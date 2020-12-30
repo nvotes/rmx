@@ -8,7 +8,7 @@ use rmx::shuffler::*;
 
 use criterion::{criterion_group, criterion_main, Criterion, SamplingMode, BenchmarkId};
 
-fn shuffle_rug(n: usize) -> bool {
+pub fn shuffle_rug(n: usize) -> bool {
     let group = RugGroup::default();
     let exp_hasher = &*group.exp_hasher();
         
@@ -40,7 +40,7 @@ fn shuffle_rug(n: usize) -> bool {
     ok
 }
 
-fn shuffle_ristretto(n: usize) -> bool {
+pub fn shuffle_ristretto(n: usize) -> bool {
     let group = RistrettoGroup;
     let exp_hasher = &*group.exp_hasher();
 

@@ -372,22 +372,14 @@ fn check<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Group
 
 #[test]
 fn demo_rug() {
-    CombinedLogger::init(
-        vec![
-            TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed)
-        ]
-    ).unwrap();
+    // setup_log();
     let group = RugGroup::default();
     demo(group);
 }
 
 #[test]
 fn demo_ristretto() {
-    CombinedLogger::init(
-        vec![
-            TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed)
-        ]
-    ).unwrap();
+    // setup_log();
     let group = RistrettoGroup;
     demo(group);
 }
@@ -595,4 +587,19 @@ fn custom_theme_from_cursive(siv: &Cursive) -> Theme {
     theme.palette[PaletteColor::View] = Color::TerminalDefault;
 
     theme
+}
+
+use std::sync::Once;
+
+static INIT: Once = Once::new();
+
+/// Setup function that is only run once, even if called multiple times.
+fn setup_log() {
+    INIT.call_once(|| {
+        CombinedLogger::init(
+            vec![
+                TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed)
+            ]
+        ).unwrap();
+    });
 }

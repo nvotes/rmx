@@ -142,12 +142,12 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
                 Act::CheckMix(cfg_h, cnt, trustee, mix_h, ballots_h, pk_h) => {
                     let cfg = board.get_config(cfg_h).unwrap();
                     info!(">> Action:: Verifying mix (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
-                    let now_ = std::time::Instant::now();
+
                     let mix = board.get_mix(cnt, trustee, mix_h).unwrap();
                     let ciphertexts = self.get_mix_src(board, cnt, trustee, ballots_h);
                     let pk = board.get_pk(cnt, pk_h).unwrap();
                     let group = &cfg.group;
-                    let rate = ciphertexts.len() as f32 / now_.elapsed().as_millis() as f32;
+                    
                     let hs = generators(ciphertexts.len() + 1, group, cnt, cfg.id.to_vec());
                     let exp_hasher = &*group.exp_hasher();
                     let shuffler = Shuffler {
@@ -158,9 +158,10 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
                     let proof = mix.proof;
                     info!("Verifying shuffle {:?} <- {:?}", short(&mix_h), short(&ballots_h));
 
-                    // let now_ = std::time::Instant::now();
+                    let now_ = std::time::Instant::now();
                     assert!(shuffler.check_proof(&proof, &ciphertexts, &mix.mixed_ballots));
-                    // info!("Check proof ({:.1} ciphertexts/s)", 1000.0 * rate);
+                    let rate = ciphertexts.len() as f32 / now_.elapsed().as_millis() as f32;
+                    info!("Check proof ({:.1} ciphertexts/s)", 1000.0 * rate);
             
                     let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_h, cnt, &self.keypair, Some(trustee));
                     let mix_path = self.localstore.set_mix_stmt(&action, &ss);

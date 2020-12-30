@@ -21,6 +21,8 @@ use crate::group::Group;
 use crate::util;
 use crate::localstore::*;
 
+use log::info;
+
 struct MBasicBulletinBoard{
     data: HashMap<String, Vec<u8>>
 }
@@ -38,10 +40,15 @@ impl MBasicBulletinBoard {
         let key = target;
         let bytes = self.data.get(&key).ok_or("Not found")?;
 
+        let now_ = std::time::Instant::now();
         let artifact = bincode::deserialize::<A>(bytes)
             .map_err(|e| std::format!("serde error {}", e))?;
-
+        info!(">> Deser {}, bytes {}", now_.elapsed().as_millis(), bytes.len());
+        
+        let now_ = std::time::Instant::now();
         let hashed = hashing::hash(&artifact);
+        info!(">> Hash {}", now_.elapsed().as_millis());
+
         
         if hashed == hash {
             Ok(artifact)
@@ -181,7 +188,9 @@ impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned>
     }
     fn get_mix(&self, contest: u32, trustee: u32, hash: Hash) -> Option<Mix<E>> {
         let key = Self::mix(contest, trustee).to_string();
+        let now_ = std::time::Instant::now();
         let ret = self.get(key, hash).ok()?;
+        info!(">> Get mix {}", now_.elapsed().as_millis());
 
         Some(ret)
     }

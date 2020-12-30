@@ -66,15 +66,6 @@ impl HashTo<Integer> for RugHasher {
     }
 }
 
-fn first_bytes<T: HashBytes>(input: T) -> Vec<u8> {
-    let mut bytes = input.get_bytes();
-    let length = bytes.len() as u64;
-    let mut first = length.to_le_bytes().to_vec();
-    first.append(&mut bytes);
-
-    first
-}
-
 // https://stackoverflow.com/questions/39675949/is-there-a-trait-supplying-iter
 fn concat_bytes_iter<'a, H: 'a + HashBytes, I: IntoIterator<Item = &'a H>>(cs: I) -> Vec<u8> {
     cs.into_iter()
@@ -394,14 +385,6 @@ impl HashBytes for EncryptedPrivateKey {
         bytes
     }
 }
-
-/* use crate::artifact::Pk;
-
-impl<E: Element, G: Group<E>> HashBytes for Pk<E, G> {
-    fn get_bytes(&self) -> Vec<u8> {
-        self.value.get_bytes()
-    }
-}*/
 
 use crate::artifact::Ballots;
 

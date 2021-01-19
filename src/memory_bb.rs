@@ -87,7 +87,6 @@ impl MBasicBulletinBoard {
 }
 
 pub struct MemoryBulletinBoard<E, G> {
-    
     basic: MBasicBulletinBoard,
     phantom_e: PhantomData<E>,
     phantom_g: PhantomData<G>,

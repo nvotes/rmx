@@ -56,8 +56,8 @@ pub struct Shuffler<'a, E: Element, G: Group<E>> {
 
 impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
     
-    pub fn gen_shuffle
-    (&self, ciphertexts: &Vec<Ciphertext<E>>) -> (Vec<Ciphertext<E>>, Vec<E::Exp>, Vec<usize>) {
+    pub fn gen_shuffle(&self, ciphertexts: &Vec<Ciphertext<E>>) -> 
+    (Vec<Ciphertext<E>>, Vec<E::Exp>, Vec<usize>) {
         
         let perm: Vec<usize> = gen_permutation(ciphertexts.len());
     
@@ -166,11 +166,12 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         let mut t4_2_temp = E::mul_identity();
         
 //        let now = std::time::Instant::now();
+        // fixed base exponentiation OPT 1
         let values: Vec<(E, E, E)> = (0..N).into_par_iter().map(|i| {
             (
-            h_generators[i].mod_pow(&omega_primes[i], gmod),
-            e_primes[i].a.mod_pow(&omega_primes[i], gmod),
-            e_primes[i].b.mod_pow(&omega_primes[i], gmod)
+                h_generators[i].mod_pow(&omega_primes[i], gmod),
+                e_primes[i].a.mod_pow(&omega_primes[i], gmod),
+                e_primes[i].b.mod_pow(&omega_primes[i], gmod)
             )
         }).collect();
 //        println!("values loop {}", now.elapsed().as_millis());
@@ -193,6 +194,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             .modulo(gmod);
     
 //        let now = std::time::Instant::now();
+        // fixed base exponentiation OPT 2
         let t_hats = (0..c_hats.len()).into_par_iter().map(|i| {
             let previous_c = if i == 0 {
                 h_initial 
@@ -360,6 +362,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             .mul(&t_tilde42_temp)
             .modulo(gmod);
     
+        // batch verification OPT 3a
         let t_hat_primes: Vec<E> = (0..N).into_par_iter().map(|i| {
             let c_term = if i == 0 {
                 h_initial 
@@ -382,6 +385,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         checks.push(proof.t.t3.eq(&t_prime3));
         checks.push(proof.t.t4_1.eq(&t_prime41));
         checks.push(proof.t.t4_2.eq(&t_prime42));
+        // batch verification OPT 3b
         for i in 0..N {
             checks.push(proof.t.t_hats[i].eq(&t_hat_primes[i]));
         }

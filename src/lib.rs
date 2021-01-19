@@ -19,3 +19,4 @@ pub mod localstore;
 pub mod action;
 pub mod memory_bb;
 pub mod trustee;
+pub mod bytes;

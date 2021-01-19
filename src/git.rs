@@ -23,6 +23,60 @@ struct GitBulletinBoard {
 
 impl GitBulletinBoard {
 
+    fn open_or_clone(&self) -> Result<Repository, Error> {    
+        if Path::new(&self.fs_path).exists() {
+            Repository::open(&self.fs_path)
+        }
+        else {  
+            let co = CheckoutBuilder::new();
+            let mut fo = FetchOptions::new();
+            let cb = remote_callbacks(&self.ssh_key_path);
+            fo.remote_callbacks(cb);    
+            RepoBuilder::new()
+                .fetch_options(fo)
+                .with_checkout(co)
+                .clone(&self.url, Path::new(&self.fs_path))
+        }
+    }
+    
+    fn list(&self) -> Vec<String> {
+        let walker = WalkDir::new(&self.fs_path).min_depth(1).into_iter();
+        let entries: Vec<DirEntry> = walker
+            .filter_entry(|e| !is_hidden(e))
+            .map(|e| e.unwrap())
+            .collect();
+         
+        // filter directories and make relative
+        let files = entries.into_iter()
+            .filter(|e| !e.file_type().is_dir())
+            .map(|e| {
+                e.path()
+                    .strip_prefix(&self.fs_path).unwrap()
+                    .to_str().unwrap().to_string()
+            })
+            .collect();
+
+        files
+    }
+
+    /*fn get<A: HashBytes + DeserializeOwned>(&self, _target: 
+        &Path, hash: Hash) -> Result<A, bincode::Error> {
+
+        // FIXME: get the bytes from file in working copy
+        let bytes: Vec<u8> = vec![];
+
+        let artifact = bincode::deserialize::<A>(&bytes)?;
+
+        let hashed = hashing::hash(&artifact);
+        
+        if hashed == hash {
+            Ok(artifact)
+        }
+        else {
+            Err(Box::new(bincode::ErrorKind::Custom("Mismatched hash".to_string())))
+        }
+    }*/
+    
     fn refresh(&self) -> Result<(), Error> {
         let repo = self.open_or_clone()?;
         let mut remote = repo.find_remote("origin").unwrap();
@@ -79,61 +133,6 @@ impl GitBulletinBoard {
         self.push(&repo)
     }
 
-    fn list(&self) -> Vec<String> {
-        let walker = WalkDir::new(&self.fs_path).min_depth(1).into_iter();
-        let entries: Vec<DirEntry> = walker
-            .filter_entry(|e| !is_hidden(e))
-            .map(|e| e.unwrap())
-            .collect();
-         
-        // filter directories and make relative
-        let files = entries.into_iter()
-            .filter(|e| !e.file_type().is_dir())
-            .map(|e| {
-                e.path()
-                    .strip_prefix(&self.fs_path).unwrap()
-                    .to_str().unwrap().to_string()
-            })
-            .collect();
-
-        files
-    }
-
-    fn get<A: HashBytes + DeserializeOwned>(&self, _target: 
-        &Path, hash: Hash) -> Result<A, bincode::Error> {
-
-        // let bytes = self.0.get(&key)
-        //    .ok_or("not found")?;
-        let bytes: Vec<u8> = vec![];
-
-        let artifact = bincode::deserialize::<A>(&bytes)?;
-
-        let hashed = hashing::hash(&artifact);
-        
-        if hashed == hash {
-            Ok(artifact)
-        }
-        else {
-            Err(Box::new(bincode::ErrorKind::Custom("Mismatched hash".to_string())))
-        }
-    }
-    
-    fn open_or_clone(&self) -> Result<Repository, Error> {    
-        if Path::new(&self.fs_path).exists() {
-            Repository::open(&self.fs_path)
-        }
-        else {  
-            let co = CheckoutBuilder::new();
-            let mut fo = FetchOptions::new();
-            let cb = remote_callbacks(&self.ssh_key_path);
-            fo.remote_callbacks(cb);    
-            RepoBuilder::new()
-                .fetch_options(fo)
-                .with_checkout(co)
-                .clone(&self.url, Path::new(&self.fs_path))
-        }
-    }
-    
     fn add_commit_many(&self, repo: &Repository, files: Vec<(&Path, &Path)>, 
         message: &str, append_only: bool) -> Result<(), Error> {
         let mut entries = vec![];
@@ -153,8 +152,22 @@ impl GitBulletinBoard {
         let entry = self.prepare_add(target, source);
         // reset right before commiting
         self.reset(&repo)?;
-        // adding to repo index uses relative path: &target_path
+        // adding to repo index uses relative path
         add_and_commit(&repo, vec![entry], message, append_only)
+    }
+
+    // resets the working copy to match that of the remote
+    // local commits and working copy are discarded
+    fn reset(&self, repo: &Repository) -> Result<(), Error> {
+        let mut remote = repo.find_remote("origin")?;
+        let mut fo = FetchOptions::new();
+        fo.remote_callbacks(remote_callbacks(&self.ssh_key_path));
+        fo.download_tags(git2::AutotagOption::All);
+        remote.fetch(&["master"], Some(&mut fo), None)?;
+        let fetch_head = repo.find_reference("FETCH_HEAD")?;
+        let commit = repo.reference_to_annotated_commit(&fetch_head)?;
+        let object = repo.find_object(commit.id(), None)?;
+        repo.reset(&object, git2::ResetType::Hard, None)
     }
 
     fn prepare_add(&self, target_path: &Path, source: &Path) -> GitAddEntry {
@@ -172,20 +185,6 @@ impl GitBulletinBoard {
             fs_path: target_file.to_path_buf(), 
             repo_path: target_path.to_path_buf()
         }
-    }
-
-    // resets the working copy to match that of the remote
-    // local commits and working copy are discarded
-    fn reset(&self, repo: &Repository) -> Result<(), Error> {
-        let mut remote = repo.find_remote("origin")?;
-        let mut fo = FetchOptions::new();
-        fo.remote_callbacks(remote_callbacks(&self.ssh_key_path));
-        fo.download_tags(git2::AutotagOption::All);
-        remote.fetch(&["master"], Some(&mut fo), None)?;
-        let fetch_head = repo.find_reference("FETCH_HEAD")?;
-        let commit = repo.reference_to_annotated_commit(&fetch_head)?;
-        let object = repo.find_object(commit.id(), None)?;
-        repo.reset(&object, git2::ResetType::Hard, None)
     }
 
     fn push(&self, repo: &Repository) -> Result<(), Error> {

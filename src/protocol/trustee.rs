@@ -9,19 +9,19 @@ use log::info;
 use crate::hashing;
 use crate::hashing::*;
 use crate::artifact::*;
-use crate::statement::*;
+use crate::protocol::statement::*;
 use crate::elgamal::{PublicKey, Ciphertext, PrivateKey};
 use crate::bb::*;
 use crate::util;
 use crate::arithm::Element;
 use crate::group::Group;
-use crate::action::Act;
+use crate::protocol::facts::Act;
 use crate::util::short;
 use crate::shuffler::*;
 use crate::keymaker::Keymaker;
 use crate::localstore::LocalStore;
 use crate::symmetric;
-use crate::protocol::*;
+use crate::protocol::facts::*;
 
 pub struct Trustee<E, G> {
     pub keypair: Keypair,

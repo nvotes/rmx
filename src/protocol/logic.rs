@@ -1,0 +1,398 @@
+use std::fmt;
+use std::collections::HashSet;
+use std::marker::PhantomData;
+use std::fmt::Debug;
+
+use serde::de::DeserializeOwned;
+use ed25519_dalek::PublicKey as SPublicKey;
+use ed25519_dalek::Verifier;
+use crepe::crepe;
+use log::info;
+
+use crate::hashing;
+use crate::hashing::*;
+use crate::bb::*;
+use crate::util;
+use crate::arithm::Element;
+use crate::group::Group;
+use crate::protocol::facts::Act;
+use crate::util::short;
+use crate::protocol::trustee::Trustee;
+use crate::protocol::facts::{Facts, InputFact};
+
+use crate::hashing::Hash;
+
+type TrusteeTotal = u32;
+pub(super) type TrusteeIndex = u32;
+pub(super) type ContestIndex = u32;
+pub(super) type ConfigHash = Hash;
+pub(super) type ShareHash = Hash;
+pub(super) type PkHash = Hash;
+pub(super) type BallotsHash = Hash;
+pub(super) type MixHash = Hash;
+pub(super) type DecryptionHash = Hash;
+pub(super) type PlaintextsHash = Hash;
+pub(super) type Hashes = [Hash; 10];
+
+fn load_facts(facts: &Vec<InputFact>, runtime: &mut Crepe) {
+    let mut sorted = facts.to_vec();
+    sorted.sort_by(|a, b| {
+        a.to_string().partial_cmp(&b.to_string()).unwrap()
+    });
+    sorted.into_iter().map(|f| {
+    // facts.into_iter().map(|f| {
+        info!("IFact {:?}", f);
+        match f {
+            InputFact::ConfigPresent(x) => runtime.extend(&[x]),
+            InputFact::ConfigSignedBy(x) => runtime.extend(&[x]),
+            InputFact::PkShareSignedBy(x) => runtime.extend(&[x]),
+            InputFact::PkSignedBy(x) => runtime.extend(&[x]),
+            InputFact::BallotsSigned(x) => runtime.extend(&[x]),
+            InputFact::MixSignedBy(x) => runtime.extend(&[x]),
+            InputFact::DecryptionSignedBy(x) => runtime.extend(&[x]),
+            InputFact::PlaintextsSignedBy(x) => runtime.extend(&[x])
+        }
+    }).count();
+    info!("\n");
+}
+
+crepe! {
+    @input
+    pub(super) struct ConfigPresent(pub ConfigHash, pub ContestIndex, pub TrusteeIndex, pub TrusteeIndex);
+    @input
+    pub(super) struct ConfigSignedBy(pub ConfigHash, pub u32);
+    @input
+    pub(super) struct PkShareSignedBy(pub ConfigHash, pub ContestIndex, pub ShareHash, pub TrusteeIndex);
+    @input
+    pub(super) struct PkSignedBy(pub ConfigHash, pub ContestIndex, pub PkHash, pub TrusteeIndex);
+    @input
+    pub(super) struct BallotsSigned(pub ConfigHash, pub ContestIndex, pub BallotsHash);
+    @input
+    pub(super) struct MixSignedBy(pub ConfigHash, pub ContestIndex, pub MixHash, pub BallotsHash, pub TrusteeIndex, pub TrusteeIndex);
+    @input
+    pub(super) struct DecryptionSignedBy(pub ConfigHash, pub ContestIndex, pub DecryptionHash, pub TrusteeIndex);
+    @input
+    pub(super) struct PlaintextsSignedBy(pub ConfigHash, pub ContestIndex, pub PlaintextsHash, pub TrusteeIndex);
+
+    // 0
+    @output
+    pub(super) struct Do(pub Act);
+    // 1
+    @output
+    pub(super) struct ConfigOk(pub ConfigHash);
+    // 2
+    @output
+    pub(super) struct PkSharesAll(pub ConfigHash, pub ContestIndex, pub Hashes);
+    // 3
+    @output
+    pub(super) struct PkOk(pub ConfigHash, pub ContestIndex, pub PkHash);
+    // 4
+    @output
+    pub(super) struct PkSharesUpTo(pub ConfigHash, pub ContestIndex, pub TrusteeIndex, pub Hashes);
+    // 5
+    @output
+    pub(super) struct ConfigSignedUpTo(pub ConfigHash, pub TrusteeIndex);
+    // 6
+    @output
+    pub(super) struct Contest(pub ConfigHash, pub ContestIndex);
+    // 7
+    @output
+    pub(super) struct PkSignedUpTo(pub ConfigHash, pub ContestIndex, pub PkHash, pub TrusteeIndex);
+    // 8
+    @output
+    pub(super) struct MixSignedUpTo(pub ConfigHash, pub ContestIndex, pub MixHash, pub BallotsHash, pub TrusteeIndex);
+    // 9
+    @output
+    pub(super) struct MixOk(pub ConfigHash, pub ContestIndex, pub MixHash, pub BallotsHash);
+    // 10
+    @output
+    pub(super) struct ContestMixedUpTo(pub ConfigHash, pub ContestIndex, pub MixHash, pub TrusteeIndex);
+    // 11
+    @output
+    pub(super) struct ContestMixedOk(pub ConfigHash, pub ContestIndex, pub MixHash);
+    // 11
+    @output
+    pub(super) struct DecryptionsUpTo(pub ConfigHash, pub ContestIndex, pub TrusteeIndex, pub Hashes);
+    // 12
+    @output
+    pub(super) struct DecryptionsAll(pub ConfigHash, pub ContestIndex, pub Hashes);
+    // 13
+    @output
+    pub(super) struct PlaintextsSignedUpTo(pub ConfigHash, pub ContestIndex, pub PlaintextsHash, pub TrusteeIndex);
+    // 14
+    @output
+    pub(super) struct PlaintextsOk(pub ConfigHash, pub ContestIndex, pub PlaintextsHash);
+    
+    Do(Act::CheckConfig(config)) <- 
+        ConfigPresent(config, _, _, self_t),
+        !ConfigSignedBy(config, self_t);
+    
+    Do(Act::PostShare(config, contest)) <- 
+        ConfigPresent(config, _, _, self_t),
+        Contest(config, contest),
+        ConfigOk(config),
+        !PkShareSignedBy(config, contest, _, self_t);
+    
+    Do(Act::CombineShares(config, contest, hashes)) <- 
+        PkSharesAll(config, contest, hashes),
+        ConfigPresent(config, _, _, 0),
+        ConfigOk(config),
+        !PkSignedBy(config, contest, _, 0);
+
+    Do(Act::CheckPk(config, contest, pk_hash, hashes)) <- 
+        ConfigPresent(config, _, _, self_t),
+        ConfigOk(config),
+        PkSharesAll(config, contest, hashes),
+        PkSignedBy(config, contest, pk_hash, 0),
+        !PkSignedBy(config, contest, pk_hash, self_t);
+
+    // mix 0
+    Do(Act::Mix(config, contest, ballots_hash, pk_hash)) <- 
+        PkOk(config, contest, pk_hash),
+        ConfigPresent(config, _, _, 0),
+        ConfigOk(config),    
+        BallotsSigned(config, contest, ballots_hash),
+        !MixSignedBy(config, contest, _, _, 0, 0);
+
+    // mix n
+    Do(Act::Mix(config, contest, mix_ballots_hash, pk_hash)) <- 
+        PkOk(config, contest, pk_hash),
+        ConfigPresent(config, _, _, self_t),
+        ConfigOk(config),
+        (self_t > 0),
+        MixSignedBy(config, contest, mix_ballots_hash, _, self_t - 1, self_t - 1),
+        MixSignedBy(config, contest, mix_ballots_hash, _, self_t - 1, self_t),
+        !MixSignedBy(config, contest, _, _, self_t, self_t);
+  
+    // check mix 0
+    Do(Act::CheckMix(config, contest, 0, mix_hash, ballots_hash, pk_hash)) <- 
+        PkOk(config, contest, pk_hash),
+        ConfigPresent(config, _, _, self_t),
+        ConfigOk(config),    
+        MixSignedBy(config, contest, mix_hash, ballots_hash, 0, 0),
+        // input ballots to mix came from the ballotbox
+        BallotsSigned(config, contest, ballots_hash),
+        !MixSignedBy(config, contest, mix_hash, ballots_hash, 0, self_t);
+
+    // check mix n
+    Do(Act::CheckMix(config, contest, mixer_t, mix_hash, mix_ballots_hash, pk_hash)) <- 
+        PkOk(config, contest, pk_hash),
+        ConfigPresent(config, _, _, self_t),
+        ConfigOk(config),    
+        MixSignedBy(config, contest, mix_hash, mix_ballots_hash, mixer_t, _signer_t),
+        (mixer_t > 0),
+        // input ballots to mix came from a previous mix, thus (mixer_t - 1)
+        MixSignedBy(config, contest, mix_ballots_hash, _, mixer_t - 1, _),
+        !MixSignedBy(config, contest, mix_hash, mix_ballots_hash, mixer_t, self_t);
+    
+    Do(Act::PartialDecrypt(config, contest, mix_hash, share)) <- 
+        PkOk(config, contest, _pk_hash),
+        ConfigPresent(config, _n_trustees, _, self_t),
+        ConfigOk(config),
+        PkShareSignedBy(config, contest, share, self_t),
+        ContestMixedOk(config, contest, mix_hash),
+        !DecryptionSignedBy(config, contest, _, self_t);
+
+    Do(Act::CombineDecryptions(config, contest, decryptions, mix_hash, shares)) <- 
+        DecryptionsAll(config, contest, decryptions),
+        ConfigPresent(config, _, _, 0),
+        ConfigOk(config),
+        ContestMixedOk(config, contest, mix_hash),
+        PkSharesAll(config, contest, shares),
+        !PlaintextsSignedBy(config, contest, _, 0);
+
+    Do(Act::CheckPlaintexts(config, contest, plaintext_hash, decryptions, mix_hash, shares)) <- 
+        DecryptionsAll(config, contest, decryptions),
+        ConfigPresent(config, _, _, self_t),
+        ConfigOk(config),
+        ContestMixedOk(config, contest, mix_hash),
+        PkSharesAll(config, contest, shares),
+        PlaintextsSignedBy(config, contest, plaintext_hash, 0),
+        !PlaintextsSignedBy(config, contest, plaintext_hash, self_t);
+
+    PlaintextsSignedUpTo(config, contest, plaintext_hash, 0) <-
+        PlaintextsSignedBy(config, contest, plaintext_hash, 0);
+
+    PlaintextsSignedUpTo(config, contest, plaintext_hash, trustee + 1) <-
+        PlaintextsSignedUpTo(config, contest, plaintext_hash, trustee),   
+        PlaintextsSignedBy(config, contest, plaintext_hash, trustee + 1);
+
+    PlaintextsOk(config, contest, plaintext_hash) <-
+        ConfigPresent(config, _, total_t, _),
+        ConfigOk(config),
+        PlaintextsSignedUpTo(config, contest, plaintext_hash, total_t - 1);
+
+    DecryptionsUpTo(config, contest, 0, first) <-
+        DecryptionSignedBy(config, contest, decryption, 0),
+        let first = array_make(decryption);
+
+    DecryptionsUpTo(config, contest, trustee + 1, decryptions) <- 
+        DecryptionsUpTo(config, contest, trustee, input_decryptions),
+        DecryptionSignedBy(config, contest, decryption, trustee + 1),
+        let decryptions = array_set(input_decryptions, trustee + 1, decryption);
+
+    DecryptionsAll(config, contest, decryptions) <-
+        ConfigPresent(config, _, total_t, _),
+        ConfigOk(config),
+        DecryptionsUpTo(config, contest, total_t - 1, decryptions);
+    
+    MixSignedUpTo(config, contest, mix_hash, ballots_hash, 0) <-
+        MixSignedBy(config, contest, mix_hash, ballots_hash, _, 0);
+
+    MixSignedUpTo(config, contest, mix_hash, ballots_hash, signer_t + 1) <-
+        MixSignedUpTo(config, contest, mix_hash, ballots_hash, signer_t),
+        MixSignedBy(config, contest, mix_hash, ballots_hash, _mixer_t, signer_t + 1);
+
+    MixOk(config, contest, mix_hash, ballots_hash) <-
+        ConfigPresent(config, _, total_t, _),
+        ConfigOk(config),
+        MixSignedUpTo(config, contest, mix_hash, ballots_hash, total_t - 1);
+
+    ContestMixedUpTo(config, contest, mix_hash, 0) <- 
+        MixOk(config, contest, mix_hash, ballots_hash),
+        BallotsSigned(config, contest, ballots_hash);
+
+    ContestMixedUpTo(config, contest, mix_hash, trustee + 1) <- 
+        ContestMixedUpTo(config, contest, previous_mix_hash, trustee),
+        MixOk(config, contest, mix_hash, previous_mix_hash);
+
+    ContestMixedOk(config, contest, mix_hash) <- 
+        ConfigPresent(config, _, total_t, _),
+        ConfigOk(config),
+        ContestMixedUpTo(config, contest, mix_hash, total_t - 1);
+    
+    ConfigSignedUpTo(config, 0) <-
+        ConfigSignedBy(config, 0);
+    
+    ConfigSignedUpTo(config, trustee + 1) <- 
+        ConfigSignedUpTo(config, trustee),
+        ConfigSignedBy(config, trustee + 1);
+    
+    ConfigOk(config) <- 
+        ConfigPresent(config, _, total_t, _),
+        ConfigSignedUpTo(config, total_t - 1);
+    
+    PkSharesUpTo(config, contest, 0, first) <-
+        PkShareSignedBy(config, contest, share, 0),
+        let first = array_make(share);
+
+    PkSharesUpTo(config, contest, trustee + 1, shares) <- 
+        PkSharesUpTo(config, contest, trustee, input_shares),
+        PkShareSignedBy(config, contest, share, trustee + 1),
+        let shares = array_set(input_shares, trustee + 1, share);
+
+    PkSharesAll(config, contest, shares) <-
+        ConfigPresent(config, _, total_t, _),
+        ConfigOk(config),
+        PkSharesUpTo(config, contest, total_t - 1, shares);
+
+    PkOk(config, contest, pk_hash) <-
+        ConfigPresent(config, _, total_t, _),
+        ConfigOk(config),
+        PkSignedUpTo(config, contest, pk_hash, total_t - 1);
+    
+    PkSignedUpTo(config, contest, pk_hash, 0) <-
+        PkSignedBy(config, contest, pk_hash, 0);
+
+    PkSignedUpTo(config, contest, pk_hash, trustee + 1) <-
+        PkSignedUpTo(config, contest, pk_hash, trustee),
+        PkSignedBy(config, contest, pk_hash, trustee + 1);
+
+    Contest(config, contests - 1) <-
+        ConfigPresent(config, contests, _, _self);
+
+    Contest(config, n - 1) <- Contest(config, n),
+        (n > 0);
+}
+
+fn array_make(value: Hash) -> Hashes {
+    let mut ret = [[0u8; 64]; 10];
+    ret[0] = value;
+
+    ret
+}
+
+fn array_set(mut input: Hashes, index: u32, value: Hash) -> Hashes {
+    input[index as usize] = value;
+
+    input
+}
+
+pub struct Protocol <E, G, B> {
+    trustee: Trustee<E, G>,
+    phantom_b: PhantomData<B>
+}
+
+impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned,
+    B: BulletinBoard<E, G>> Protocol<E, G, B> {
+
+    pub fn new(trustee: Trustee<E, G>) -> Protocol<E, G, B> {
+        Protocol {
+            trustee,
+            phantom_b: PhantomData
+        }
+    }
+    
+    fn get_facts(&self, board: &B) -> Vec<InputFact> {
+    
+        let self_pk = self.trustee.keypair.public;
+        let now = std::time::Instant::now();
+        let svs = board.get_statements();
+        // info!("SVerifiers: {}", svs.len());
+        let mut facts: Vec<InputFact> = svs.iter()
+            .map(|sv| sv.verify(board))
+            .filter(|f| f.is_some())
+            .map(|f| f.unwrap())
+            .collect();
+        
+        if let Some(cfg) = board.get_config_unsafe() {
+            let trustees = cfg.trustees.len();
+            
+            let self_pos = cfg.trustees.iter()
+                .position(|s| s.to_bytes() == self_pk.to_bytes())
+                .unwrap();
+            let hash = hashing::hash(&cfg);
+            let contests = cfg.contests;
+
+            let f = InputFact::config_present(
+                hash,
+                contests,
+                trustees as u32,
+                self_pos as u32
+            );
+            facts.push(f);
+        };
+        info!("Input facts derived in [{}ms]", now.elapsed().as_millis());
+        info!("");
+        facts
+    }
+    
+    pub fn process_facts(&self, board: &B) -> Facts {
+        let mut runtime = Crepe::new();
+        let input_facts = self.get_facts(board);
+        load_facts(&input_facts, &mut runtime);
+        
+        let now = std::time::Instant::now();
+        let output = runtime.run();
+        let done = now.elapsed().as_millis();
+        let actions = output.0.len();
+        
+        let ret = Facts::new(input_facts, output);
+    
+        ret.log();
+        info!("");
+        info!("Output facts ({} actions) derived in [{}ms]", actions, done);
+        
+        ret
+    }
+
+    pub fn run(&self, facts: Facts, board: &mut B) -> u32 {
+        self.trustee.run(facts, board)
+    }
+
+    pub fn step(&self, board: &mut B) -> u32 {
+        let output = self.process_facts(&board);
+
+        self.trustee.run(output, board)
+    }
+}

@@ -14,8 +14,8 @@ use crate::hashing;
 use crate::bb::*;
 use crate::artifact::*;
 use crate::elgamal::PublicKey;
-use crate::statement::*;
-use crate::protocol::SVerifier;
+use crate::protocol::statement::SignedStatement;
+use crate::protocol::statement::StatementVerifier;
 use crate::arithm::Element;
 use crate::group::Group;
 use crate::util;
@@ -221,7 +221,7 @@ impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned>
         Some(ret)
     }
 
-    fn get_statements(&self) -> Vec<SVerifier> {
+    fn get_statements(&self) -> Vec<StatementVerifier> {
         
         let sts = self.get_stmts();
         let mut ret = Vec::new();
@@ -232,7 +232,7 @@ impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned>
             let (trustee, contest) = artifact_location(s);
             let stmt: SignedStatement = bincode::deserialize(&s_bytes).unwrap();
 
-            let next = SVerifier {
+            let next = StatementVerifier {
                 statement: stmt,
                 trustee: trustee,
                 contest: contest

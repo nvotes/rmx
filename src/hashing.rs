@@ -323,7 +323,8 @@ impl HashBytes for Signature {
     }
 }
 
-use crate::statement::Statement;
+use crate::protocol::statement::Statement;
+use crate::protocol::statement::SignedStatement;
 
 impl HashBytes for Statement {
     fn get_bytes(&self) -> Vec<u8> {
@@ -338,8 +339,6 @@ impl HashBytes for Statement {
         bytes
     }
 }
-
-use crate::statement::SignedStatement;
 
 impl HashBytes for SignedStatement {
     fn get_bytes(&self) -> Vec<u8> {
@@ -424,7 +423,7 @@ impl<E: Element> HashBytes for Plaintexts<E> {
     }
 }
 
-use crate::action::Act;
+use crate::protocol::facts::Act;
 
 impl HashBytes for Hash {
     fn get_bytes(&self) -> Vec<u8> {
@@ -509,14 +508,6 @@ impl HashBytes for Act {
         }
     }
 }
-
-/*
-impl HashBytes for str {
-    fn get_bytes(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
-    }
-}
-*/
 
 #[cfg(test)]
 mod tests {  

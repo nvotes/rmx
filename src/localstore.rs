@@ -5,9 +5,9 @@ use serde::de::DeserializeOwned;
 
 use crate::hashing;
 use crate::util;
-use crate::action::Act;
 use crate::artifact::*;
-use crate::statement::*;
+use crate::protocol::statement::*;
+use crate::protocol::facts::Act;
 use crate::elgamal::PublicKey;
 use crate::arithm::Element;
 use crate::group::Group;
@@ -21,7 +21,6 @@ pub struct BallotsPath(pub PathBuf, pub PathBuf);
 pub struct MixPath(pub PathBuf, pub PathBuf);
 pub struct MixStmtPath(pub PathBuf);
 pub struct PDecryptionsPath(pub PathBuf, pub PathBuf);
-// pub struct PDecryptionsStmtPath(pub PathBuf);
 pub struct PlaintextsPath(pub PathBuf, pub PathBuf);
 pub struct PlaintextsStmtPath(pub PathBuf);
 

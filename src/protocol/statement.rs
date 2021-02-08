@@ -1,10 +1,116 @@
+use std::convert::TryInto;
+
+use ed25519_dalek::PublicKey as SPublicKey;
+use ed25519_dalek::Verifier;
 use ed25519_dalek::Signature;
 use ed25519_dalek::{Keypair, Signer};
+
 use serde::{Deserialize, Serialize};
 
 use crate::hashing;
-use crate::protocol::ContestIndex;
-use crate::protocol::TrusteeIndex;
+use crate::util;
+use crate::protocol::facts::InputFact;
+use crate::arithm::Element;
+use crate::group::Group;
+use crate::bb::BulletinBoard;
+use crate::protocol::logic::ContestIndex;
+use crate::protocol::logic::TrusteeIndex;
+
+
+#[derive(Debug)]
+pub struct StatementVerifier {
+    pub statement: SignedStatement,
+    pub trustee: i32,
+    pub contest: u32
+}
+
+impl StatementVerifier {
+    
+    pub(super) fn verify<E: Element, G: Group<E>, B: BulletinBoard<E, G>>(&self, board: &B) -> Option<InputFact> {
+        let statement = &self.statement.statement;
+        let config = board.get_config_unsafe()?;
+        
+        let (pk, self_t): (SPublicKey, u32) =
+        if self.trustee >= 0 {
+            (config.trustees[self.trustee as usize], self.trustee.try_into().unwrap())
+        } else {
+            (config.ballotbox, 0)
+        };
+        
+        let statement_hash = hashing::hash(statement);
+        let verified = pk.verify(&statement_hash, &self.statement.signature);
+        let config_h = util::to_u8_64(&statement.hashes[0]);
+        // info!("* Verify returns: [{}] on [{:?}] from trustee [{}] for contest [{}]", verified.is_ok(), 
+        //    &self.statement.statement.stype, &self.trustee, &self.contest
+        //);
+        
+        let mixer_t = statement.trustee_aux.unwrap_or(self_t);
+
+        match statement.stype {
+            StatementType::Config => {
+                self.ret(
+                    InputFact::config_signed_by(config_h, self_t),
+                    verified.is_ok()
+                )
+            },
+            StatementType::Keyshare => {
+                let share_h = util::to_u8_64(&statement.hashes[1]);
+                self.ret(
+                    InputFact::share_signed_by(config_h, self.contest, share_h, self_t),
+                    verified.is_ok()
+                )
+            },
+            StatementType::PublicKey => {
+                let pk_h = util::to_u8_64(&statement.hashes[1]);
+                self.ret(
+                    InputFact::pk_signed_by(config_h, self.contest, pk_h, self_t),
+                    verified.is_ok()
+                )
+            },
+            StatementType::Ballots => {
+                let ballots_h = util::to_u8_64(&statement.hashes[1]);
+                self.ret(
+                    InputFact::ballots_signed(config_h, self.contest, ballots_h),
+                    verified.is_ok()
+                )
+            },
+            StatementType::Mix => {
+                let mix_h = util::to_u8_64(&statement.hashes[1]);
+                let ballots_h = util::to_u8_64(&statement.hashes[2]);
+                self.ret(
+                    InputFact::mix_signed_by(config_h, self.contest, mix_h, ballots_h, mixer_t, self_t),
+                    verified.is_ok()
+                )
+
+            },
+            StatementType::PDecryption => {
+                let pdecryptions_h = util::to_u8_64(&statement.hashes[1]);
+                self.ret(
+                    InputFact::decryption_signed_by(config_h, self.contest, pdecryptions_h, self_t),
+                    verified.is_ok()
+                )
+
+            },
+            StatementType::Plaintexts => {
+                let plaintexts_h = util::to_u8_64(&statement.hashes[1]);
+                self.ret(
+                    InputFact::plaintexts_signed_by(config_h, self.contest, plaintexts_h, self_t),
+                    verified.is_ok()
+                )
+            }
+        }
+    }
+
+    fn ret(&self, fact: InputFact, verified: bool) -> Option<InputFact> {
+        if verified {
+            Some(fact)
+        } else {
+            None
+        }
+    }
+}
+
+
 
 type VHash = Vec<u8>;
 

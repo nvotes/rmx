@@ -3,7 +3,7 @@ use crate::artifact::*;
 use crate::elgamal::PublicKey;
 use crate::arithm::Element;
 use crate::group::Group;
-use crate::protocol::SVerifier;
+use crate::protocol::statement::StatementVerifier;
 
 pub trait Names {
     const CONFIG: &'static str = "config";
@@ -85,7 +85,7 @@ pub trait BulletinBoard<E: Element, G: Group<E>> {
     fn set_plaintexts_stmt(&mut self, path: &PlaintextsStmtPath, contest: u32, trustee: u32);
     fn get_plaintexts(&self, contest: u32, hash: Hash) -> Option<Plaintexts<E>>;
 
-    fn get_statements(&self) -> Vec<SVerifier>;
+    fn get_statements(&self) -> Vec<StatementVerifier>;
     fn get_stmts(&self) -> Vec<String> {
         self.list().into_iter().filter(|s| {
             s.ends_with(".stmt")

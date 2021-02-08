@@ -11,7 +11,7 @@ use ed25519_dalek::{Keypair, PublicKey as SPublicKey};
 use uuid::Uuid;
 use serde::de::DeserializeOwned;
 
-use rmx::statement::SignedStatement;
+use rmx::protocol::statement::SignedStatement;
 use rmx::artifact::*;
 use rmx::elgamal::PublicKey;
 use rmx::hashing;
@@ -22,10 +22,11 @@ use rmx::ristretto_b::*;
 use rmx::bb::BulletinBoard;
 use rmx::bb::Names;
 use rmx::memory_bb::*;
-use rmx::protocol::*;
+use rmx::protocol::logic::Protocol;
 use rmx::util;
 use rmx::localstore::*;
-use rmx::trustee::Trustee;
+use rmx::protocol::trustee::Trustee;
+use rmx::protocol::facts::Facts;
 
 use cursive::align::HAlign;
 use cursive::traits::*;
@@ -190,8 +191,6 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
     }
 }
 
-
-#[test]
 fn demo_tui() {
     let mut n: u32 = 0;
     let mut siv = cursive::default();
@@ -372,14 +371,14 @@ fn check<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Group
 
 #[test]
 fn demo_rug() {
-    // setup_log();
+    setup_log();
     let group = RugGroup::default();
     demo(group);
 }
 
 #[test]
 fn demo_ristretto() {
-    // setup_log();
+    setup_log();
     let group = RistrettoGroup;
     demo(group);
 }

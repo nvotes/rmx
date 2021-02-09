@@ -1,10 +1,9 @@
 use generic_array::{typenum::U32, GenericArray};
 use rayon::prelude::*;
 
-use crate::artifact::EncryptedPrivateKey;
-use crate::arithm::*;
-use crate::group::*;
-use crate::elgamal::*;
+use crate::data::entity::*;
+use crate::crypto::base::*;
+use crate::crypto::elgamal::*;
 
 pub struct Keymaker<E: Element, G> {
     sk: PrivateKey<E, G>,

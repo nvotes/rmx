@@ -7,14 +7,14 @@ use ed25519_dalek::{Keypair, Signer};
 
 use serde::{Deserialize, Serialize};
 
-use crate::hashing;
 use crate::util;
 use crate::protocol::facts::InputFact;
-use crate::arithm::Element;
-use crate::group::Group;
-use crate::bb::BulletinBoard;
 use crate::protocol::logic::ContestIndex;
 use crate::protocol::logic::TrusteeIndex;
+use crate::crypto::base::Element;
+use crate::crypto::base::Group;
+use crate::crypto::hashing;
+use crate::bulletinboard::*;
 
 
 #[derive(Debug)]

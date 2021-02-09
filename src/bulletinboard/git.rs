@@ -9,9 +9,8 @@ use walkdir::{DirEntry, WalkDir};
 use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
 
-
-use crate::hashing::{Hash, HashBytes};
-use crate::hashing;
+use crate::crypto::hashing;
+use crate::crypto::hashing::{Hash, HashBytes};
 
 #[derive(Serialize, Deserialize)]
 struct GitBulletinBoard {
@@ -303,7 +302,8 @@ mod tests {
     use serial_test::serial;
     use std::fs;
     use std::path::{Path};
-    use crate::git::*;
+    
+    use crate::bulletinboard::git::*;
     use crate::util;
     
     #[test]

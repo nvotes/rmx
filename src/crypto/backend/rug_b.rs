@@ -9,10 +9,9 @@ use rand::SeedableRng;
 use rand::rngs::StdRng;
 use serde::{Deserialize, Serialize};
 
-use crate::hashing::{HashTo, RugHasher, hash_bytes_256};
-use crate::arithm::*;
-use crate::elgamal::*;
-use crate::group::*;
+use crate::crypto::base::*;
+use crate::crypto::elgamal::*;
+use crate::crypto::hashing::{HashTo, RugHasher, hash_bytes_256};
 
 impl Element for Integer {
     type Exp = Integer;
@@ -245,11 +244,11 @@ impl Group<Integer> for RugGroup {
 
 #[cfg(test)]
 mod tests {
-    use crate::rug_b::*;
-    use crate::keymaker::*;
-    use crate::shuffler::*;
-    use crate::artifact::*;
-    use crate::symmetric;
+    use crate::crypto::backend::rug_b::*;
+    use crate::crypto::keymaker::*;
+    use crate::crypto::shuffler::*;
+    use crate::crypto::symmetric;
+    use crate::data::entity::*;
     use crate::util;
 
     #[test]

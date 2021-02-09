@@ -1,25 +1,23 @@
-use serde::de::DeserializeOwned;
+use std::marker::PhantomData;
 use std::collections::HashMap;
 use std::path::Path;
-
-use std::marker::PhantomData;
+use serde::de::DeserializeOwned;
 
 use rug::Integer;
 use curve25519_dalek::ristretto::RistrettoPoint;
-use crate::rug_b::RugGroup;
-use crate::ristretto_b::RistrettoGroup;
 
-use crate::hashing::{HashBytes, Hash};
-use crate::hashing;
-use crate::bb::*;
-use crate::artifact::*;
-use crate::elgamal::PublicKey;
+use crate::bulletinboard::*;
+use crate::data::entity::*;
+use crate::crypto::hashing;
+use crate::crypto::hashing::{HashBytes, Hash};
+use crate::crypto::elgamal::PublicKey;
+use crate::crypto::base::Element;
+use crate::crypto::base::Group;
+use crate::crypto::backend::rug_b::RugGroup;
+use crate::crypto::backend::ristretto_b::RistrettoGroup;
 use crate::protocol::statement::SignedStatement;
 use crate::protocol::statement::StatementVerifier;
-use crate::arithm::Element;
-use crate::group::Group;
 use crate::util;
-use crate::localstore::*;
 
 use log::info;
 
@@ -277,10 +275,10 @@ mod tests {
     
     use rug::Integer;
 
-    use crate::hashing;
-    use crate::artifact::Config;
-    use crate::rug_b::*;
-    use crate::memory_bb::*;
+    use crate::crypto::hashing;
+    use crate::crypto::backend::rug_b::*;
+    use crate::data::entity::Config;
+    use crate::bulletinboard::memory_bb::*;
         
     #[test]
     fn test_membb_putget() {

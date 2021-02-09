@@ -9,10 +9,9 @@ use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::constants::{RISTRETTO_BASEPOINT_POINT};
 use curve25519_dalek::traits::Identity;
 
-use crate::arithm::*;
-use crate::elgamal::*;
-use crate::group::*;
-use crate::hashing::{HashTo, RistrettoHasher, hash_bytes_256};
+use crate::crypto::base::*;
+use crate::crypto::elgamal::*;
+use crate::crypto::hashing::{HashTo, RistrettoHasher, hash_bytes_256};
 use crate::util;
 
 impl Element for RistrettoPoint {
@@ -176,13 +175,12 @@ mod tests {
     use curve25519_dalek::ristretto::{RistrettoPoint};
     use curve25519_dalek::traits::Identity;
 
-    use crate::arithm::*;
-    use crate::group::*;
-    use crate::keymaker::*;
-    use crate::ristretto_b::*;
-    use crate::shuffler::*;
-    use crate::artifact::*;
-    use crate::symmetric;
+    use crate::crypto::base::*;
+    use crate::crypto::keymaker::*;
+    use crate::crypto::backend::ristretto_b::*;
+    use crate::crypto::shuffler::*;
+    use crate::crypto::symmetric;
+    use crate::data::entity::*;
     use crate::util;
 
     #[test]

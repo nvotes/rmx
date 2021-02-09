@@ -6,11 +6,10 @@ use rand::rngs::OsRng;
 use serde::{Deserialize, Serialize};
 use rayon::prelude::*;
 
-use crate::arithm::*;
-use crate::group::*;
-use crate::elgamal::*;
-use crate::hashing;
-use crate::hashing::{HashBytes, HashTo};
+use crate::crypto::base::*;
+use crate::crypto::elgamal::*;
+use crate::crypto::hashing;
+use crate::crypto::hashing::{HashBytes, HashTo};
 
 pub struct YChallengeInput<'a, E: Element + HashBytes, G: Group<E>> {
     pub es: &'a Vec<Ciphertext<E>>,
@@ -485,12 +484,11 @@ fn gen_permutation(size: usize) -> Vec<usize> {
 
 #[cfg(test)]
 mod tests {    
-    use crate::group::*;
-    use crate::rug_b::*;
-    use crate::ristretto_b::*;
-    use crate::shuffler::*;
     use rug::Integer;
-
+    use crate::crypto::base::*;
+    use crate::crypto::backend::rug_b::*;
+    use crate::crypto::backend::ristretto_b::*;
+    use crate::crypto::shuffler::*;
 
     #[test]
     fn test_ristretto_shuffle() {

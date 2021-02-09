@@ -5,10 +5,9 @@ use curve25519_dalek::scalar::Scalar;
 use sha2::{Sha512, Sha256, Digest};
 use rug::{Integer,integer::Order};
 
-use crate::arithm::*;
-use crate::elgamal::*;
-use crate::group::*;
-use crate::shuffler::{YChallengeInput, TValues};
+use crate::crypto::base::*;
+use crate::crypto::elgamal::*;
+use crate::crypto::shuffler::{YChallengeInput, TValues};
 
 pub type Hash = [u8; 64];
 
@@ -192,7 +191,7 @@ impl HashBytes for Integer {
     }
 }
 
-use crate::rug_b::RugGroup;
+use crate::crypto::backend::rug_b::RugGroup;
 
 impl HashBytes for RugGroup {
     fn get_bytes(&self) -> Vec<u8> {
@@ -213,7 +212,7 @@ impl HashBytes for Option<RugGroup> {
     }
 }
 
-use crate::ristretto_b::RistrettoGroup;
+use crate::crypto::backend::ristretto_b::RistrettoGroup;
 
 impl HashBytes for RistrettoGroup {
     fn get_bytes(&self) -> Vec<u8> {
@@ -221,8 +220,8 @@ impl HashBytes for RistrettoGroup {
     }
 }
 
-use crate::group::Schnorr;
-use crate::group::ChaumPedersen;
+use crate::data::entity::Schnorr;
+use crate::data::entity::ChaumPedersen;
 
 impl<E: Element> HashBytes for Schnorr<E> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -245,8 +244,8 @@ impl<E: Element> HashBytes for ChaumPedersen<E> {
     }
 }
 
-use crate::shuffler::ShuffleProof;
-use crate::shuffler::Responses;
+use crate::crypto::shuffler::ShuffleProof;
+use crate::crypto::shuffler::Responses;
 
 impl<E: Element> HashBytes for TValues<E> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -285,8 +284,8 @@ impl<E: Element> HashBytes for ShuffleProof<E> {
     }
 }
 
-use crate::elgamal::PrivateKey;
-use crate::elgamal::PublicKey;
+use crate::crypto::elgamal::PrivateKey;
+use crate::crypto::elgamal::PublicKey;
 
 impl<E: Element, G: Group<E>> HashBytes for PrivateKey<E, G> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -349,7 +348,7 @@ impl HashBytes for SignedStatement {
     }
 }
 
-use crate::artifact::Config;
+use crate::data::entity::Config;
 
 impl<E: Element, G: Group<E>> HashBytes for Config<E, G> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -363,7 +362,7 @@ impl<E: Element, G: Group<E>> HashBytes for Config<E, G> {
     }
 }
 
-use crate::artifact::Keyshare;
+use crate::data::entity::Keyshare;
 
 impl<E: Element, G: Group<E>> HashBytes for Keyshare<E, G> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -374,7 +373,7 @@ impl<E: Element, G: Group<E>> HashBytes for Keyshare<E, G> {
     }
 }
 
-use crate::artifact::EncryptedPrivateKey;
+use crate::data::entity::EncryptedPrivateKey;
 
 impl HashBytes for EncryptedPrivateKey {
     fn get_bytes(&self) -> Vec<u8> {
@@ -385,7 +384,7 @@ impl HashBytes for EncryptedPrivateKey {
     }
 }
 
-use crate::artifact::Ballots;
+use crate::data::entity::Ballots;
 
 impl<E: Element> HashBytes for Ballots<E> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -393,7 +392,7 @@ impl<E: Element> HashBytes for Ballots<E> {
     }
 }
 
-use crate::artifact::Mix;
+use crate::data::entity::Mix;
 
 impl<E: Element> HashBytes for Mix<E> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -404,7 +403,7 @@ impl<E: Element> HashBytes for Mix<E> {
     }
 }
 
-use crate::artifact::PartialDecryption;
+use crate::data::entity::PartialDecryption;
 
 impl<E: Element> HashBytes for PartialDecryption<E> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -415,7 +414,7 @@ impl<E: Element> HashBytes for PartialDecryption<E> {
     }
 }
 
-use crate::artifact::Plaintexts;
+use crate::data::entity::Plaintexts;
 
 impl<E: Element> HashBytes for Plaintexts<E> {
     fn get_bytes(&self) -> Vec<u8> {

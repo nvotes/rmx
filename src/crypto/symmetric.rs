@@ -44,7 +44,7 @@ pub fn gen_key() -> GenericArray<u8, U32> {
 #[cfg(test)]
 mod tests {
 
-    use crate::symmetric::*;
+    use crate::crypto::symmetric::*;
 
     #[test]
     fn test_aes() {

@@ -6,12 +6,12 @@ use std::fmt::Debug;
 use log::info;
 use strum::Display;
 
-use crate::hashing;
-use crate::hashing::*;
-use crate::bb::*;
+use crate::bulletinboard::*;
 use crate::util;
-use crate::arithm::Element;
-use crate::group::Group;
+use crate::crypto::base::Element;
+use crate::crypto::base::Group;
+use crate::crypto::hashing;
+use crate::crypto::hashing::*;
 use crate::util::{short, shortm};
 use crate::protocol::trustee::Trustee;
 use crate::protocol::logic::*;

@@ -12,21 +12,19 @@ use uuid::Uuid;
 use serde::de::DeserializeOwned;
 
 use rmx::protocol::statement::SignedStatement;
-use rmx::artifact::*;
-use rmx::elgamal::PublicKey;
-use rmx::hashing;
-use rmx::group::Group;
-use rmx::arithm::Element;
-use rmx::rug_b::*;
-use rmx::ristretto_b::*;
-use rmx::bb::BulletinBoard;
-use rmx::bb::Names;
-use rmx::memory_bb::*;
+use rmx::data::entity::*;
+use rmx::crypto::elgamal::PublicKey;
+use rmx::crypto::hashing;
+use rmx::crypto::base::Group;
+use rmx::crypto::base::Element;
+use rmx::crypto::backend::rug_b::*;
+use rmx::crypto::backend::ristretto_b::*;
+use rmx::bulletinboard::*;
+use rmx::bulletinboard::memory_bb::*;
 use rmx::protocol::logic::Protocol;
-use rmx::util;
-use rmx::localstore::*;
 use rmx::protocol::trustee::Trustee;
 use rmx::protocol::facts::Facts;
+use rmx::util;
 
 use cursive::align::HAlign;
 use cursive::traits::*;
@@ -47,7 +45,7 @@ struct Demo<E: Element, G> {
     pub cb_sink: cursive::CbSink,
     trustees: Vec<Protocol<E, G, MemoryBulletinBoard<E, G>>>,
     bb_keypair: Keypair,
-    config: rmx::artifact::Config<E, G>,
+    config: rmx::data::entity::Config<E, G>,
     board: MemoryBulletinBoard<E, G>,
     all_plaintexts: Vec<Vec<E::Plaintext>>,
     ballots: u32
@@ -371,14 +369,14 @@ fn check<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Group
 
 #[test]
 fn demo_rug() {
-    setup_log();
+    // setup_log();
     let group = RugGroup::default();
     demo(group);
 }
 
 #[test]
 fn demo_ristretto() {
-    setup_log();
+    // setup_log();
     let group = RistrettoGroup;
     demo(group);
 }
@@ -562,11 +560,11 @@ impl DemoLogSink {
 }
 
 fn gen_config<E: Element, G: Group<E>>(group: &G, contests: u32, trustee_pks: Vec<SPublicKey>,
-    ballotbox_pk: SPublicKey) -> rmx::artifact::Config<E, G> {
+    ballotbox_pk: SPublicKey) -> rmx::data::entity::Config<E, G> {
 
     let id = Uuid::new_v4();
 
-    let cfg = rmx::artifact::Config {
+    let cfg = rmx::data::entity::Config {
         id: id.as_bytes().clone(),
         group: group.clone(),
         contests: contests, 

@@ -9,18 +9,16 @@ use ed25519_dalek::Verifier;
 use crepe::crepe;
 use log::info;
 
-use crate::hashing;
-use crate::hashing::*;
-use crate::bb::*;
+use crate::bulletinboard::*;
 use crate::util;
-use crate::arithm::Element;
-use crate::group::Group;
-use crate::protocol::facts::Act;
+use crate::crypto::base::Element;
+use crate::crypto::base::Group;
+use crate::crypto::hashing;
+use crate::crypto::hashing::*;
 use crate::util::short;
 use crate::protocol::trustee::Trustee;
 use crate::protocol::facts::{Facts, InputFact};
-
-use crate::hashing::Hash;
+use crate::protocol::facts::Act;
 
 type TrusteeTotal = u32;
 pub(super) type TrusteeIndex = u32;

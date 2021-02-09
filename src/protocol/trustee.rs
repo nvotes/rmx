@@ -6,22 +6,21 @@ use rand::rngs::OsRng;
 use ed25519_dalek::Keypair;
 use log::info;
 
-use crate::hashing;
-use crate::hashing::*;
-use crate::artifact::*;
+use crate::data::entity::*;
 use crate::protocol::statement::*;
-use crate::elgamal::{PublicKey, Ciphertext, PrivateKey};
-use crate::bb::*;
-use crate::util;
-use crate::arithm::Element;
-use crate::group::Group;
-use crate::protocol::facts::Act;
-use crate::util::short;
-use crate::shuffler::*;
-use crate::keymaker::Keymaker;
-use crate::localstore::LocalStore;
-use crate::symmetric;
 use crate::protocol::facts::*;
+use crate::crypto::elgamal::{PublicKey, Ciphertext, PrivateKey};
+use crate::crypto::shuffler::*;
+use crate::crypto::keymaker::Keymaker;
+use crate::crypto::base::Element;
+use crate::crypto::base::Group;
+use crate::crypto::symmetric;
+use crate::crypto::hashing;
+use crate::crypto::hashing::*;
+use crate::bulletinboard::*;
+use crate::util;
+use crate::util::short;
+use crate::localstore::LocalStore;
 
 pub struct Trustee<E, G> {
     pub keypair: Keypair,

@@ -3,26 +3,15 @@ use std::marker::PhantomData;
 
 use serde::de::DeserializeOwned;
 
-use crate::hashing;
 use crate::util;
-use crate::artifact::*;
+use crate::data::entity::*;
 use crate::protocol::statement::*;
 use crate::protocol::facts::Act;
-use crate::elgamal::PublicKey;
-use crate::arithm::Element;
-use crate::group::Group;
-
-pub struct ConfigPath(pub PathBuf);
-pub struct ConfigStmtPath(pub PathBuf);
-pub struct KeysharePath(pub PathBuf, pub PathBuf);
-pub struct PkPath(pub PathBuf, pub PathBuf);
-pub struct PkStmtPath(pub PathBuf);
-pub struct BallotsPath(pub PathBuf, pub PathBuf);
-pub struct MixPath(pub PathBuf, pub PathBuf);
-pub struct MixStmtPath(pub PathBuf);
-pub struct PDecryptionsPath(pub PathBuf, pub PathBuf);
-pub struct PlaintextsPath(pub PathBuf, pub PathBuf);
-pub struct PlaintextsStmtPath(pub PathBuf);
+use crate::crypto::hashing;
+use crate::crypto::elgamal::PublicKey;
+use crate::crypto::base::Element;
+use crate::crypto::base::Group;
+use crate::bulletinboard::*;
 
 pub struct LocalStore<E, G> {
     pub fs_path: PathBuf,
@@ -47,9 +36,9 @@ impl<E: Element + DeserializeOwned,
         assert!(matches!(act, Act::CheckConfig(_)));
         assert!(matches!(stmt.statement.stype, StatementType::Config));
         let stmt_b = bincode::serialize(&stmt).unwrap();
-        ConfigStmtPath (
-            self.set_work(act, vec![stmt_b]).remove(0)
-        )
+        let stmt_p = self.set_work(act, vec![stmt_b]).remove(0);
+
+        ConfigStmtPath(stmt_p)
     }
     pub fn set_share(&self, act: &Act, share: Keyshare<E, G>, stmt: &SignedStatement) -> KeysharePath {
         assert!(matches!(act, Act::PostShare(..)));
@@ -60,7 +49,7 @@ impl<E: Element + DeserializeOwned,
         let share_p = paths.remove(0);
         let stmt_p = paths.remove(0);
         
-        KeysharePath (share_p, stmt_p)
+        KeysharePath(share_p, stmt_p)
     }
     pub fn set_pk(&self, act: &Act, pk: PublicKey<E, G>, stmt: &SignedStatement) -> PkPath {
         assert!(matches!(act, Act::CombineShares(..)));
@@ -102,7 +91,6 @@ impl<E: Element + DeserializeOwned,
         
         MixStmtPath(stmt_p)
     }
-
 
     pub fn set_pdecryptions(&self, act: &Act, pdecryptions: PartialDecryption<E>, stmt: &SignedStatement) -> PDecryptionsPath {
         assert!(matches!(act, Act::PartialDecrypt(..)));

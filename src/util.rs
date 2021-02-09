@@ -14,12 +14,12 @@ use chrono::{DateTime, Utc};
 use tempfile::NamedTempFile;
 use uuid::Uuid;
 
-use crate::group::Group;
-use crate::arithm::Element;
-use crate::elgamal::*;
-use crate::artifact::*;
-use crate::rug_b::RugGroup;
-use crate::ristretto_b::RistrettoGroup;
+use crate::crypto::base::Group;
+use crate::crypto::base::Element;
+use crate::crypto::elgamal::*;
+use crate::crypto::backend::rug_b::RugGroup;
+use crate::crypto::backend::ristretto_b::RistrettoGroup;
+use crate::data::entity::*;
 
 pub fn read_file_bytes(path: &Path) -> io::Result<Vec<u8>> {
     fs::read(path)

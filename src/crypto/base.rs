@@ -1,9 +1,36 @@
 use std::marker::{Send, Sync};
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 
-use crate::arithm::*;
-use crate::hashing::*;
-use crate::elgamal::*;
+use crate::crypto::hashing::*;
+use crate::crypto::elgamal::*;
+use crate::data::entity::ChaumPedersen;
+use crate::data::entity::Schnorr;
+
+pub trait Element: HashBytes + Clone + Send + Sync + Serialize {
+    type Exp: Exponent;
+    type Plaintext: std::hash::Hash + Eq + Send + Sync;
+    
+    fn mul(&self, other: &Self) -> Self;
+    fn div(&self, other: &Self, modulus: &Self) -> Self;
+    fn mod_pow(&self, exp: &Self::Exp, modulus: &Self) -> Self;
+    fn modulo(&self, modulus: &Self) -> Self;
+    fn eq(&self, other: &Self) -> bool;
+
+    fn mul_identity() -> Self;
+}
+
+pub trait Exponent: HashBytes + Clone + Send + Sync + Serialize + DeserializeOwned {
+    fn add(&self, other: &Self) -> Self;
+    fn sub(&self, other: &Self) -> Self;
+    fn neg(&self) -> Self;
+    fn mul(&self, other: &Self) -> Self;
+    fn modulo(&self, modulus: &Self) -> Self;
+    fn eq(&self, other: &Self) -> bool;
+    
+    fn add_identity() -> Self;
+    fn mul_identity() -> Self;
+}
 
 pub trait Group<E: Element>: Serialize + HashBytes + Send + Sync + Sized + Clone {
     
@@ -77,19 +104,4 @@ pub trait Group<E: Element>: Serialize + HashBytes + Send + Sync + Sized + Clone
         
         ok1 && ok2 && ok3
     }
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct Schnorr<E: Element> {
-    pub commitment: E,
-    pub challenge: E::Exp,
-    pub response: E::Exp
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct ChaumPedersen<E: Element> {
-    pub commitment1: E,
-    pub commitment2: E,
-    pub challenge: E::Exp,
-    pub response: E::Exp
 }

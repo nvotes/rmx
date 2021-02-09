@@ -1,8 +1,6 @@
 #![allow(dead_code)]
-pub mod util;
 pub mod crypto;
 pub mod bulletinboard;
 pub mod protocol;
 pub mod data;
-pub mod localstore;
-pub mod bytes;
+pub mod util;

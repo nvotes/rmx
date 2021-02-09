@@ -1,5 +1,6 @@
 pub mod memory_bb;
 pub mod git;
+pub mod localstore;
 
 use std::path::{Path,PathBuf};
 

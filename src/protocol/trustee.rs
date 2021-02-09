@@ -18,9 +18,9 @@ use crate::crypto::symmetric;
 use crate::crypto::hashing;
 use crate::crypto::hashing::*;
 use crate::bulletinboard::*;
+use crate::bulletinboard::localstore::LocalStore;
 use crate::util;
 use crate::util::short;
-use crate::localstore::LocalStore;
 
 pub struct Trustee<E, G> {
     pub keypair: Keypair,

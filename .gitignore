@@ -1,2 +1,5 @@
 /target
 resources/test/git_bb.json
+/.metals
+/.vscode
+Cargo.lock

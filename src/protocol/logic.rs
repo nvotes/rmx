@@ -1,21 +1,13 @@
-use std::fmt;
-use std::collections::HashSet;
 use std::marker::PhantomData;
-use std::fmt::Debug;
-
 use serde::de::DeserializeOwned;
-use ed25519_dalek::PublicKey as SPublicKey;
-use ed25519_dalek::Verifier;
 use crepe::crepe;
 use log::info;
 
 use crate::bulletinboard::*;
-use crate::util;
 use crate::crypto::base::Element;
 use crate::crypto::base::Group;
 use crate::crypto::hashing;
 use crate::crypto::hashing::*;
-use crate::util::short;
 use crate::protocol::trustee::Trustee;
 use crate::protocol::facts::{Facts, InputFact};
 use crate::protocol::facts::Act;

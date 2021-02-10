@@ -1,19 +1,10 @@
 use std::fmt;
 use std::collections::HashSet;
-use std::marker::PhantomData;
-use std::fmt::Debug;
-
 use log::info;
+
 use strum::Display;
 
-use crate::bulletinboard::*;
-use crate::util;
-use crate::crypto::base::Element;
-use crate::crypto::base::Group;
-use crate::crypto::hashing;
-use crate::crypto::hashing::*;
 use crate::util::{short, shortm};
-use crate::protocol::trustee::Trustee;
 use crate::protocol::logic::*;
 
 #[derive(Copy, Clone, Display)]

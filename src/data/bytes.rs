@@ -4,11 +4,29 @@ use ed25519_dalek::PublicKey as SPublicKey;
 // use sha2::{Sha512, Sha256, Digest};
 use rug::{Integer,integer::Order};
 
+// use bincode::Result;
+
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
 use crate::data::entity::*;
 use crate::crypto::shuffler::{YChallengeInput, TValues};
 use crate::util;
+
+const LEAF: u8 = 0;
+const TREE: u8 = 1;
+
+quick_error! {
+    #[derive(Debug)]
+    pub enum ByteError {
+        Bincode(err: bincode::Error) {
+            from()
+        }
+        Empty{}
+        Custom(message: String) {
+            from()
+        }
+    }
+}
 
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
@@ -16,20 +34,52 @@ pub enum ByteTree {
     Leaf(Vec<u8>),
     Tree(Vec<ByteTree>)
 }
+use ByteTree::*;
+// OPT: try to move instead of copy
+impl ByteTree {
+    
+    fn to_hash_bytes(&self) -> Vec<u8> {
+        
+        let ret = match self {
+            Leaf(bytes) => {
+                let mut next: Vec<u8> = vec![];
+                let length = bytes.len() as u64;
+                next.push(LEAF);
+                next.extend(&length.to_le_bytes());
+                next.extend(bytes);
+
+                next
+            }
+                
+            Tree(trees) => {
+                let mut next: Vec<u8> = vec![];
+                let length = trees.len() as u64;
+                next.push(TREE);
+                next.extend(&length.to_le_bytes());
+                for t in trees {
+                    next.extend(t.to_hash_bytes());
+                }
+                next
+            }
+        };
+
+        ret
+    }
+}
 
 pub trait ToBytes {
     fn to_bytes(&self) -> Vec<u8>;
 }
 
 pub trait FromBytes {
-    fn from_bytes(bytes: &Vec<u8>) -> Option<Self> where Self: Sized;
+    fn from_bytes(bytes: &Vec<u8>) -> Result<Self, ByteError> where Self: Sized;
 }
  
 pub trait ToByteTree {
     fn to_byte_tree(&self) -> ByteTree;
 }
 pub trait FromByteTree {
-    fn from_byte_tree(tree: &ByteTree) -> Option<Self> where Self: Sized;
+    fn from_byte_tree(tree: &ByteTree) -> Result<Self, ByteError> where Self: Sized;
 }
 
 impl<T: ToByteTree> ToBytes for T {
@@ -40,8 +90,8 @@ impl<T: ToByteTree> ToBytes for T {
 }
 
 impl<T: FromByteTree> FromBytes for T {
-    fn from_bytes(bytes: &Vec<u8>) -> Option<T> {
-        let tree: ByteTree = bincode::deserialize(bytes).ok()?;
+    fn from_bytes(bytes: &Vec<u8>) -> Result<T, ByteError> {
+        let tree: ByteTree = bincode::deserialize(bytes)?;
         T::from_byte_tree(&tree)
     }
 }
@@ -53,9 +103,11 @@ impl ToBytes for Scalar {
 }
 
 impl FromBytes for Scalar {
-    fn from_bytes(bytes: &Vec<u8>) -> Option<Scalar> {
+    fn from_bytes(bytes: &Vec<u8>) -> Result<Scalar, ByteError> {
         let b32 = util::to_u8_32(&bytes);
-        Scalar::from_canonical_bytes(b32)
+        Scalar::from_canonical_bytes(b32).ok_or(
+            ByteError::Empty
+        )
     }
 }
 
@@ -66,9 +118,11 @@ impl ToBytes for RistrettoPoint {
 }
 
 impl FromBytes for RistrettoPoint {
-    fn from_bytes(bytes: &Vec<u8>) -> Option<RistrettoPoint> {
+    fn from_bytes(bytes: &Vec<u8>) -> Result<RistrettoPoint, ByteError> {
         let b32 = util::to_u8_32(&bytes);
-        CompressedRistretto(b32).decompress()
+        CompressedRistretto(b32).decompress().ok_or(
+            ByteError::Empty
+        )
     }
 }
 
@@ -79,13 +133,13 @@ impl ToBytes for Integer {
 }
 
 impl FromBytes for Integer {
-    fn from_bytes(bytes: &Vec<u8>) -> Option<Integer> {
+    fn from_bytes(bytes: &Vec<u8>) -> Result<Integer, ByteError> {
         let ret = Integer::from_digits(bytes, Order::LsfLe);
-        Some(ret)
+        Ok(ret)
     }
 }
 
-use ByteTree::*;
+
 
 impl<T: ToByteTree> ToByteTree for Vec<T> {
     fn to_byte_tree(&self) -> ByteTree {
@@ -94,18 +148,18 @@ impl<T: ToByteTree> ToByteTree for Vec<T> {
     }
 }
 
+
 impl<T: FromByteTree> FromByteTree for Vec<T> {
-    fn from_byte_tree(tree: &ByteTree) -> Option<Vec<T>> {
-        let mut ret = None;
+    fn from_byte_tree(tree: &ByteTree) -> Result<Vec<T>, ByteError> {
         if let Tree(trees) = tree {
             let elements = trees.iter().map(|b| {
                 T::from_byte_tree(b)
-            }).collect::<Option<Vec<T>>>();
+            }).collect::<Result<Vec<T>, ByteError>>();
 
-            ret = elements;
-        }
-
-        ret
+            elements
+        } else {
+            Err(ByteError::Empty)
+        }   
     }
 }
 
@@ -122,13 +176,14 @@ impl<E: ToBytes, G: ToByteTree> ToByteTree for Config<E, G> {
         bytes.push(self.group.to_byte_tree());
         bytes.push(ByteTree::Leaf(self.contests.to_le_bytes().to_vec()));
         bytes.push(self.ballotbox.to_byte_tree());
+        bytes.push(self.trustees.to_byte_tree());
         ByteTree::Tree(bytes)
     }
 }
 
 impl<E: ToBytes, G: ToByteTree> FromByteTree for Config<E, G> {
-    fn from_byte_tree(tree: &ByteTree) -> Option<Config<E, G>> {
-        None
+    fn from_byte_tree(tree: &ByteTree) -> Result<Config<E, G>, ByteError> {
+        Err(ByteError::Custom(String::from("Not implemented")))
     }
 }
 
@@ -216,13 +271,13 @@ impl<E: ToBytes> ToByteTree for Ciphertext<E> {
 
 impl<E: FromBytes> FromByteTree for Ciphertext<E> {
     
-    fn from_byte_tree(tree: &ByteTree) -> Option<Ciphertext<E>> {
-        let mut ret = None;
+    fn from_byte_tree(tree: &ByteTree) -> Result<Ciphertext<E>, ByteError> {
+        let mut ret = Err(ByteError::Empty);
         if let Tree(trees) = tree {
             if let (Leaf(a_), Leaf(b_)) = (&trees[0], &trees[1]) {
                 let a = E::from_bytes(a_)?;
                 let b = E::from_bytes(b_)?;
-                ret = Some(Ciphertext {
+                ret = Ok(Ciphertext {
                     a,
                     b
                 });

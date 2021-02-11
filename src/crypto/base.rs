@@ -1,6 +1,6 @@
 use std::marker::{Send, Sync};
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::crypto::hashing::*;
 use crate::crypto::elgamal::*;

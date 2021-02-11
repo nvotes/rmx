@@ -7,10 +7,6 @@ use tempfile::NamedTempFile;
 use walkdir::{DirEntry, WalkDir};
 
 use serde::{Deserialize, Serialize};
-use serde::de::DeserializeOwned;
-
-use crate::crypto::hashing;
-use crate::crypto::hashing::{Hash, HashBytes};
 
 #[derive(Serialize, Deserialize)]
 struct GitBulletinBoard {

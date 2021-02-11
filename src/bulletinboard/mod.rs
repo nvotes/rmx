@@ -2,7 +2,7 @@ pub mod memory_bb;
 pub mod git;
 pub mod localstore;
 
-use std::path::{Path,PathBuf};
+use std::path::PathBuf;
 
 use crate::data::entity::*;
 use crate::crypto::hashing::{Hash};

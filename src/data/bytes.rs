@@ -1,12 +1,15 @@
+use std::marker::PhantomData;
+use std::convert::TryInto;
+
 use curve25519_dalek::ristretto::{RistrettoPoint,CompressedRistretto};
 use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek::PublicKey as SPublicKey;
 // use sha2::{Sha512, Sha256, Digest};
 use rug::{Integer,integer::Order};
 
-// use bincode::Result;
-
 use crate::crypto::base::*;
+use crate::crypto::backend::rug_b::*;
+use crate::crypto::backend::ristretto_b::*;
 use crate::crypto::elgamal::*;
 use crate::data::entity::*;
 use crate::crypto::shuffler::{YChallengeInput, TValues};
@@ -18,11 +21,14 @@ const TREE: u8 = 1;
 quick_error! {
     #[derive(Debug)]
     pub enum ByteError {
+        Empty{}
         Bincode(err: bincode::Error) {
             from()
         }
-        Empty{}
-        Custom(message: String) {
+        Signature(err: ed25519_dalek::SignatureError) {
+            from()
+        }
+        Msg(message: String) {
             from()
         }
     }
@@ -38,7 +44,7 @@ use ByteTree::*;
 // OPT: try to move instead of copy
 impl ByteTree {
     
-    fn to_hash_bytes(&self) -> Vec<u8> {
+    fn to_hashable_bytes(&self) -> Vec<u8> {
         
         let ret = match self {
             Leaf(bytes) => {
@@ -57,7 +63,7 @@ impl ByteTree {
                 next.push(TREE);
                 next.extend(&length.to_le_bytes());
                 for t in trees {
-                    next.extend(t.to_hash_bytes());
+                    next.extend(t.to_hashable_bytes());
                 }
                 next
             }
@@ -65,14 +71,29 @@ impl ByteTree {
 
         ret
     }
-}
 
-pub trait ToBytes {
-    fn to_bytes(&self) -> Vec<u8>;
-}
+    fn leaf(&self) -> Result<&Vec<u8>, ByteError> {
+        if let Leaf(bytes) = self {
+            Ok(bytes)
+        }
+        else {
+            Err(ByteError::Msg(String::from("ByteTree: unexpected Tree")))
+        }
+    }
 
-pub trait FromBytes {
-    fn from_bytes(bytes: &Vec<u8>) -> Result<Self, ByteError> where Self: Sized;
+    fn tree(&self, length: usize) -> Result<&Vec<ByteTree>, ByteError> {
+        if let Tree(trees) = self {
+            if trees.len() == length {
+                Ok(trees)
+            }
+            else {
+                Err(ByteError::Msg(String::from("ByteTree: size mismatch")))
+            }
+        }
+        else {
+            Err(ByteError::Msg(String::from("ByteTree: unexpected Leaf")))
+        }
+    }
 }
  
 pub trait ToByteTree {
@@ -82,28 +103,37 @@ pub trait FromByteTree {
     fn from_byte_tree(tree: &ByteTree) -> Result<Self, ByteError> where Self: Sized;
 }
 
-impl<T: ToByteTree> ToBytes for T {
-    fn to_bytes(&self) -> Vec<u8> {
+pub trait Ser {
+    fn ser(&self) -> Vec<u8>;
+}
+
+pub trait Deser {
+    fn deser(bytes: &Vec<u8>) -> Result<Self, ByteError> where Self: Sized;
+}
+
+impl<T: ToByteTree> Ser for T {
+    fn ser(&self) -> Vec<u8> {
         let tree = self.to_byte_tree();
         bincode::serialize(&tree).unwrap()
     }
 }
 
-impl<T: FromByteTree> FromBytes for T {
-    fn from_bytes(bytes: &Vec<u8>) -> Result<T, ByteError> {
+impl<T: FromByteTree> Deser for T {
+    fn deser(bytes: &Vec<u8>) -> Result<T, ByteError> {
         let tree: ByteTree = bincode::deserialize(bytes)?;
         T::from_byte_tree(&tree)
     }
 }
 
-impl ToBytes for Scalar {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
+impl ToByteTree for Scalar {
+    fn to_byte_tree(&self) -> ByteTree {
+        Leaf(self.as_bytes().to_vec())
     }
 }
 
-impl FromBytes for Scalar {
-    fn from_bytes(bytes: &Vec<u8>) -> Result<Scalar, ByteError> {
+impl FromByteTree for Scalar {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Scalar, ByteError> {
+        let bytes = tree.leaf()?;
         let b32 = util::to_u8_32(&bytes);
         Scalar::from_canonical_bytes(b32).ok_or(
             ByteError::Empty
@@ -111,14 +141,15 @@ impl FromBytes for Scalar {
     }
 }
 
-impl ToBytes for RistrettoPoint {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.compress().as_bytes().to_vec()
+impl ToByteTree for RistrettoPoint {
+    fn to_byte_tree(&self) -> ByteTree {
+        Leaf(self.compress().as_bytes().to_vec())
     }
 }
 
-impl FromBytes for RistrettoPoint {
-    fn from_bytes(bytes: &Vec<u8>) -> Result<RistrettoPoint, ByteError> {
+impl FromByteTree for RistrettoPoint {
+    fn from_byte_tree(tree: &ByteTree) -> Result<RistrettoPoint, ByteError> {
+        let bytes = tree.leaf()?;
         let b32 = util::to_u8_32(&bytes);
         CompressedRistretto(b32).decompress().ok_or(
             ByteError::Empty
@@ -126,28 +157,45 @@ impl FromBytes for RistrettoPoint {
     }
 }
 
-impl ToBytes for Integer {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_digits::<u8>(Order::LsfLe)
+impl ToByteTree for Integer {
+    fn to_byte_tree(&self) -> ByteTree {
+        Leaf(self.to_digits::<u8>(Order::LsfLe))
     }
 }
 
-impl FromBytes for Integer {
-    fn from_bytes(bytes: &Vec<u8>) -> Result<Integer, ByteError> {
+impl FromByteTree for Integer {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Integer, ByteError> {
+        let bytes = tree.leaf()?;
         let ret = Integer::from_digits(bytes, Order::LsfLe);
         Ok(ret)
     }
 }
 
-
-
-impl<T: ToByteTree> ToByteTree for Vec<T> {
+impl ToByteTree for RugGroup {
     fn to_byte_tree(&self) -> ByteTree {
-        let tree = self.iter().map(|e| e.to_byte_tree()).collect();
-        ByteTree::Tree(tree)
+        let mut bytes: Vec<ByteTree> = Vec::with_capacity(4);
+        bytes.push(self.generator.to_byte_tree());
+        bytes.push(self.modulus.to_byte_tree());
+        bytes.push(self.modulus_exp.to_byte_tree());
+        bytes.push(self.co_factor.to_byte_tree());
+        ByteTree::Tree(bytes)
     }
 }
 
+impl FromByteTree for RugGroup {
+    fn from_byte_tree(tree: &ByteTree) -> Result<RugGroup, ByteError> {
+        Err(ByteError::Empty)
+    }
+}
+
+impl<T: ToByteTree> ToByteTree for Vec<T> {
+    fn to_byte_tree(&self) -> ByteTree {
+        let tree = self.iter().map(|e| {
+            e.to_byte_tree()
+        }).collect();
+        ByteTree::Tree(tree)
+    }
+}
 
 impl<T: FromByteTree> FromByteTree for Vec<T> {
     fn from_byte_tree(tree: &ByteTree) -> Result<Vec<T>, ByteError> {
@@ -169,21 +217,44 @@ impl ToByteTree for SPublicKey {
     }
 }
 
-impl<E: ToBytes, G: ToByteTree> ToByteTree for Config<E, G> {
-    fn to_byte_tree(&self) -> ByteTree {
-        let mut bytes: Vec<ByteTree> = Vec::with_capacity(2);
-        bytes.push(ByteTree::Leaf(self.id.to_vec()));
-        bytes.push(self.group.to_byte_tree());
-        bytes.push(ByteTree::Leaf(self.contests.to_le_bytes().to_vec()));
-        bytes.push(self.ballotbox.to_byte_tree());
-        bytes.push(self.trustees.to_byte_tree());
-        ByteTree::Tree(bytes)
+impl FromByteTree for SPublicKey {
+    fn from_byte_tree(tree: &ByteTree) -> Result<SPublicKey, ByteError> {
+        if let Leaf(bytes) = tree {
+            let signature = SPublicKey::from_bytes(bytes)?;
+            Ok(signature)
+        }
+        else {
+            Err(ByteError::Msg(String::from("Expected leaf, found tree")))
+        }
     }
 }
 
-impl<E: ToBytes, G: ToByteTree> FromByteTree for Config<E, G> {
+impl<E: ToByteTree, G: ToByteTree> ToByteTree for Config<E, G> {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(5);
+        trees.push(ByteTree::Leaf(self.id.to_vec()));
+        trees.push(self.group.to_byte_tree());
+        trees.push(ByteTree::Leaf(self.contests.to_le_bytes().to_vec()));
+        trees.push(self.ballotbox.to_byte_tree());
+        trees.push(self.trustees.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
+}
+
+impl<E, G: FromByteTree> FromByteTree for Config<E, G> {
     fn from_byte_tree(tree: &ByteTree) -> Result<Config<E, G>, ByteError> {
-        Err(ByteError::Custom(String::from("Not implemented")))
+        let trees = tree.tree(5)?;
+        let id_ = trees[0].leaf()?;
+        let id = util::to_u8_16(id_);
+        let group = G::from_byte_tree(&trees[1])?;
+        let contests_ = trees[2].leaf()?;
+        let contests = u32::from_le_bytes(contests_.as_slice().try_into().unwrap());
+        let ballotbox = SPublicKey::from_byte_tree(&trees[3])?;
+        let trustees = Vec::<SPublicKey>::from_byte_tree(&trees[4])?;
+        let config = Config {
+            id, group, contests, ballotbox, trustees, phantom_e: PhantomData
+        };
+        Ok(config)
     }
 }
 
@@ -260,31 +331,24 @@ pub struct ChaumPedersen<E: Element> {
 }
 */
 
-impl<E: ToBytes> ToByteTree for Ciphertext<E> {
+impl<E: ToByteTree> ToByteTree for Ciphertext<E> {
     fn to_byte_tree(&self) -> ByteTree {
         let mut bytes: Vec<ByteTree> = Vec::with_capacity(2);
-        bytes.push(ByteTree::Leaf(self.a.to_bytes()));
-        bytes.push(ByteTree::Leaf(self.b.to_bytes()));
+        bytes.push(self.a.to_byte_tree());
+        bytes.push(self.b.to_byte_tree());
         ByteTree::Tree(bytes)
     }
 }
 
-impl<E: FromBytes> FromByteTree for Ciphertext<E> {
-    
+impl<E: FromByteTree> FromByteTree for Ciphertext<E> {
     fn from_byte_tree(tree: &ByteTree) -> Result<Ciphertext<E>, ByteError> {
-        let mut ret = Err(ByteError::Empty);
-        if let Tree(trees) = tree {
-            if let (Leaf(a_), Leaf(b_)) = (&trees[0], &trees[1]) {
-                let a = E::from_bytes(a_)?;
-                let b = E::from_bytes(b_)?;
-                ret = Ok(Ciphertext {
-                    a,
-                    b
-                });
-            }
-        }
-
-        ret
+        let trees = tree.tree(2)?;
+        let a = E::from_byte_tree(&trees[0])?;
+        let b = E::from_byte_tree(&trees[1])?;
+        Ok(Ciphertext {
+            a,
+            b
+        })
     }
 }
 
@@ -295,13 +359,43 @@ mod tests {
     use crate::crypto::backend::ristretto_b::*;
     use crate::crypto::backend::rug_b::*;
 
+    use uuid::Uuid;
+    use rug::Integer;
+    use rand::rngs::OsRng;
+    use ed25519_dalek::Keypair;
+
     #[test]
     fn test_ciphertext_bytes() {
         let group = RugGroup::default();
         let c = util::random_rug_ballots(1, &group).ciphertexts.remove(0);
-        let bytes = c.to_bytes();
-        let back: Ciphertext<Integer> = Ciphertext::<Integer>::from_bytes(&bytes).unwrap();
+        let bytes = c.ser();
+        let back: Ciphertext<Integer> = Ciphertext::<Integer>::deser(&bytes).unwrap();
 
         assert!(c.a == back.a && c.b == back.b);
+    }
+
+    fn test_config_bytes() {
+        let mut csprng = OsRng;
+        let group = RugGroup::default();
+        let id = Uuid::new_v4();
+        let contests = 2;
+        let ballotbox_pk = Keypair::generate(&mut csprng).public; 
+        let trustees = 3;
+        let mut trustee_pks = Vec::with_capacity(trustees);
+        
+        for _ in 0..trustees {
+            let keypair = Keypair::generate(&mut csprng);
+            trustee_pks.push(keypair.public);
+        }
+        let cfg: Config<Integer, RugGroup> = Config {
+            id: id.as_bytes().clone(),
+            group: group,
+            contests: contests, 
+            ballotbox: ballotbox_pk, 
+            trustees: trustee_pks,
+            phantom_e: PhantomData
+        };
+
+        let bytes = cfg.ser();
     }
 }

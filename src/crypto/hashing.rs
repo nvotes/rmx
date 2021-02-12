@@ -147,9 +147,6 @@ use crate::util;
 pub fn hash<T: HashBytes>(data: &T) -> [u8; 64] {
     let bytes = data.get_bytes();
     hash_bytes(bytes)
-    /* let mut hasher = Sha512::new();
-    hasher.update(bytes);
-    util::to_u8_64(&hasher.finalize().to_vec())*/
 }
 
 pub fn hash_bytes(bytes: Vec<u8>) -> [u8; 64] {
@@ -158,6 +155,7 @@ pub fn hash_bytes(bytes: Vec<u8>) -> [u8; 64] {
     util::to_u8_64(&hasher.finalize().to_vec())
 }
 
+// We only use this variant for seeding rngs when deriving independent generators
 pub fn hash_bytes_256(bytes: Vec<u8>) -> [u8; 32] {
     let mut hasher = Sha256::new();
     hasher.update(bytes);

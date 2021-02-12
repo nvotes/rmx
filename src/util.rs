@@ -37,6 +37,13 @@ pub fn write_tmp(bytes: Vec<u8>) -> io::Result<NamedTempFile> {
     Ok(tmp_file)
 }
 
+pub fn to_u8_16(input: &Vec<u8>) -> [u8; 16] {
+    assert_eq!(input.len(), 16);
+    let mut bytes = [0u8; 16];
+    bytes.copy_from_slice(&input);
+    bytes
+}
+
 pub fn to_u8_30(input: &Vec<u8>) -> [u8; 30] {
     assert_eq!(input.len(), 30);
     let mut bytes = [0u8; 30];

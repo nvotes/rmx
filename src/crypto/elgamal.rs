@@ -11,7 +11,7 @@ pub struct Ciphertext<E> {
     pub b: E
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 pub struct PublicKey<E, G> {
     pub value: E,
     pub group: G
@@ -35,7 +35,7 @@ impl<E: Element, G: Group<E>> PublicKey<E, G> {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 pub struct PrivateKey<E: Element, G> {
     pub value: E::Exp,
     pub public_value: E,

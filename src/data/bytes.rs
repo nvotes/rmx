@@ -136,7 +136,7 @@ impl FromByteTree for Scalar {
         let bytes = tree.leaf()?;
         let b32 = util::to_u8_32(&bytes);
         Scalar::from_canonical_bytes(b32).ok_or(
-            ByteError::Empty
+            ByteError::Msg(String::from("Failed constructing scalar"))
         )
     }
 }
@@ -152,7 +152,7 @@ impl FromByteTree for RistrettoPoint {
         let bytes = tree.leaf()?;
         let b32 = util::to_u8_32(&bytes);
         CompressedRistretto(b32).decompress().ok_or(
-            ByteError::Empty
+            ByteError::Msg(String::from("Failed constructing ristretto point"))
         )
     }
 }
@@ -184,7 +184,20 @@ impl ToByteTree for RugGroup {
 
 impl FromByteTree for RugGroup {
     fn from_byte_tree(tree: &ByteTree) -> Result<RugGroup, ByteError> {
-        Err(ByteError::Empty)
+        let trees = tree.tree(4)?;
+        let generator = Integer::from_byte_tree(&trees[0])?;
+        let modulus = Integer::from_byte_tree(&trees[1])?;
+        let modulus_exp = Integer::from_byte_tree(&trees[2])?;
+        let co_factor = Integer::from_byte_tree(&trees[3])?;
+
+        let group = RugGroup {
+            generator,
+            modulus,
+            modulus_exp,
+            co_factor
+        };
+
+        Ok(group)
     }
 }
 
@@ -258,15 +271,83 @@ impl<E, G: FromByteTree> FromByteTree for Config<E, G> {
     }
 }
 
+impl<E: ToByteTree, G: ToByteTree> ToByteTree for PublicKey<E, G> {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
+        trees.push(self.value.to_byte_tree());
+        trees.push(self.group.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
+}
+
+impl<E: FromByteTree, G: FromByteTree> FromByteTree for PublicKey<E, G> {
+    fn from_byte_tree(tree: &ByteTree) -> Result<PublicKey<E, G>, ByteError> {
+        let trees = tree.tree(2)?;
+        let value = E::from_byte_tree(&trees[0])?;
+        let group = G::from_byte_tree(&trees[1])?;
+        let pk = PublicKey {
+            value, group
+        };
+
+        Ok(pk)
+    }
+}
+
+impl<E: Element + ToByteTree, G: ToByteTree> ToByteTree for PrivateKey<E, G> 
+    where E::Exp: ToByteTree {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
+        trees.push(self.value.to_byte_tree());
+        trees.push(self.public_value.to_byte_tree());
+        trees.push(self.group.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
+}
+
+impl<E: Element + FromByteTree, G: FromByteTree> FromByteTree for PrivateKey<E, G>
+    where E::Exp: FromByteTree {
+    fn from_byte_tree(tree: &ByteTree) -> Result<PrivateKey<E, G>, ByteError> {
+        let trees = tree.tree(3)?;
+        let value = E::Exp::from_byte_tree(&trees[0])?;
+        let public_value = E::from_byte_tree(&trees[1])?;
+        let group = G::from_byte_tree(&trees[2])?;
+        let pk = PrivateKey {
+            value, public_value, group
+        };
+
+        Ok(pk)
+    }
+}
+
+
+/*impl<E: Element + ToByteTree, G: ToByteTree> ToByteTree for Keyshare<E, G> {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
+        ByteTree::Tree(trees)
+    }
+}
+
+impl<E: Element + ToByteTree, G: ToByteTree> FromByteTree for PublicKey<E, G> {
+    fn from_byte_tree(tree: &ByteTree) -> Result<PublicKey<E, G>, ByteError> {
+    }
+}
+*/
+
+
+/*pub struct PrivateKey<E: Element, G> {
+    pub value: E::Exp,
+    pub public_value: E,
+    pub group: G
+}*/
 
 /*
-impl<T: ToBytes> ToByteTree for  {
+impl<E: ToByteTree, G: ToByteTree> ToByteTree for Config<E, G> {
     fn to_byte_tree(&self) -> ByteTree {
     }
 }
 
-impl<T: FromBytes> FromByteTree for  {
-    fn from_byte_tree(tree: &ByteTree) -> Option<T> {
+impl<E, G: FromByteTree> FromByteTree for Config<E, G> {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Config<E, G>, ByteError> {
     }
 }
 */
@@ -333,10 +414,10 @@ pub struct ChaumPedersen<E: Element> {
 
 impl<E: ToByteTree> ToByteTree for Ciphertext<E> {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut bytes: Vec<ByteTree> = Vec::with_capacity(2);
-        bytes.push(self.a.to_byte_tree());
-        bytes.push(self.b.to_byte_tree());
-        ByteTree::Tree(bytes)
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
+        trees.push(self.a.to_byte_tree());
+        trees.push(self.b.to_byte_tree());
+        ByteTree::Tree(trees)
     }
 }
 
@@ -369,11 +450,12 @@ mod tests {
         let group = RugGroup::default();
         let c = util::random_rug_ballots(1, &group).ciphertexts.remove(0);
         let bytes = c.ser();
-        let back: Ciphertext<Integer> = Ciphertext::<Integer>::deser(&bytes).unwrap();
+        let back = Ciphertext::<Integer>::deser(&bytes).unwrap();
 
         assert!(c.a == back.a && c.b == back.b);
     }
 
+    #[test]
     fn test_config_bytes() {
         let mut csprng = OsRng;
         let group = RugGroup::default();
@@ -397,5 +479,26 @@ mod tests {
         };
 
         let bytes = cfg.ser();
+        let back = Config::<Integer, RugGroup>::deser(&bytes).unwrap();
+
+        assert!(cfg == back);
+    }
+
+    #[test]
+    fn test_key_bytes() {
+        let mut csprng = OsRng;
+        let group = RugGroup::default();
+        let sk = group.gen_key();
+        let pk = PublicKey::from(&sk.public_value, &group);
+        
+        let bytes = sk.ser();
+        let back = PrivateKey::<Integer, RugGroup>::deser(&bytes).unwrap();
+
+        assert!(sk == back);
+
+        let bytes = pk.ser();
+        let back = PublicKey::<Integer, RugGroup>::deser(&bytes).unwrap();
+
+        assert!(pk == back);
     }
 }

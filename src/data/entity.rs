@@ -24,7 +24,7 @@ pub struct Keyshare<E: Element, G> {
     pub encrypted_sk: EncryptedPrivateKey
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 pub struct EncryptedPrivateKey {
     pub bytes: Vec<u8>,
     pub iv: Vec<u8>
@@ -52,14 +52,14 @@ pub struct Plaintexts<E> {
     pub plaintexts: Vec<E>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 pub struct Schnorr<E: Element> {
     pub commitment: E,
     pub challenge: E::Exp,
     pub response: E::Exp
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 pub struct ChaumPedersen<E: Element> {
     pub commitment1: E,
     pub commitment2: E,

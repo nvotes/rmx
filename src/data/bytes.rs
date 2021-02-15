@@ -242,6 +242,29 @@ impl FromByteTree for SPublicKey {
     }
 }
 
+impl ToByteTree for EncryptedPrivateKey {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
+        trees.push(ByteTree::Leaf(self.bytes.clone()));
+        trees.push(ByteTree::Leaf(self.iv.clone()));
+        ByteTree::Tree(trees)
+    }
+}
+
+impl FromByteTree for EncryptedPrivateKey {
+    fn from_byte_tree(tree: &ByteTree) -> Result<EncryptedPrivateKey, ByteError> {
+        let trees = tree.tree(2)?;
+        let bytes = trees[0].leaf()?.to_vec();
+        let iv = trees[1].leaf()?.to_vec();
+        let epk = EncryptedPrivateKey {
+            bytes, iv
+        };
+
+        Ok(epk)
+    }
+}
+
+
 impl<E: ToByteTree, G: ToByteTree> ToByteTree for Config<E, G> {
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(5);
@@ -319,59 +342,95 @@ impl<E: Element + FromByteTree, G: FromByteTree> FromByteTree for PrivateKey<E, 
     }
 }
 
-
-/*impl<E: Element + ToByteTree, G: ToByteTree> ToByteTree for Keyshare<E, G> {
+impl<E: Element + ToByteTree> ToByteTree for Schnorr<E> 
+    where E::Exp: ToByteTree {
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
+        trees.push(self.commitment.to_byte_tree());
+        trees.push(self.challenge.to_byte_tree());
+        trees.push(self.response.to_byte_tree());
         ByteTree::Tree(trees)
     }
 }
 
-impl<E: Element + ToByteTree, G: ToByteTree> FromByteTree for PublicKey<E, G> {
-    fn from_byte_tree(tree: &ByteTree) -> Result<PublicKey<E, G>, ByteError> {
+impl<E: Element + FromByteTree> FromByteTree for Schnorr<E>
+    where E::Exp: FromByteTree {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Schnorr<E>, ByteError> {
+        let trees = tree.tree(3)?;
+
+        let commitment = E::from_byte_tree(&trees[0])?;
+        let challenge = E::Exp::from_byte_tree(&trees[1])?;
+        let response = E::Exp::from_byte_tree(&trees[2])?;
+        let schnorr = Schnorr {
+            commitment, challenge, response
+        };
+
+        Ok(schnorr)
     }
 }
-*/
 
-
-/*pub struct PrivateKey<E: Element, G> {
-    pub value: E::Exp,
-    pub public_value: E,
-    pub group: G
-}*/
-
-/*
-impl<E: ToByteTree, G: ToByteTree> ToByteTree for Config<E, G> {
+impl<E: Element + ToByteTree> ToByteTree for ChaumPedersen<E> 
+    where E::Exp: ToByteTree {
     fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
+        trees.push(self.commitment1.to_byte_tree());
+        trees.push(self.commitment2.to_byte_tree());
+        trees.push(self.challenge.to_byte_tree());
+        trees.push(self.response.to_byte_tree());
+        ByteTree::Tree(trees)
     }
 }
 
-impl<E, G: FromByteTree> FromByteTree for Config<E, G> {
-    fn from_byte_tree(tree: &ByteTree) -> Result<Config<E, G>, ByteError> {
+impl<E: Element + FromByteTree> FromByteTree for ChaumPedersen<E>
+    where E::Exp: FromByteTree {
+    fn from_byte_tree(tree: &ByteTree) -> Result<ChaumPedersen<E>, ByteError> {
+        let trees = tree.tree(4)?;
+
+        let commitment1 = E::from_byte_tree(&trees[0])?;
+        let commitment2 = E::from_byte_tree(&trees[1])?;
+        let challenge = E::Exp::from_byte_tree(&trees[2])?;
+        let response = E::Exp::from_byte_tree(&trees[3])?;
+        let cp = ChaumPedersen {
+            commitment1, commitment2, challenge, response
+        };
+
+        Ok(cp)
     }
 }
-*/
 
-/* pub struct Config<E, G> {
-    pub id: [u8; 16],
-    pub group: G,
-    pub contests: u32, 
-    pub ballotbox: SPublicKey, 
-    pub trustees: Vec<SPublicKey>,
-    pub phantom_e: PhantomData<E>
+
+impl<E: Element + ToByteTree, G: ToByteTree> ToByteTree for Keyshare<E, G>
+    where E::Exp: ToByteTree {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
+        trees.push(self.share.to_byte_tree());
+        trees.push(self.proof.to_byte_tree());
+        trees.push(self.encrypted_sk.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
 }
 
+impl<E: Element + FromByteTree, G: FromByteTree> FromByteTree for Keyshare<E, G>
+    where E::Exp: FromByteTree {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Keyshare<E, G>, ByteError> {
+        let trees = tree.tree(3)?;
+        let share = PublicKey::<E, G>::from_byte_tree(&trees[0])?;
+        let proof = Schnorr::<E>::from_byte_tree(&trees[1])?;
+        let encrypted_sk = EncryptedPrivateKey::from_byte_tree(&trees[2])?;
+        
+        let ks = Keyshare {
+            share, proof, encrypted_sk
+        };
 
+        Ok(ks)
+    }
+}
+
+/* 
 pub struct Keyshare<E: Element, G> {
     pub share: PublicKey<E, G>,
     pub proof: Schnorr<E>,
     pub encrypted_sk: EncryptedPrivateKey
-}
-
-
-pub struct EncryptedPrivateKey {
-    pub bytes: Vec<u8>,
-    pub iv: Vec<u8>
 }
 
 
@@ -396,20 +455,6 @@ pub struct Plaintexts<E> {
     pub plaintexts: Vec<E>
 }
 
-
-pub struct Schnorr<E: Element> {
-    pub commitment: E,
-    pub challenge: E::Exp,
-    pub response: E::Exp
-}
-
-
-pub struct ChaumPedersen<E: Element> {
-    pub commitment1: E,
-    pub commitment2: E,
-    pub challenge: E::Exp,
-    pub response: E::Exp
-}
 */
 
 impl<E: ToByteTree> ToByteTree for Ciphertext<E> {
@@ -439,6 +484,9 @@ mod tests {
     use crate::data::bytes::*;
     use crate::crypto::backend::ristretto_b::*;
     use crate::crypto::backend::rug_b::*;
+    use crate::crypto::symmetric;
+    use crate::crypto::keymaker::*;
+
 
     use uuid::Uuid;
     use rug::Integer;
@@ -501,4 +549,91 @@ mod tests {
 
         assert!(pk == back);
     }
+
+    #[test]
+    fn test_schnorr_bytes() {
+        let group = RugGroup::default();
+        let g = group.generator();
+        let secret = group.rnd_exp();
+        let public = g.mod_pow(&secret, &group.modulus());
+        let schnorr = group.schnorr_prove(&secret, &public, &g);
+        let verified = group.schnorr_verify(&public, &g, &schnorr);
+        assert!(verified == true);
+        
+        let bytes = schnorr.ser();
+        let back = Schnorr::<Integer>::deser(&bytes).unwrap();
+        assert!(schnorr == back);
+        
+        let verified = group.schnorr_verify(&public, &g, &back);
+        assert!(verified == true);
+    }
+
+    #[test]
+    fn test_cp_bytes() {
+        let group = RugGroup::default();
+        let g1 = group.generator();
+        let g2 = group.rnd();
+        let secret = group.rnd_exp();
+        let public1 = g1.mod_pow(&secret, &group.modulus());
+        let public2 = g2.mod_pow(&secret, &group.modulus());
+        let proof = group.cp_prove(&secret, &public1, &public2, &g1, &g2);
+        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &proof);
+        assert!(verified == true);
+        
+        let bytes = proof.ser();
+        let back = ChaumPedersen::<Integer>::deser(&bytes).unwrap();
+        assert!(proof == back);
+        
+        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &back);
+        assert!(verified == true);
+    }
+    
+    #[test]
+    fn test_epk_bytes() {
+        let group = RugGroup::default();
+        
+        let sk = group.gen_key();
+        let pk = PublicKey::from(&sk.public_value, &group);
+
+        let plaintext = group.rnd_exp();
+        
+        let encoded = group.encode(&plaintext);
+        let c = pk.encrypt(&encoded);
+        
+        let sym_key = symmetric::gen_key();
+        let enc_sk = sk.to_encrypted(sym_key);
+        let enc_sk_b = enc_sk.ser();
+        let back = EncryptedPrivateKey::deser(&enc_sk_b).unwrap();
+        assert!(enc_sk == back);
+        
+        let sk_d = PrivateKey::from_encrypted(sym_key, back, &group);
+        let d = group.decode(&sk_d.decrypt(&c));
+        assert_eq!(d, plaintext);
+    }
+    
+    #[test]
+    fn test_share_bytes() {
+        let group = RugGroup::default();
+        
+        let km = Keymaker::gen(&group);
+        let (pk, proof) = km.share();
+
+        let sym = symmetric::gen_key();
+        let esk = km.get_encrypted_sk(sym);
+
+        let share = Keyshare {
+            share: pk,
+            proof: proof,
+            encrypted_sk: esk
+        };
+
+        let bytes = share.ser();
+        let back = Keyshare::<Integer, RugGroup>::deser(&bytes).unwrap();
+
+        assert!(share.share == back.share);
+        assert!(share.proof == back.proof);
+        assert!(share.encrypted_sk == back.encrypted_sk);
+    }
 }
+
+

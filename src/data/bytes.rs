@@ -12,7 +12,7 @@ use crate::crypto::backend::rug_b::*;
 use crate::crypto::backend::ristretto_b::*;
 use crate::crypto::elgamal::*;
 use crate::data::entity::*;
-use crate::crypto::shuffler::{YChallengeInput, TValues};
+use crate::crypto::shuffler::{ShuffleProof, Responses, TValues};
 use crate::util;
 
 const LEAF: u8 = 0;
@@ -256,11 +256,11 @@ impl FromByteTree for EncryptedPrivateKey {
         let trees = tree.tree(2)?;
         let bytes = trees[0].leaf()?.to_vec();
         let iv = trees[1].leaf()?.to_vec();
-        let epk = EncryptedPrivateKey {
+        let ret = EncryptedPrivateKey {
             bytes, iv
         };
 
-        Ok(epk)
+        Ok(ret)
     }
 }
 
@@ -287,10 +287,10 @@ impl<E, G: FromByteTree> FromByteTree for Config<E, G> {
         let contests = u32::from_le_bytes(contests_.as_slice().try_into().unwrap());
         let ballotbox = SPublicKey::from_byte_tree(&trees[3])?;
         let trustees = Vec::<SPublicKey>::from_byte_tree(&trees[4])?;
-        let config = Config {
+        let ret = Config {
             id, group, contests, ballotbox, trustees, phantom_e: PhantomData
         };
-        Ok(config)
+        Ok(ret)
     }
 }
 
@@ -308,11 +308,11 @@ impl<E: FromByteTree, G: FromByteTree> FromByteTree for PublicKey<E, G> {
         let trees = tree.tree(2)?;
         let value = E::from_byte_tree(&trees[0])?;
         let group = G::from_byte_tree(&trees[1])?;
-        let pk = PublicKey {
+        let ret = PublicKey {
             value, group
         };
 
-        Ok(pk)
+        Ok(ret)
     }
 }
 
@@ -334,11 +334,11 @@ impl<E: Element + FromByteTree, G: FromByteTree> FromByteTree for PrivateKey<E, 
         let value = E::Exp::from_byte_tree(&trees[0])?;
         let public_value = E::from_byte_tree(&trees[1])?;
         let group = G::from_byte_tree(&trees[2])?;
-        let pk = PrivateKey {
+        let ret = PrivateKey {
             value, public_value, group
         };
 
-        Ok(pk)
+        Ok(ret)
     }
 }
 
@@ -361,11 +361,11 @@ impl<E: Element + FromByteTree> FromByteTree for Schnorr<E>
         let commitment = E::from_byte_tree(&trees[0])?;
         let challenge = E::Exp::from_byte_tree(&trees[1])?;
         let response = E::Exp::from_byte_tree(&trees[2])?;
-        let schnorr = Schnorr {
+        let ret = Schnorr {
             commitment, challenge, response
         };
 
-        Ok(schnorr)
+        Ok(ret)
     }
 }
 
@@ -390,14 +390,13 @@ impl<E: Element + FromByteTree> FromByteTree for ChaumPedersen<E>
         let commitment2 = E::from_byte_tree(&trees[1])?;
         let challenge = E::Exp::from_byte_tree(&trees[2])?;
         let response = E::Exp::from_byte_tree(&trees[3])?;
-        let cp = ChaumPedersen {
+        let ret = ChaumPedersen {
             commitment1, commitment2, challenge, response
         };
 
-        Ok(cp)
+        Ok(ret)
     }
 }
-
 
 impl<E: Element + ToByteTree, G: ToByteTree> ToByteTree for Keyshare<E, G>
     where E::Exp: ToByteTree {
@@ -418,44 +417,204 @@ impl<E: Element + FromByteTree, G: FromByteTree> FromByteTree for Keyshare<E, G>
         let proof = Schnorr::<E>::from_byte_tree(&trees[1])?;
         let encrypted_sk = EncryptedPrivateKey::from_byte_tree(&trees[2])?;
         
-        let ks = Keyshare {
+        let ret = Keyshare {
             share, proof, encrypted_sk
         };
 
-        Ok(ks)
+        Ok(ret)
     }
 }
 
-/* 
-pub struct Keyshare<E: Element, G> {
-    pub share: PublicKey<E, G>,
-    pub proof: Schnorr<E>,
-    pub encrypted_sk: EncryptedPrivateKey
+impl<E: ToByteTree> ToByteTree for Ballots<E> {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(1);
+        trees.push(self.ciphertexts.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
+}
+ 
+impl<E: FromByteTree> FromByteTree for Ballots<E> {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Ballots<E>, ByteError> {
+        let trees = tree.tree(1)?;
+        let ciphertexts = Vec::<Ciphertext<E>>::from_byte_tree(&trees[0])?;
+        
+        let ret = Ballots {
+            ciphertexts
+        };
+
+        Ok(ret)
+    }
+}
+
+impl<E: ToByteTree> ToByteTree for Plaintexts<E> {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(1);
+        trees.push(self.plaintexts.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
+}
+ 
+impl<E: FromByteTree> FromByteTree for Plaintexts<E> {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Plaintexts<E>, ByteError> {
+        let trees = tree.tree(1)?;
+        let plaintexts = Vec::<E>::from_byte_tree(&trees[0])?;
+        
+        let ret = Plaintexts {
+            plaintexts
+        };
+
+        Ok(ret)
+    }
 }
 
 
-pub struct Ballots<E> {
-    pub ciphertexts: Vec<Ciphertext<E>>
+impl<E: Element + ToByteTree> ToByteTree for Mix<E>
+    where E::Exp: ToByteTree {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
+        trees.push(self.mixed_ballots.to_byte_tree());
+        trees.push(self.proof.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
+}
+
+impl<E: Element + FromByteTree> FromByteTree for Mix<E>
+    where E::Exp: FromByteTree {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Mix<E>, ByteError> {
+        let trees = tree.tree(2)?;
+        let mixed_ballots = Vec::<Ciphertext<E>>::from_byte_tree(&trees[0])?;
+        let proof = ShuffleProof::<E>::from_byte_tree(&trees[1])?;
+        
+        let ret = Mix {
+            mixed_ballots, proof    
+        };
+
+        Ok(ret)
+    }
+}
+
+impl<E: Element + ToByteTree> ToByteTree for ShuffleProof<E>
+    where E::Exp: ToByteTree {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
+        trees.push(self.t.to_byte_tree());
+        trees.push(self.s.to_byte_tree());
+        trees.push(self.cs.to_byte_tree());
+        trees.push(self.c_hats.to_byte_tree());
+
+        ByteTree::Tree(trees)
+    }
+}
+
+impl<E: Element + FromByteTree> FromByteTree for ShuffleProof<E>
+    where E::Exp: FromByteTree {
+    fn from_byte_tree(tree: &ByteTree) -> Result<ShuffleProof<E>, ByteError> {
+        let trees = tree.tree(4)?;
+        let t = TValues::<E>::from_byte_tree(&trees[0])?;
+        let s = Responses::<E>::from_byte_tree(&trees[1])?;
+        let cs = Vec::<E>::from_byte_tree(&trees[2])?;
+        let c_hats = Vec::<E>::from_byte_tree(&trees[3])?;
+
+        let ret = ShuffleProof {
+            t, s, cs, c_hats
+        };
+
+        Ok(ret)
+    }
+}
+
+impl<E: Element + ToByteTree> ToByteTree for TValues<E>
+    where E::Exp: ToByteTree {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(6);
+        trees.push(self.t1.to_byte_tree());
+        trees.push(self.t2.to_byte_tree());
+        trees.push(self.t3.to_byte_tree());
+        trees.push(self.t4_1.to_byte_tree());
+        trees.push(self.t4_2.to_byte_tree());
+        trees.push(self.t_hats.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
+}
+
+impl<E: Element + FromByteTree> FromByteTree for TValues<E>
+    where E::Exp: FromByteTree {
+    fn from_byte_tree(tree: &ByteTree) -> Result<TValues<E>, ByteError> {
+        let trees = tree.tree(6)?;
+        let t1 = E::from_byte_tree(&trees[0])?;
+        let t2 = E::from_byte_tree(&trees[1])?;
+        let t3 = E::from_byte_tree(&trees[2])?;
+        let t4_1 = E::from_byte_tree(&trees[3])?;
+        let t4_2 = E::from_byte_tree(&trees[4])?;
+        let t_hats = Vec::<E>::from_byte_tree(&trees[5])?;
+        
+        let ret = TValues {
+            t1, t2, t3, t4_1, t4_2, t_hats
+        };
+
+        Ok(ret)
+        
+    }
+}
+
+impl<E: Element + ToByteTree> ToByteTree for Responses<E>
+    where E::Exp: ToByteTree {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(6);
+        trees.push(self.s1.to_byte_tree());
+        trees.push(self.s2.to_byte_tree());
+        trees.push(self.s3.to_byte_tree());
+        trees.push(self.s4.to_byte_tree());
+        trees.push(self.s_hats.to_byte_tree());
+        trees.push(self.s_primes.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
+}
+
+impl<E: Element + FromByteTree> FromByteTree for Responses<E>
+    where E::Exp: FromByteTree {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Responses<E>, ByteError> {
+        let trees = tree.tree(6)?;
+        let s1 = <E::Exp>::from_byte_tree(&trees[0])?;
+        let s2 = <E::Exp>::from_byte_tree(&trees[1])?;
+        let s3 = <E::Exp>::from_byte_tree(&trees[2])?;
+        let s4 = <E::Exp>::from_byte_tree(&trees[3])?;
+        let s_hats = Vec::<E::Exp>::from_byte_tree(&trees[4])?;
+        let s_primes = Vec::<E::Exp>::from_byte_tree(&trees[5])?;
+        
+        let ret = Responses {
+            s1, s2, s3, s4, s_hats, s_primes
+        };
+
+        Ok(ret)
+    }
 }
 
 
-pub struct Mix<E: Element> {
-    pub mixed_ballots: Vec<Ciphertext<E>>,
-    pub proof: ShuffleProof<E>
+impl<E: Element + ToByteTree> ToByteTree for PartialDecryption<E>
+    where E::Exp: ToByteTree {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
+        trees.push(self.pd_ballots.to_byte_tree());
+        trees.push(self.proofs.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
 }
 
+impl<E: Element + FromByteTree> FromByteTree for PartialDecryption<E>
+    where E::Exp: FromByteTree {
+    fn from_byte_tree(tree: &ByteTree) -> Result<PartialDecryption<E>, ByteError> {
+        let trees = tree.tree(2)?;
+        let pd_ballots = Vec::<E>::from_byte_tree(&trees[0])?;
+        let proofs = Vec::<ChaumPedersen<E>>::from_byte_tree(&trees[1])?;
+        
+        let ret = PartialDecryption {
+            pd_ballots, proofs
+        };
 
-pub struct PartialDecryption<E: Element> {
-    pub pd_ballots: Vec<E>,
-    pub proofs: Vec<ChaumPedersen<E>>
+        Ok(ret)
+    }
 }
-
-
-pub struct Plaintexts<E> {
-    pub plaintexts: Vec<E>
-}
-
-*/
 
 impl<E: ToByteTree> ToByteTree for Ciphertext<E> {
     fn to_byte_tree(&self) -> ByteTree {
@@ -486,6 +645,7 @@ mod tests {
     use crate::crypto::backend::rug_b::*;
     use crate::crypto::symmetric;
     use crate::crypto::keymaker::*;
+    use crate::crypto::shuffler::*;
 
 
     use uuid::Uuid;
@@ -534,7 +694,6 @@ mod tests {
 
     #[test]
     fn test_key_bytes() {
-        let mut csprng = OsRng;
         let group = RugGroup::default();
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
@@ -634,6 +793,74 @@ mod tests {
         assert!(share.proof == back.proof);
         assert!(share.encrypted_sk == back.encrypted_sk);
     }
+
+    #[test]
+    fn test_ballots_bytes() {
+        let group = RugGroup::default();
+        let bs = util::random_rug_ballots(1000, &group);
+        let bytes = bs.ser();
+        let back = Ballots::<Integer>::deser(&bytes).unwrap();
+
+        assert!(bs == back);
+    }
+
+    #[test]
+    fn test_mix_bytes() {
+        let group = RugGroup::default();
+        let exp_hasher = &*group.exp_hasher();
+            
+        let sk = group.gen_key();
+        let pk = PublicKey::from(&sk.public_value, &group);
+        let n = 100;
+    
+        let mut es: Vec<Ciphertext<Integer>> = Vec::with_capacity(10);
+        
+        for _ in 0..n {
+            let plaintext: Integer = group.encode(&group.rnd_exp());
+            let c = pk.encrypt(&plaintext);
+            es.push(c);
+        }
+        let seed = vec![];
+        let hs = generators(es.len() + 1, &group, 0, seed);
+        let shuffler = Shuffler {
+            pk: &pk,
+            generators: &hs,
+            hasher: exp_hasher
+        };   
+
+        let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
+        let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
+        let ok = shuffler.check_proof(&proof, &es, &e_primes);
+        assert!(ok == true);
+
+        let mix = Mix {
+            mixed_ballots: e_primes,
+            proof: proof
+        };
+        let bytes = mix.ser();
+        let back = Mix::<Integer>::deser(&bytes).unwrap();
+
+        assert!(mix.mixed_ballots == back.mixed_ballots);
+        let ok = shuffler.check_proof(&back.proof, &es, &back.mixed_ballots);
+        assert!(ok == true);        
+    }    
+
+    #[test]
+    fn test_plaintexts_bytes() {
+        let group = RugGroup::default();
+        let plaintexts: Vec<Integer> = (0..100).into_iter().map(|_| {
+            group.encode(&group.rnd_exp())
+        }).collect();
+        let ps = Plaintexts {
+            plaintexts
+        };
+        let bytes = ps.ser();
+        let back = Plaintexts::<Integer>::deser(&bytes).unwrap();
+
+        assert!(ps == back);
+    }    
 }
+
+
 
 

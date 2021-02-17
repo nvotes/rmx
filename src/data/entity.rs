@@ -30,7 +30,7 @@ pub struct EncryptedPrivateKey {
     pub iv: Vec<u8>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 pub struct Ballots<E> {
     pub ciphertexts: Vec<Ciphertext<E>>
 }
@@ -47,24 +47,9 @@ pub struct PartialDecryption<E: Element> {
     pub proofs: Vec<ChaumPedersen<E>>
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
 pub struct Plaintexts<E> {
     pub plaintexts: Vec<E>
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq)]
-pub struct Schnorr<E: Element> {
-    pub commitment: E,
-    pub challenge: E::Exp,
-    pub response: E::Exp
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq)]
-pub struct ChaumPedersen<E: Element> {
-    pub commitment1: E,
-    pub commitment2: E,
-    pub challenge: E::Exp,
-    pub response: E::Exp
 }
 
 #[cfg(test)]

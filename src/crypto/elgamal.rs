@@ -5,7 +5,7 @@ use crate::crypto::base::*;
 use crate::data::entity::*;
 use crate::crypto::symmetric;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Ciphertext<E> {
     pub a: E,
     pub b: E
@@ -14,6 +14,13 @@ pub struct Ciphertext<E> {
 #[derive(Serialize, Deserialize, Eq, PartialEq)]
 pub struct PublicKey<E, G> {
     pub value: E,
+    pub group: G
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
+pub struct PrivateKey<E: Element, G> {
+    pub value: E::Exp,
+    pub public_value: E,
     pub group: G
 }
 
@@ -33,13 +40,6 @@ impl<E: Element, G: Group<E>> PublicKey<E, G> {
             group: group.clone(),
         }
     }
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq)]
-pub struct PrivateKey<E: Element, G> {
-    pub value: E::Exp,
-    pub public_value: E,
-    pub group: G
 }
 
 impl<E: Element, G: Group<E>> PrivateKey<E, G> {

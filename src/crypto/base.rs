@@ -1,11 +1,9 @@
 use std::marker::{Send, Sync};
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
 use crate::crypto::hashing::*;
 use crate::crypto::elgamal::*;
-use crate::data::entity::ChaumPedersen;
-use crate::data::entity::Schnorr;
 
 pub trait Element: HashBytes + Clone + Send + Sync + Serialize {
     type Exp: Exponent;
@@ -104,4 +102,19 @@ pub trait Group<E: Element>: Serialize + HashBytes + Send + Sync + Sized + Clone
         
         ok1 && ok2 && ok3
     }
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
+pub struct Schnorr<E: Element> {
+    pub commitment: E,
+    pub challenge: E::Exp,
+    pub response: E::Exp
+}
+
+#[derive(Serialize, Deserialize, Eq, PartialEq)]
+pub struct ChaumPedersen<E: Element> {
+    pub commitment1: E,
+    pub commitment2: E,
+    pub challenge: E::Exp,
+    pub response: E::Exp
 }

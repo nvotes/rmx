@@ -103,7 +103,7 @@ pub fn random_ristretto_ballots<G: Group<RistrettoPoint>>(n: usize, group: &G) -
 pub fn random_rug_ballots<G: Group<Integer>>(n: usize, group: &G) -> Ballots<Integer> {
     
     let cs = (0..n).into_par_iter().map(|_| {
-            Ciphertext{
+            Ciphertext {
                 a: group.encode(&group.rnd_exp()),
                 b: group.encode(&group.rnd_exp())
             }

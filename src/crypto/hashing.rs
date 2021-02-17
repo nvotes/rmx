@@ -218,8 +218,8 @@ impl HashBytes for RistrettoGroup {
     }
 }
 
-use crate::data::entity::Schnorr;
-use crate::data::entity::ChaumPedersen;
+use crate::crypto::base::Schnorr;
+use crate::crypto::base::ChaumPedersen;
 
 impl<E: Element> HashBytes for Schnorr<E> {
     fn get_bytes(&self) -> Vec<u8> {

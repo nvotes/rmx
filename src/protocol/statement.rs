@@ -16,6 +16,87 @@ use crate::crypto::base::Group;
 use crate::crypto::hashing;
 use crate::bulletinboard::*;
 
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+pub struct Statement {
+    pub stype: StatementType, 
+    pub contest: ContestIndex,
+    // special case for mixes where we need to keep track of 
+    // target trustee (the trustee producing the mix
+    // which the local trustee is signing)
+    pub trustee_aux: Option<TrusteeIndex>,
+    pub hashes: Vec<VHash>
+}
+
+impl Statement {
+    pub fn config(config: VHash) -> Statement {
+        Statement {
+            stype: StatementType::Config,
+            contest: 0,
+            trustee_aux: None,
+            hashes: vec![config]
+        }
+    }
+    pub fn keyshare(config: VHash, contest: u32, share: VHash) -> Statement {
+        Statement {
+            stype: StatementType::Keyshare,
+            contest: contest,
+            trustee_aux: None,
+            hashes: vec![config, share]
+        }
+    }
+    pub fn public_key(config: VHash, contest: u32, public_key: VHash) -> Statement {
+        Statement {
+            stype: StatementType::PublicKey,
+            contest: contest,
+            trustee_aux: None,
+            hashes: vec![config, public_key]
+        }
+    }
+    pub fn ballots(config: VHash, contest: u32, ballots: VHash) -> Statement {
+        Statement {
+            stype: StatementType::Ballots,
+            contest: contest,
+            trustee_aux: None,
+            hashes: vec![config, ballots]
+        }
+    }
+    pub fn mix(config: VHash, contest: u32, mix: VHash, ballots: VHash, mixing_trustee: Option<u32>) -> Statement {
+        Statement {
+            stype: StatementType::Mix,
+            contest: contest,
+            trustee_aux: mixing_trustee,
+            hashes: vec![config, mix, ballots]
+        }
+    }
+    pub fn partial_decryption(config: VHash, contest: u32, partial_decryptions: VHash) -> Statement {
+        Statement {
+            stype: StatementType::PDecryption,
+            contest: contest,
+            trustee_aux: None,
+            hashes: vec![config, partial_decryptions]
+        }
+    }
+    pub fn plaintexts(config: VHash, contest: u32, plaintexts: VHash) -> Statement {
+        Statement {
+            stype: StatementType::Plaintexts,
+            contest: contest,
+            trustee_aux: None,
+            hashes: vec![config, plaintexts]
+        }
+    }
+}
+
+#[repr(u8)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone, Copy)]
+pub enum StatementType {
+    Config,
+    Keyshare,
+    PublicKey,
+    Ballots,
+    Mix,
+    PDecryption,
+    Plaintexts
+}
 
 #[derive(Debug)]
 pub struct StatementVerifier {
@@ -189,86 +270,4 @@ impl SignedStatement {
         }
     }
     
-}
-
-#[repr(u8)]
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone, Copy)]
-pub enum StatementType {
-    Config,
-    Keyshare,
-    PublicKey,
-    Ballots,
-    Mix,
-    PDecryption,
-    Plaintexts
-}
-
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
-pub struct Statement {
-    pub stype: StatementType, 
-    pub contest: ContestIndex,
-    // special case for mixes where we need to keep track of 
-    // target trustee (the trustee producing the mix
-    // which the local trustee is signing)
-    pub trustee_aux: Option<TrusteeIndex>,
-    pub hashes: Vec<VHash>
-}
-
-impl Statement {
-    pub fn config(config: VHash) -> Statement {
-        Statement {
-            stype: StatementType::Config,
-            contest: 0,
-            trustee_aux: None,
-            hashes: vec![config]
-        }
-    }
-    pub fn keyshare(config: VHash, contest: u32, share: VHash) -> Statement {
-        Statement {
-            stype: StatementType::Keyshare,
-            contest: contest,
-            trustee_aux: None,
-            hashes: vec![config, share]
-        }
-    }
-    pub fn public_key(config: VHash, contest: u32, public_key: VHash) -> Statement {
-        Statement {
-            stype: StatementType::PublicKey,
-            contest: contest,
-            trustee_aux: None,
-            hashes: vec![config, public_key]
-        }
-    }
-    pub fn ballots(config: VHash, contest: u32, ballots: VHash) -> Statement {
-        Statement {
-            stype: StatementType::Ballots,
-            contest: contest,
-            trustee_aux: None,
-            hashes: vec![config, ballots]
-        }
-    }
-    pub fn mix(config: VHash, contest: u32, mix: VHash, ballots: VHash, mixing_trustee: Option<u32>) -> Statement {
-        Statement {
-            stype: StatementType::Mix,
-            contest: contest,
-            trustee_aux: mixing_trustee,
-            hashes: vec![config, mix, ballots]
-        }
-    }
-    pub fn partial_decryption(config: VHash, contest: u32, partial_decryptions: VHash) -> Statement {
-        Statement {
-            stype: StatementType::PDecryption,
-            contest: contest,
-            trustee_aux: None,
-            hashes: vec![config, partial_decryptions]
-        }
-    }
-    pub fn plaintexts(config: VHash, contest: u32, plaintexts: VHash) -> Statement {
-        Statement {
-            stype: StatementType::Plaintexts,
-            contest: contest,
-            trustee_aux: None,
-            hashes: vec![config, plaintexts]
-        }
-    }
 }

@@ -3,9 +3,11 @@ use std::convert::TryInto;
 
 use curve25519_dalek::ristretto::{RistrettoPoint,CompressedRistretto};
 use curve25519_dalek::scalar::Scalar;
+use ed25519_dalek::Signature;
 use ed25519_dalek::PublicKey as SPublicKey;
 // use sha2::{Sha512, Sha256, Digest};
 use rug::{Integer,integer::Order};
+use std::convert::TryFrom;
 
 use crate::crypto::base::*;
 use crate::crypto::backend::rug_b::*;
@@ -13,6 +15,7 @@ use crate::crypto::backend::ristretto_b::*;
 use crate::crypto::elgamal::*;
 use crate::data::entity::*;
 use crate::crypto::shuffler::{ShuffleProof, Responses, TValues};
+use crate::protocol::statement::*;
 use crate::util;
 
 const LEAF: u8 = 0;
@@ -26,6 +29,9 @@ quick_error! {
             from()
         }
         Signature(err: ed25519_dalek::SignatureError) {
+            from()
+        }
+        Enum(err: num_enum::TryFromPrimitiveError<StatementType>) {
             from()
         }
         Msg(message: String) {
@@ -125,6 +131,46 @@ impl<T: FromByteTree> Deser for T {
     }
 }
 
+impl<T: ToByteTree> ToByteTree for Vec<T> {
+    fn to_byte_tree(&self) -> ByteTree {
+        let tree = self.iter().map(|e| {
+            e.to_byte_tree()
+        }).collect();
+        ByteTree::Tree(tree)
+    }
+}
+
+impl<T: FromByteTree> FromByteTree for Vec<T> {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Vec<T>, ByteError> {
+        if let Tree(trees) = tree {
+            let elements = trees.iter().map(|b| {
+                T::from_byte_tree(b)
+            }).collect::<Result<Vec<T>, ByteError>>();
+
+            elements
+        } else {
+            Err(ByteError::Msg(String::from("ByteTree: unexpected Leaf constructing Vec<T: FromByteTree>")))
+        }   
+    }
+}
+
+impl ToByteTree for Vec<u8> {
+    fn to_byte_tree(&self) -> ByteTree {
+        Leaf(self.to_vec())
+    }
+}
+
+impl FromByteTree for Vec<u8> {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Vec<u8>, ByteError> {
+        if let Leaf(bytes) = tree {
+            Ok(bytes.to_vec())
+        }
+        else {
+            Err(ByteError::Msg(String::from("ByteTree: unexpected Tree constructing Vec<u8>")))
+        }
+    }
+}
+
 impl ToByteTree for Scalar {
     fn to_byte_tree(&self) -> ByteTree {
         Leaf(self.as_bytes().to_vec())
@@ -157,6 +203,21 @@ impl FromByteTree for RistrettoPoint {
     }
 }
 
+impl ToByteTree for Signature {
+    fn to_byte_tree(&self) -> ByteTree {
+        Leaf(self.to_bytes().to_vec())
+    } 
+}
+
+impl FromByteTree for Signature {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Signature, ByteError> {
+        let bytes = tree.leaf()?;
+        let b64 = util::to_u8_64(&bytes);
+        Ok(Signature::new(b64))
+    }
+}
+
+
 impl ToByteTree for Integer {
     fn to_byte_tree(&self) -> ByteTree {
         Leaf(self.to_digits::<u8>(Order::LsfLe))
@@ -168,6 +229,21 @@ impl FromByteTree for Integer {
         let bytes = tree.leaf()?;
         let ret = Integer::from_digits(bytes, Order::LsfLe);
         Ok(ret)
+    }
+}
+
+impl ToByteTree for SPublicKey {
+    fn to_byte_tree(&self) -> ByteTree {
+        ByteTree::Leaf(self.as_bytes().to_vec())
+    }
+}
+
+impl FromByteTree for SPublicKey {
+    fn from_byte_tree(tree: &ByteTree) -> Result<SPublicKey, ByteError> {
+        let bytes = tree.leaf()?;
+        let signature = SPublicKey::from_bytes(&bytes)?;
+        
+        Ok(signature)
     }
 }
 
@@ -201,44 +277,16 @@ impl FromByteTree for RugGroup {
     }
 }
 
-impl<T: ToByteTree> ToByteTree for Vec<T> {
+impl ToByteTree for RistrettoGroup {
     fn to_byte_tree(&self) -> ByteTree {
-        let tree = self.iter().map(|e| {
-            e.to_byte_tree()
-        }).collect();
-        ByteTree::Tree(tree)
+        ByteTree::Leaf(vec![])
     }
 }
 
-impl<T: FromByteTree> FromByteTree for Vec<T> {
-    fn from_byte_tree(tree: &ByteTree) -> Result<Vec<T>, ByteError> {
-        if let Tree(trees) = tree {
-            let elements = trees.iter().map(|b| {
-                T::from_byte_tree(b)
-            }).collect::<Result<Vec<T>, ByteError>>();
-
-            elements
-        } else {
-            Err(ByteError::Empty)
-        }   
-    }
-}
-
-impl ToByteTree for SPublicKey {
-    fn to_byte_tree(&self) -> ByteTree {
-        ByteTree::Leaf(self.as_bytes().to_vec())
-    }
-}
-
-impl FromByteTree for SPublicKey {
-    fn from_byte_tree(tree: &ByteTree) -> Result<SPublicKey, ByteError> {
-        if let Leaf(bytes) = tree {
-            let signature = SPublicKey::from_bytes(bytes)?;
-            Ok(signature)
-        }
-        else {
-            Err(ByteError::Msg(String::from("Expected leaf, found tree")))
-        }
+impl FromByteTree for RistrettoGroup {
+    fn from_byte_tree(tree: &ByteTree) -> Result<RistrettoGroup, ByteError> {
+        let _leaf = tree.leaf()?;
+        Ok(RistrettoGroup)
     }
 }
 
@@ -637,6 +685,47 @@ impl<E: FromByteTree> FromByteTree for Ciphertext<E> {
     }
 }
 
+impl ToByteTree for Statement {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
+        trees.push(Leaf(vec![self.stype as u8]));
+        trees.push(Leaf(self.contest.to_le_bytes().to_vec()));
+        let trustee_aux = if let Some(t) = self.trustee_aux {
+            t.to_le_bytes().to_vec()
+        }
+        else {
+            vec![]
+        };
+        trees.push(Leaf(trustee_aux));
+        trees.push(self.hashes.to_byte_tree());
+
+        ByteTree::Tree(trees)
+    }
+}
+
+impl FromByteTree for Statement {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Statement, ByteError> {
+        let trees = tree.tree(4)?;
+        let stype_ = &trees[0].leaf()?;
+        let stype: StatementType = StatementType::try_from(stype_[0])?;
+        let contest_ = trees[1].leaf()?;
+        let contest = u32::from_le_bytes(contest_.as_slice().try_into().unwrap());
+        let trustee_aux_ = trees[2].leaf()?;
+        let trustee_aux = if trustee_aux_.len() == 0 {
+            None
+        }
+        else {
+            Some(u32::from_le_bytes(trustee_aux_.as_slice().try_into().unwrap()))
+        };
+        let hashes = Vec::<Vec<u8>>::from_byte_tree(&trees[3])?;
+        let ret = Statement {
+            stype, contest, trustee_aux, hashes
+        };
+
+        Ok(ret)
+    }
+}
+
 #[cfg(test)]
 mod tests {  
     use crate::data::entity::*;
@@ -858,7 +947,24 @@ mod tests {
         let back = Plaintexts::<Integer>::deser(&bytes).unwrap();
 
         assert!(ps == back);
-    }    
+    }
+
+    use rand::Rng;
+    #[test]
+    fn test_statement_bytes() {
+        fn rnd32() -> Vec<u8> {
+            rand::thread_rng().gen::<[u8; 32]>().to_vec()
+        }
+        
+        let mut csprng = OsRng;
+        let group = RugGroup::default();
+        let pk = Keypair::generate(&mut csprng);
+        let stmt = Statement::mix(rnd32(), 0, rnd32(), rnd32(), Some(2));
+        let bytes = stmt.ser();
+        let back = Statement::deser(&bytes).unwrap();
+
+        assert!(stmt == back);
+    } 
 }
 
 

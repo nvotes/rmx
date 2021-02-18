@@ -43,7 +43,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
         }
     }
     
-    pub fn run<B: BulletinBoard<E, G>>(&self, facts: Facts, board: &mut B) -> u32 {
+    pub fn run<B: BulletinBoard<E, G>>(&self, facts: AllFacts, board: &mut B) -> u32 {
         let self_index = facts.get_self_index();
         let trustees = facts.get_trustee_count();
         let actions = facts.all_actions;
@@ -53,10 +53,10 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
         let now = std::time::Instant::now();
         for action in actions {
             match action {
-                Act::CheckConfig(cfg) => {
+                Act::CheckConfig(cfg_h) => {
                     info!(">> Action: checking config..");
                     // FIXME validate the config somehow
-                    let ss = SignedStatement::config(&cfg, &self.keypair);
+                    let ss = SignedStatement::config(&cfg_h, &self.keypair);
                     let stmt_path = self.localstore.set_config_stmt(&action, &ss);
                     board.add_config_stmt(&stmt_path, self_index.unwrap());
                     info!(">> OK");
@@ -64,7 +64,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
                 Act::PostShare(cfg_h, cnt) => {
                     info!(">> Action: Computing shares (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
                     let cfg = board.get_config(cfg_h).unwrap();
-                    let share = self.share(&cfg.group);
+                    let share = self.gen_share(&cfg.group);
                     let share_h = hashing::hash(&share);
                     let ss = SignedStatement::keyshare(&cfg_h, &share_h, cnt, &self.keypair);
                     let share_path = self.localstore.set_share(&action, share, &ss);
@@ -128,7 +128,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
                     };
                     let mix_h = hashing::hash(&mix);
                     
-                    let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_h, cnt, &self.keypair, None);
+                    let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_h, None, cnt, &self.keypair);
                     
                     let now_ = std::time::Instant::now();
                     let mix_path = self.localstore.set_mix(&action, mix, &ss);
@@ -162,7 +162,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
                     let rate = ciphertexts.len() as f32 / now_.elapsed().as_millis() as f32;
                     info!("Check proof ({:.1} ciphertexts/s)", 1000.0 * rate);
             
-                    let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_h, cnt, &self.keypair, Some(trustee));
+                    let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_h, Some(trustee), cnt, &self.keypair);
                     let mix_path = self.localstore.set_mix_stmt(&action, &ss);
                     board.add_mix_stmt(&mix_path, cnt, self_index.unwrap(), trustee);
                     
@@ -185,7 +185,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
                         proofs: proofs
                     };
                     let pd_h = hashing::hash(&pd);
-                    let ss = SignedStatement::pdecryptions(&cfg_h, cnt, &pd_h, &self.keypair);
+                    let ss = SignedStatement::pdecryptions(&cfg_h, &pd_h, cnt, &self.keypair);
                     let pd_path = self.localstore.set_pdecryptions(&action, pd, &ss);
                     board.add_decryption(&pd_path, cnt, self_index.unwrap());
                     
@@ -203,7 +203,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
                         plaintexts: pls
                     };
                     let p_h = hashing::hash(&plaintexts);
-                    let ss = SignedStatement::plaintexts(&cfg_h, cnt, &p_h, &self.keypair);
+                    let ss = SignedStatement::plaintexts(&cfg_h, &p_h, cnt, &self.keypair);
                     let p_path = self.localstore.set_plaintexts(&action, plaintexts, &ss);
                     board.set_plaintexts(&p_path, cnt);
                     
@@ -220,7 +220,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
                     let pls_board = board.get_plaintexts(cnt, plaintexts_h).unwrap();
                     assert!(pls == pls_board.plaintexts);
             
-                    let ss = SignedStatement::plaintexts(&cfg_h, cnt, &plaintexts_h, &self.keypair);
+                    let ss = SignedStatement::plaintexts(&cfg_h, &plaintexts_h, cnt, &self.keypair);
                     let p_path = self.localstore.set_plaintexts_stmt(&action, &ss);
                     board.set_plaintexts_stmt(&p_path, cnt, self_index.unwrap());
                     info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
@@ -232,7 +232,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
         ret as u32
     }
     
-    // ballots may come the ballot box, or an earlier mix
+    // ballots may come from the ballot box, or an earlier mix
     fn get_mix_src<B: BulletinBoard<E, G>>(&self, board: &B, contest: u32, 
         mixing_trustee: u32, ballots_h: Hash) -> Vec<Ciphertext<E>> {
 
@@ -243,18 +243,6 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
         else {
             let mix = board.get_mix(contest, mixing_trustee - 1, ballots_h).unwrap();
             mix.mixed_ballots
-        }
-    }
-    
-    fn share(&self, group: &G) -> Keyshare<E, G> {
-        let keymaker = Keymaker::gen(group);
-        let (share, proof) = keymaker.share();
-        let encrypted_sk = keymaker.get_encrypted_sk(self.symmetric);
-        
-        Keyshare {
-            share,
-            proof,
-            encrypted_sk
         }
     }
 
@@ -312,6 +300,18 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
         }
         else {
             None
+        }
+    }
+
+    fn gen_share(&self, group: &G) -> Keyshare<E, G> {
+        let keymaker = Keymaker::gen(group);
+        let (share, proof) = keymaker.share();
+        let encrypted_sk = keymaker.get_encrypted_sk(self.symmetric);
+        
+        Keyshare {
+            share,
+            proof,
+            encrypted_sk
         }
     }
 }

@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use std::marker::PhantomData;
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -23,7 +24,7 @@ use rmx::bulletinboard::*;
 use rmx::bulletinboard::memory_bb::*;
 use rmx::protocol::logic::Protocol;
 use rmx::protocol::trustee::Trustee;
-use rmx::protocol::facts::Facts;
+use rmx::protocol::facts::AllFacts;
 use rmx::util;
 
 use cursive::align::HAlign;
@@ -144,11 +145,11 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
             
         }
     }
-    fn process_facts(&mut self, t: usize) -> Facts {
+    fn process_facts(&mut self, t: usize) -> AllFacts {
         let trustee = &self.trustees[t];
         trustee.process_facts(&mut self.board)
     }
-    fn run(&mut self, facts: Facts, t: usize) -> u32 {
+    fn run(&mut self, facts: AllFacts, t: usize) -> u32 {
         let trustee = &self.trustees[t];
         trustee.run(facts, &mut self.board)
     }

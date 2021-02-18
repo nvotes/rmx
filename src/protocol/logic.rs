@@ -9,7 +9,7 @@ use crate::crypto::base::Group;
 use crate::crypto::hashing;
 use crate::crypto::hashing::*;
 use crate::protocol::trustee::Trustee;
-use crate::protocol::facts::{Facts, InputFact};
+use crate::protocol::facts::{InputFact, AllFacts};
 use crate::protocol::facts::Act;
 
 type TrusteeTotal = u32;
@@ -23,28 +23,6 @@ pub(super) type MixHash = Hash;
 pub(super) type DecryptionHash = Hash;
 pub(super) type PlaintextsHash = Hash;
 pub(super) type Hashes = [Hash; 10];
-
-fn load_facts(facts: &Vec<InputFact>, runtime: &mut Crepe) {
-    let mut sorted = facts.to_vec();
-    sorted.sort_by(|a, b| {
-        a.to_string().partial_cmp(&b.to_string()).unwrap()
-    });
-    sorted.into_iter().map(|f| {
-    // facts.into_iter().map(|f| {
-        info!("IFact {:?}", f);
-        match f {
-            InputFact::ConfigPresent(x) => runtime.extend(&[x]),
-            InputFact::ConfigSignedBy(x) => runtime.extend(&[x]),
-            InputFact::PkShareSignedBy(x) => runtime.extend(&[x]),
-            InputFact::PkSignedBy(x) => runtime.extend(&[x]),
-            InputFact::BallotsSigned(x) => runtime.extend(&[x]),
-            InputFact::MixSignedBy(x) => runtime.extend(&[x]),
-            InputFact::DecryptionSignedBy(x) => runtime.extend(&[x]),
-            InputFact::PlaintextsSignedBy(x) => runtime.extend(&[x])
-        }
-    }).count();
-    info!("\n");
-}
 
 crepe! {
     @input
@@ -313,7 +291,7 @@ pub struct Protocol <E, G, B> {
     phantom_b: PhantomData<B>
 }
 
-impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned,
+impl<E: Element + DeserializeOwned + PartialEq, G: Group<E> + DeserializeOwned,
     B: BulletinBoard<E, G>> Protocol<E, G, B> {
 
     pub fn new(trustee: Trustee<E, G>) -> Protocol<E, G, B> {
@@ -357,7 +335,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
         facts
     }
     
-    pub fn process_facts(&self, board: &B) -> Facts {
+    pub fn process_facts(&self, board: &B) -> AllFacts {
         let mut runtime = Crepe::new();
         let input_facts = self.get_facts(board);
         load_facts(&input_facts, &mut runtime);
@@ -367,7 +345,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
         let done = now.elapsed().as_millis();
         let actions = output.0.len();
         
-        let ret = Facts::new(input_facts, output);
+        let ret = AllFacts::new(input_facts, output);
     
         ret.log();
         info!("");
@@ -376,7 +354,7 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
         ret
     }
 
-    pub fn run(&self, facts: Facts, board: &mut B) -> u32 {
+    pub fn run(&self, facts: AllFacts, board: &mut B) -> u32 {
         self.trustee.run(facts, board)
     }
 
@@ -385,4 +363,26 @@ impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deserial
 
         self.trustee.run(output, board)
     }
+}
+
+fn load_facts(facts: &Vec<InputFact>, runtime: &mut Crepe) {
+    let mut sorted = facts.to_vec();
+    sorted.sort_by(|a, b| {
+        a.to_string().partial_cmp(&b.to_string()).unwrap()
+    });
+    sorted.into_iter().map(|f| {
+    // facts.into_iter().map(|f| {
+        info!("IFact {:?}", f);
+        match f {
+            InputFact::ConfigPresent(x) => runtime.extend(&[x]),
+            InputFact::ConfigSignedBy(x) => runtime.extend(&[x]),
+            InputFact::PkShareSignedBy(x) => runtime.extend(&[x]),
+            InputFact::PkSignedBy(x) => runtime.extend(&[x]),
+            InputFact::BallotsSigned(x) => runtime.extend(&[x]),
+            InputFact::MixSignedBy(x) => runtime.extend(&[x]),
+            InputFact::DecryptionSignedBy(x) => runtime.extend(&[x]),
+            InputFact::PlaintextsSignedBy(x) => runtime.extend(&[x])
+        }
+    }).count();
+    info!("\n");
 }

@@ -515,7 +515,6 @@ impl<E: FromByteTree> FromByteTree for Plaintexts<E> {
     }
 }
 
-
 impl<E: Element + ToByteTree> ToByteTree for Mix<E>
     where E::Exp: ToByteTree {
     fn to_byte_tree(&self) -> ByteTree {
@@ -726,12 +725,35 @@ impl FromByteTree for Statement {
     }
 }
 
+impl ToByteTree for SignedStatement {
+    fn to_byte_tree(&self) -> ByteTree {
+        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
+        trees.push(self.statement.to_byte_tree());
+        trees.push(self.signature.to_byte_tree());
+        ByteTree::Tree(trees)
+    }
+}
+
+impl FromByteTree for SignedStatement {
+    fn from_byte_tree(tree: &ByteTree) -> Result<SignedStatement, ByteError> {
+        let trees = tree.tree(2)?;
+        let statement = Statement::from_byte_tree(&trees[0])?;
+        let signature = Signature::from_byte_tree(&trees[1])?;
+        let ret = SignedStatement {
+            statement, signature
+        };
+        
+        Ok(ret)
+    }
+}
+
+
+
+
+
 #[cfg(test)]
 mod tests {  
-    use crate::data::entity::*;
     use crate::data::bytes::*;
-    use crate::crypto::backend::ristretto_b::*;
-    use crate::crypto::backend::rug_b::*;
     use crate::crypto::symmetric;
     use crate::crypto::keymaker::*;
     use crate::crypto::shuffler::*;
@@ -957,13 +979,19 @@ mod tests {
         }
         
         let mut csprng = OsRng;
-        let group = RugGroup::default();
         let pk = Keypair::generate(&mut csprng);
-        let stmt = Statement::mix(rnd32(), 0, rnd32(), rnd32(), Some(2));
+        let stmt = Statement::mix(rnd32(), rnd32(), rnd32(), Some(2), 0);
         let bytes = stmt.ser();
         let back = Statement::deser(&bytes).unwrap();
 
         assert!(stmt == back);
+
+        let s_stmt = SignedStatement::mix(&[0u8; 64], &[0u8; 64], &[0u8; 64], Some(2), 0, &pk);
+
+        let bytes = s_stmt.ser();
+        let back = SignedStatement::deser(&bytes).unwrap();
+
+        assert!(s_stmt == back);
     } 
 }
 

@@ -127,7 +127,7 @@ type DatalogOutput = (HashSet<Do>, HashSet<ConfigOk>, HashSet<PkSharesAll>, Hash
     HashSet<ContestMixedOk>, HashSet<DecryptionsUpTo>, HashSet<DecryptionsAll>,
     HashSet<PlaintextsSignedUpTo>, HashSet<PlaintextsOk>);
 
-pub struct Facts {
+pub struct AllFacts {
     pub(self) input_facts: Vec<InputFact>,
     pub all_actions: Vec<Act>,
     pub check_config: Vec<Act>,
@@ -148,8 +148,8 @@ pub struct Facts {
     plaintexts_ok: HashSet<PlaintextsOk>
 }
 
-impl Facts {
-    pub(super) fn new(input_facts: Vec<InputFact>, f: DatalogOutput) -> Facts {
+impl AllFacts {
+    pub(super) fn new(input_facts: Vec<InputFact>, f: DatalogOutput) -> AllFacts {
         let mut all_actions = vec![];
         let mut check_config = vec![];
         let mut post_share = vec![];
@@ -185,7 +185,7 @@ impl Facts {
         let decryptions_all = f.13;
         let plaintexts_ok = f.15;
 
-        Facts {
+        AllFacts {
             input_facts,
             all_actions,
             check_config,

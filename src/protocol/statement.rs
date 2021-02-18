@@ -4,8 +4,8 @@ use ed25519_dalek::PublicKey as SPublicKey;
 use ed25519_dalek::Verifier;
 use ed25519_dalek::Signature;
 use ed25519_dalek::{Keypair, Signer};
-
 use serde::{Deserialize, Serialize};
+use num_enum::TryFromPrimitive;
 
 use crate::util;
 use crate::protocol::facts::InputFact;
@@ -27,6 +27,7 @@ pub struct Statement {
     // target trustee (the trustee producing the mix
     // which the local trustee is signing)
     pub trustee_aux: Option<TrusteeIndex>,
+    // hashes in Vector<u8> form (as opposed to [u8;64])
     pub hashes: Vec<VHash>
 }
 
@@ -39,7 +40,7 @@ impl Statement {
             hashes: vec![config]
         }
     }
-    pub fn keyshare(config: VHash, contest: u32, share: VHash) -> Statement {
+    pub fn keyshare(config: VHash, share: VHash, contest: u32) -> Statement {
         Statement {
             stype: StatementType::Keyshare,
             contest: contest,
@@ -47,7 +48,7 @@ impl Statement {
             hashes: vec![config, share]
         }
     }
-    pub fn public_key(config: VHash, contest: u32, public_key: VHash) -> Statement {
+    pub fn public_key(config: VHash, public_key: VHash, contest: u32) -> Statement {
         Statement {
             stype: StatementType::PublicKey,
             contest: contest,
@@ -55,7 +56,7 @@ impl Statement {
             hashes: vec![config, public_key]
         }
     }
-    pub fn ballots(config: VHash, contest: u32, ballots: VHash) -> Statement {
+    pub fn ballots(config: VHash, ballots: VHash, contest: u32, ) -> Statement {
         Statement {
             stype: StatementType::Ballots,
             contest: contest,
@@ -63,7 +64,7 @@ impl Statement {
             hashes: vec![config, ballots]
         }
     }
-    pub fn mix(config: VHash, contest: u32, mix: VHash, ballots: VHash, mixing_trustee: Option<u32>) -> Statement {
+    pub fn mix(config: VHash, mix: VHash, ballots: VHash, mixing_trustee: Option<u32>, contest: u32) -> Statement {
         Statement {
             stype: StatementType::Mix,
             contest: contest,
@@ -71,7 +72,7 @@ impl Statement {
             hashes: vec![config, mix, ballots]
         }
     }
-    pub fn partial_decryption(config: VHash, contest: u32, partial_decryptions: VHash) -> Statement {
+    pub fn partial_decryption(config: VHash, partial_decryptions: VHash, contest: u32) -> Statement {
         Statement {
             stype: StatementType::PDecryption,
             contest: contest,
@@ -79,7 +80,7 @@ impl Statement {
             hashes: vec![config, partial_decryptions]
         }
     }
-    pub fn plaintexts(config: VHash, contest: u32, plaintexts: VHash) -> Statement {
+    pub fn plaintexts(config: VHash, plaintexts: VHash, contest: u32) -> Statement {
         Statement {
             stype: StatementType::Plaintexts,
             contest: contest,
@@ -88,8 +89,6 @@ impl Statement {
         }
     }
 }
-
-use num_enum::TryFromPrimitive;
 
 #[repr(u8)]
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug, Clone, Copy, TryFromPrimitive)]
@@ -103,7 +102,7 @@ pub enum StatementType {
     Plaintexts
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct SignedStatement {
     pub statement: Statement, 
     pub signature: Signature
@@ -120,7 +119,7 @@ impl SignedStatement {
         }
     }
     pub fn keyshare(cfg_h: &hashing::Hash, share_h: &hashing::Hash, contest: u32, pk: &Keypair) -> SignedStatement {
-        let statement = Statement::keyshare(cfg_h.to_vec(), contest, share_h.to_vec());
+        let statement = Statement::keyshare(cfg_h.to_vec(), share_h.to_vec(), contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
@@ -129,7 +128,7 @@ impl SignedStatement {
         }
     }
     pub fn public_key(cfg_h: &hashing::Hash, pk_h: &hashing::Hash, contest: u32, pk: &Keypair) -> SignedStatement {
-        let statement = Statement::public_key(cfg_h.to_vec(), contest, pk_h.to_vec());
+        let statement = Statement::public_key(cfg_h.to_vec(), pk_h.to_vec(), contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
@@ -138,7 +137,7 @@ impl SignedStatement {
         }
     }
     pub fn ballots(cfg_h: &hashing::Hash, ballots_h: &hashing::Hash, contest: u32, pk: &Keypair) -> SignedStatement {
-        let statement = Statement::ballots(cfg_h.to_vec(), contest, ballots_h.to_vec());
+        let statement = Statement::ballots(cfg_h.to_vec(), ballots_h.to_vec(), contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
@@ -146,11 +145,11 @@ impl SignedStatement {
             signature
         }
     }
-    pub fn mix(cfg_h: &hashing::Hash, mix_h: &hashing::Hash, ballots_h: &hashing::Hash, contest: u32, 
-        pk: &Keypair, mixing_trustee: Option<TrusteeIndex>) -> SignedStatement {
+    pub fn mix(cfg_h: &hashing::Hash, mix_h: &hashing::Hash, ballots_h: &hashing::Hash, 
+        mixing_trustee: Option<TrusteeIndex>, contest: u32, pk: &Keypair) -> SignedStatement {
         
-        let statement = Statement::mix(cfg_h.to_vec(), contest, mix_h.to_vec(), 
-            ballots_h.to_vec(), mixing_trustee);
+        let statement = Statement::mix(cfg_h.to_vec(), mix_h.to_vec(), 
+            ballots_h.to_vec(), mixing_trustee, contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
@@ -159,8 +158,8 @@ impl SignedStatement {
         }
     }
     
-    pub fn pdecryptions(cfg_h: &hashing::Hash, contest: u32, pd_h: &hashing::Hash, pk: &Keypair) -> SignedStatement {
-        let statement = Statement::partial_decryption(cfg_h.to_vec(), contest, pd_h.to_vec());
+    pub fn pdecryptions(cfg_h: &hashing::Hash, pd_h: &hashing::Hash, contest: u32, pk: &Keypair) -> SignedStatement {
+        let statement = Statement::partial_decryption(cfg_h.to_vec(), pd_h.to_vec(), contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
@@ -168,8 +167,8 @@ impl SignedStatement {
             signature
         }
     }
-    pub fn plaintexts(cfg_h: &hashing::Hash, contest: u32, plaintext_h: &hashing::Hash, pk: &Keypair) -> SignedStatement {
-        let statement = Statement::plaintexts(cfg_h.to_vec(), contest, plaintext_h.to_vec());
+    pub fn plaintexts(cfg_h: &hashing::Hash, plaintext_h: &hashing::Hash, contest: u32, pk: &Keypair) -> SignedStatement {
+        let statement = Statement::plaintexts(cfg_h.to_vec(), plaintext_h.to_vec(), contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {

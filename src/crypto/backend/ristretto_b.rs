@@ -176,6 +176,7 @@ mod tests {
     use curve25519_dalek::traits::Identity;
 
     use crate::crypto::base::*;
+    use crate::data::bytes::*;
     use crate::crypto::keymaker::*;
     use crate::crypto::backend::ristretto_b::*;
     use crate::crypto::shuffler::*;
@@ -394,10 +395,10 @@ mod tests {
             encrypted_sk: esk2
         };
 
-        let share1_b = bincode::serialize(&share1).unwrap();
-        let share2_b = bincode::serialize(&share2).unwrap();
-        let share1_d: Keyshare<RistrettoPoint, RistrettoGroup> = bincode::deserialize(&share1_b).unwrap();
-        let share2_d: Keyshare<RistrettoPoint, RistrettoGroup> = bincode::deserialize(&share2_b).unwrap();
+        let share1_b = share1.ser();
+        let share2_b = share2.ser();
+        let share1_d = Keyshare::<RistrettoPoint, RistrettoGroup>::deser(&share1_b).unwrap();
+        let share2_d = Keyshare::<RistrettoPoint, RistrettoGroup>::deser(&share2_b).unwrap();
         
         let verified1 = Keymaker::verify_share(&group, &share1_d.share, &share1_d.proof);
         let verified2 = Keymaker::verify_share(&group, &share2_d.share, &share2_d.proof);
@@ -433,11 +434,11 @@ mod tests {
             pd_ballots: decs2,
             proofs: proofs2
         };
-        
-        let pd1_b = bincode::serialize(&pd1).unwrap();
-        let pd2_b = bincode::serialize(&pd2).unwrap();
-        let pd1_d: PartialDecryption<RistrettoPoint> = bincode::deserialize(&pd1_b).unwrap();
-        let pd2_d: PartialDecryption<RistrettoPoint> = bincode::deserialize(&pd2_b).unwrap();
+
+        let pd1_b = pd1.ser();
+        let pd2_b = pd2.ser();
+        let pd1_d = PartialDecryption::<RistrettoPoint>::deser(&pd1_b).unwrap();
+        let pd2_d = PartialDecryption::<RistrettoPoint>::deser(&pd2_b).unwrap();
         
         let verified1 = Keymaker::verify_decryption_factors(&group, pk1_value, &cs, 
             &pd1_d.pd_ballots, &pd1_d.proofs);
@@ -489,18 +490,16 @@ mod tests {
             proof: proof
         };
         
-        let _group_b = bincode::serialize(&group).unwrap();
-        let _sk_b = bincode::serialize(&sk).unwrap();
-        let pk_b = bincode::serialize(&pk).unwrap();
-        let es_b = bincode::serialize(&es).unwrap();
-        let mix_b = bincode::serialize(&mix).unwrap();        
+        let pk_b = pk.ser();
+        let es_b = es.ser();
+        let mix_b = mix.ser();
 
         assert!(ok == true);
 
-        let pk_d: PublicKey<RistrettoPoint, RistrettoGroup> = bincode::deserialize(&pk_b).unwrap();
-        let es_d: Vec<Ciphertext<RistrettoPoint>> = bincode::deserialize(&es_b).unwrap();
-        let mix_d: Mix<RistrettoPoint> = bincode::deserialize(&mix_b).unwrap();
-        
+        let pk_d = PublicKey::<RistrettoPoint, RistrettoGroup>::deser(&pk_b).unwrap();
+        let es_d = Vec::<Ciphertext<RistrettoPoint>>::deser(&es_b).unwrap();
+        let mix_d = Mix::<RistrettoPoint>::deser(&mix_b).unwrap();
+
         let shuffler_d = Shuffler {
             pk: &pk_d,
             generators: &hs,
@@ -525,8 +524,10 @@ mod tests {
         let c = pk.encrypt(&plaintext);
         let sym_key = symmetric::gen_key();
         let enc_sk = sk.to_encrypted(sym_key);
-        let enc_sk_b = bincode::serialize(&enc_sk).unwrap();
-        let enc_sk_d: EncryptedPrivateKey = bincode::deserialize(&enc_sk_b).unwrap();
+        
+        let enc_sk_b = enc_sk.ser();
+        let enc_sk_d = EncryptedPrivateKey::deser(&enc_sk_b).unwrap();
+        
         let sk_d = PrivateKey::from_encrypted(sym_key, enc_sk_d, &group);
         let d = sk_d.decrypt(&c);
         

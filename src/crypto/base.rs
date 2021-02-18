@@ -2,6 +2,7 @@ use std::marker::{Send, Sync};
 use serde::de::DeserializeOwned;
 use serde::{Serialize, Deserialize};
 
+use crate::data::bytes::*;
 use crate::crypto::hashing::*;
 use crate::crypto::elgamal::*;
 

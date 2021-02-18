@@ -61,6 +61,7 @@ mod tests {
     
     use crate::crypto::backend::rug_b::*;
     use crate::data::entity::*;
+    use crate::data::bytes::*;
 
     #[test]
     fn test_config_serde() {
@@ -86,8 +87,8 @@ mod tests {
             phantom_e: PhantomData
         };
 
-        let cfg_b = bincode::serialize(&cfg).unwrap();
-        let cfg_d: Config<Integer, RugGroup> = bincode::deserialize(&cfg_b).unwrap();
+        let cfg_b = cfg.ser();
+        let cfg_d = Config::<Integer, RugGroup>::deser(&cfg_b).unwrap();
 
         assert_eq!(cfg, cfg_d);
     }

@@ -117,6 +117,9 @@ pub trait Deser {
     fn deser(bytes: &Vec<u8>) -> Result<Self, ByteError> where Self: Sized;
 }
 
+pub trait BTSerde: Ser + Deser {}
+pub trait ToFromTree: ToByteTree + FromByteTree {}
+
 impl<T: ToByteTree> Ser for T {
     fn ser(&self) -> Vec<u8> {
         let tree = self.to_byte_tree();

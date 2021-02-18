@@ -3,6 +3,7 @@ use generic_array::{typenum::U32, GenericArray};
 
 use crate::crypto::base::*;
 use crate::data::entity::*;
+use crate::data::bytes::*;
 use crate::crypto::symmetric;
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
@@ -77,6 +78,7 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
     }
     pub fn to_encrypted(&self, key: GenericArray<u8, U32>) -> EncryptedPrivateKey {
         let key_bytes = bincode::serialize(&self.value).unwrap();
+        // let key_bytes = self.value.ser();
         let (b, iv) = symmetric::encrypt(key, &key_bytes);
         EncryptedPrivateKey {
             bytes: b,
@@ -86,6 +88,7 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
     pub fn from_encrypted(key: GenericArray<u8, U32>, encrypted: EncryptedPrivateKey, group: &G) -> PrivateKey<E, G> {
         let key_bytes = symmetric::decrypt(key, &encrypted.iv, &encrypted.bytes);
         let value: E::Exp = bincode::deserialize(&key_bytes).unwrap();
+        // let value = E::Exp::deser(&key_bytes).unwrap();
         let public_value = group.generator().mod_pow(&value, &group.modulus());
 
         PrivateKey {

@@ -6,32 +6,43 @@ use crate::data::bytes::*;
 use crate::crypto::hashing::*;
 use crate::crypto::elgamal::*;
 
-pub trait Element: HashBytes + Clone + Send + Sync + Serialize {
+pub trait Element: 
+    Clone + Eq + PartialEq + 
+    Send + Sync + 
+    Serialize + HashBytes {
     type Exp: Exponent;
-    type Plaintext: std::hash::Hash + Eq + Send + Sync;
+    type Plaintext: Eq + PartialEq + Send + Sync;
     
     fn mul(&self, other: &Self) -> Self;
     fn div(&self, other: &Self, modulus: &Self) -> Self;
     fn mod_pow(&self, exp: &Self::Exp, modulus: &Self) -> Self;
     fn modulo(&self, modulus: &Self) -> Self;
-    fn eq(&self, other: &Self) -> bool;
+    // fn eq(&self, other: &Self) -> bool;
 
     fn mul_identity() -> Self;
 }
 
-pub trait Exponent: HashBytes + Clone + Send + Sync + Serialize + DeserializeOwned {
+pub trait Exponent: 
+    Clone + Eq + PartialEq + 
+    Send + Sync + 
+    Serialize + DeserializeOwned + 
+    HashBytes + BTSerde {
+
     fn add(&self, other: &Self) -> Self;
     fn sub(&self, other: &Self) -> Self;
     fn neg(&self) -> Self;
     fn mul(&self, other: &Self) -> Self;
     fn modulo(&self, modulus: &Self) -> Self;
-    fn eq(&self, other: &Self) -> bool;
+    // fn eq(&self, other: &Self) -> bool;
     
     fn add_identity() -> Self;
     fn mul_identity() -> Self;
 }
 
-pub trait Group<E: Element>: Serialize + HashBytes + Send + Sync + Sized + Clone {
+pub trait Group<E: Element>: 
+    Clone + 
+    Send + Sync +
+    Serialize + HashBytes {
     
     fn generator(&self) -> E;
     fn rnd(&self) -> E;

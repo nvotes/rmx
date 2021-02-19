@@ -118,7 +118,7 @@ pub trait Deser {
 }
 
 pub trait BTSerde: Ser + Deser {}
-pub trait ToFromTree: ToByteTree + FromByteTree {}
+impl<T: Ser + Deser> BTSerde for T {}
 
 impl<T: ToByteTree> Ser for T {
     fn ser(&self) -> Vec<u8> {

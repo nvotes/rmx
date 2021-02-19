@@ -52,7 +52,8 @@ struct Demo<E: Element, G> {
     all_plaintexts: Vec<Vec<E::Plaintext>>,
     ballots: u32
 }
-impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned> Demo<E, G> {
+impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned> Demo<E, G> 
+    where <E as Element>::Plaintext: std::hash::Hash {
     fn new(sink: cursive::CbSink, group: &G, trustees: u32, contests: u32, ballots: u32) -> Demo<E, G> {
         let local1 = "/tmp/local";
         let local2 = "/tmp/local2";
@@ -324,25 +325,29 @@ fn demo_tui() {
     siv.run();
 }
 
-fn step_t<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: 'static + Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) {
+fn step_t<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: 'static + Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) 
+    where <E as Element>::Plaintext: std::hash::Hash {
     std::thread::spawn(move || {
         step(Arc::clone(&demo_arc), t)
     });
 }
 
-fn ballots_t<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: 'static + Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) {
+fn ballots_t<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: 'static + Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) 
+    where <E as Element>::Plaintext: std::hash::Hash {
     std::thread::spawn(move || {
         ballots(Arc::clone(&demo_arc), t)
     });
 }
 
-fn check_t<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: 'static + Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) {
+fn check_t<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: 'static + Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) 
+    where <E as Element>::Plaintext: std::hash::Hash {
     std::thread::spawn(move || {
         check(Arc::clone(&demo_arc), t)
     });
 }
 
-fn step<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) {
+fn step<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) 
+    where <E as Element>::Plaintext: std::hash::Hash {
     let mut demo = demo_arc.lock().unwrap();
     demo.status(String::from("Working..."));
     info!("set_panel=[facts]");
@@ -352,7 +357,8 @@ fn step<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Group<
     demo.done(t);
 }
 
-fn ballots<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) {
+fn ballots<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) 
+    where <E as Element>::Plaintext: std::hash::Hash {
     let mut demo = demo_arc.lock().unwrap();
     demo.status(String::from("Working..."));
     info!("set_panel=[{}]", t);
@@ -360,7 +366,8 @@ fn ballots<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Gro
     demo.done(t);
 }
 
-fn check<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) {
+fn check<E: 'static + Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned>(demo_arc: DemoArc<E, G>, t: u32) 
+    where <E as Element>::Plaintext: std::hash::Hash {
     let demo = demo_arc.lock().unwrap();
     demo.status(String::from("Working..."));
     info!("set_panel=[{}]", t);
@@ -383,7 +390,8 @@ fn demo_ristretto() {
     demo(group);
 }
 
-fn demo<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned>(group: G) {
+fn demo<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned>(group: G) 
+    where <E as Element>::Plaintext: std::hash::Hash {
     
     let local1 = "/tmp/local";
     let local2 = "/tmp/local2";

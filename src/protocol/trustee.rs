@@ -28,7 +28,7 @@ pub struct Trustee<E, G> {
     pub symmetric: GenericArray<u8, U32>
 }
 
-impl<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned> Trustee<E, G> {
+impl<E: Element + DeserializeOwned , G: Group<E> + DeserializeOwned> Trustee<E, G> {
     
     pub fn new(local_store: String) -> Trustee<E, G> {
         let mut csprng = OsRng;

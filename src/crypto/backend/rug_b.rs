@@ -37,9 +37,9 @@ impl Element for Integer {
         
         rem
     }
-    fn eq(&self, other: &Integer) -> bool {
+    /* fn eq(&self, other: &Integer) -> bool {
         self == other
-    }
+    }*/
     fn mul_identity() -> Integer {
         Integer::from(1)
     }
@@ -67,9 +67,9 @@ impl Exponent for Integer {
         
         rem
     }
-    fn eq(&self, other: &Integer) -> bool {
+    /*fn eq(&self, other: &Integer) -> bool {
         self == other
-    }
+    }*/
 
     fn add_identity() -> Integer {
         Integer::from(0)

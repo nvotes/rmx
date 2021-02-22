@@ -1,5 +1,6 @@
 use std::marker::PhantomData;
 use std::convert::TryInto;
+use std::convert::TryFrom;
 
 use curve25519_dalek::ristretto::{RistrettoPoint,CompressedRistretto};
 use curve25519_dalek::scalar::Scalar;
@@ -7,7 +8,8 @@ use ed25519_dalek::Signature;
 use ed25519_dalek::PublicKey as SPublicKey;
 // use sha2::{Sha512, Sha256, Digest};
 use rug::{Integer,integer::Order};
-use std::convert::TryFrom;
+use log::info;
+
 
 use crate::crypto::base::*;
 use crate::crypto::backend::rug_b::*;
@@ -117,8 +119,8 @@ pub trait Deser {
     fn deser(bytes: &Vec<u8>) -> Result<Self, ByteError> where Self: Sized;
 }
 
-pub trait BTSerde: Ser + Deser {}
-impl<T: Ser + Deser> BTSerde for T {}
+pub trait BTree: ToByteTree + FromByteTree {}
+impl<T: ToByteTree + FromByteTree> BTree for T {}
 
 impl<T: ToByteTree> Ser for T {
     fn ser(&self) -> Vec<u8> {
@@ -709,6 +711,7 @@ impl FromByteTree for Statement {
     fn from_byte_tree(tree: &ByteTree) -> Result<Statement, ByteError> {
         let trees = tree.tree(4)?;
         let stype_ = &trees[0].leaf()?;
+        info!("fbt: {}", stype_[0]);
         let stype: StatementType = StatementType::try_from(stype_[0])?;
         let contest_ = trees[1].leaf()?;
         let contest = u32::from_le_bytes(contest_.as_slice().try_into().unwrap());

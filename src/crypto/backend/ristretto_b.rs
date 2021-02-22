@@ -30,9 +30,6 @@ impl Element for RistrettoPoint {
     fn modulo(&self, _modulus: &Self) -> Self {
         *self
     }
-    /*fn eq(&self, other: &RistrettoPoint) -> bool {
-        self == other
-    }*/
     fn mul_identity() -> RistrettoPoint {
         RistrettoPoint::identity()
     }
@@ -54,9 +51,6 @@ impl Exponent for Scalar {
     fn modulo(&self, _modulus: &Scalar) -> Scalar {
         *self   
     }
-    /* fn eq(&self, other: &Scalar) -> bool {
-        self == other
-    }*/
     fn add_identity() -> Scalar {
         Scalar::zero()
     }

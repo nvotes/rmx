@@ -6,6 +6,7 @@ use rmx::util;
 use rmx::crypto::backend::rug_b::*;
 use rmx::crypto::backend::ristretto_b::*;
 use rmx::crypto::base::*;
+use rmx::data::bytes::*;
 
 #[test]
 fn test_size() {

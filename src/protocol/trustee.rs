@@ -1,7 +1,6 @@
 
 use generic_array::{typenum::U32, GenericArray};
 
-use serde::de::DeserializeOwned;
 use rand::rngs::OsRng;
 use ed25519_dalek::Keypair;
 use log::info;
@@ -19,7 +18,6 @@ use crate::crypto::hashing;
 use crate::crypto::hashing::*;
 use crate::bulletinboard::*;
 use crate::bulletinboard::localstore::LocalStore;
-use crate::util;
 use crate::util::short;
 
 pub struct Trustee<E, G> {
@@ -28,7 +26,7 @@ pub struct Trustee<E, G> {
     pub symmetric: GenericArray<u8, U32>
 }
 
-impl<E: Element + DeserializeOwned , G: Group<E> + DeserializeOwned> Trustee<E, G> {
+impl<E: Element, G: Group<E>> Trustee<E, G> {
     
     pub fn new(local_store: String) -> Trustee<E, G> {
         let mut csprng = OsRng;
@@ -45,7 +43,6 @@ impl<E: Element + DeserializeOwned , G: Group<E> + DeserializeOwned> Trustee<E, 
     
     pub fn run<B: BulletinBoard<E, G>>(&self, facts: AllFacts, board: &mut B) -> u32 {
         let self_index = facts.get_self_index();
-        let trustees = facts.get_trustee_count();
         let actions = facts.all_actions;
         let ret = actions.len();
         
@@ -75,8 +72,8 @@ impl<E: Element + DeserializeOwned , G: Group<E> + DeserializeOwned> Trustee<E, 
                 Act::CombineShares(cfg_h, cnt, hs) => {
                     info!(">> Action: Combining shares (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
                     let cfg = board.get_config(cfg_h).unwrap();
-                    let hashes = util::clear_zeroes(&hs);
-                    assert!(hashes.len() as u32 == trustees.unwrap());
+                    let hashes = clear_zeroes(&hs);
+                    assert!(hashes.len() == cfg.trustees.len());
                     let pk = self.get_pk(board, hashes, &cfg.group, cnt).unwrap();
                     let pk_h = hashing::hash(&pk);
                     let ss = SignedStatement::public_key(&cfg_h, &pk_h, cnt, &self.keypair);
@@ -88,7 +85,8 @@ impl<E: Element + DeserializeOwned , G: Group<E> + DeserializeOwned> Trustee<E, 
                 Act::CheckPk(cfg_h, cnt, pk_h, hs) => {
                     info!(">> Action: Verifying pk (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
                     let cfg = board.get_config(cfg_h).unwrap();
-                    let hashes = util::clear_zeroes(&hs);
+                    let hashes = clear_zeroes(&hs);
+                    assert!(hashes.len() == cfg.trustees.len());
                     let pk = self.get_pk(board, hashes, &cfg.group, cnt).unwrap();
                     let pk_h_ = hashing::hash(&pk);
                     assert!(pk_h == pk_h_);
@@ -195,8 +193,8 @@ impl<E: Element + DeserializeOwned , G: Group<E> + DeserializeOwned> Trustee<E, 
                     let cfg = board.get_config(cfg_h).unwrap();
                     info!(">> Action: Combining decryptions (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
                     let now_ = std::time::Instant::now();
-                    let d_hs = util::clear_zeroes(&decryption_hs);
-                    let s_hs = util::clear_zeroes(&share_hs);
+                    let d_hs = clear_zeroes(&decryption_hs);
+                    let s_hs = clear_zeroes(&share_hs);
                     let pls = self.get_plaintexts(board, cnt, d_hs, mix_h, s_hs, &cfg).unwrap();
                     let rate = pls.len() as f32 / now_.elapsed().as_millis() as f32;
                     let plaintexts = Plaintexts {
@@ -213,8 +211,8 @@ impl<E: Element + DeserializeOwned , G: Group<E> + DeserializeOwned> Trustee<E, 
                     let cfg = board.get_config(cfg_h).unwrap();
                     info!(">> Action: Checking plaintexts (contest=[{}], self=[{}])", cnt, self_index.unwrap());
                     let now_ = std::time::Instant::now();
-                    let s_hs = util::clear_zeroes(&share_hs);
-                    let d_hs = util::clear_zeroes(&decryption_hs);
+                    let s_hs = clear_zeroes(&share_hs);
+                    let d_hs = clear_zeroes(&decryption_hs);
                     let pls = self.get_plaintexts(board, cnt, d_hs, mix_h, s_hs, &cfg).unwrap();
                     let rate = pls.len() as f32 / now_.elapsed().as_millis() as f32;
                     let pls_board = board.get_plaintexts(cnt, plaintexts_h).unwrap();
@@ -250,9 +248,13 @@ impl<E: Element + DeserializeOwned , G: Group<E> + DeserializeOwned> Trustee<E, 
         mix_h: Hash, share_hs: Vec<Hash>, cfg: &Config<E, G>) -> Option<Vec<E>> {
         
         assert!(hs.len() == share_hs.len());
+        assert!(hs.len() == cfg.trustees.len());
+        assert!(share_hs.len() == cfg.trustees.len());
         
         let mut decryptions: Vec<Vec<E>> = Vec::with_capacity(hs.len());
         let last_trustee = cfg.trustees.len() - 1;
+        
+
         let mix = board.get_mix(cnt, last_trustee as u32, mix_h).unwrap();
         let ciphertexts = mix.mixed_ballots;
         for (i, h) in hs.iter().enumerate() {
@@ -314,4 +316,9 @@ impl<E: Element + DeserializeOwned , G: Group<E> + DeserializeOwned> Trustee<E, 
             encrypted_sk
         }
     }
+}
+
+fn clear_zeroes(input: &[[u8; 64]; crate::protocol::MAX_TRUSTEES]) -> Vec<[u8; 64]> {
+    input.iter().cloned().filter(|&a| a != [0u8; 64])  
+        .collect()
 }

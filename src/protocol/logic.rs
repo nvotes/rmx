@@ -22,7 +22,7 @@ pub(super) type BallotsHash = Hash;
 pub(super) type MixHash = Hash;
 pub(super) type DecryptionHash = Hash;
 pub(super) type PlaintextsHash = Hash;
-pub(super) type Hashes = [Hash; 10];
+pub(super) type Hashes = [Hash; crate::protocol::MAX_TRUSTEES];
 
 crepe! {
     @input
@@ -274,7 +274,7 @@ crepe! {
 }
 
 fn array_make(value: Hash) -> Hashes {
-    let mut ret = [[0u8; 64]; 10];
+    let mut ret = [[0u8; 64]; crate::protocol::MAX_TRUSTEES];
     ret[0] = value;
 
     ret
@@ -291,7 +291,7 @@ pub struct Protocol <E, G, B> {
     phantom_b: PhantomData<B>
 }
 
-impl<E: Element + DeserializeOwned + PartialEq, G: Group<E> + DeserializeOwned,
+impl<E: Element + DeserializeOwned, G: Group<E>,
     B: BulletinBoard<E, G>> Protocol<E, G, B> {
 
     pub fn new(trustee: Trustee<E, G>) -> Protocol<E, G, B> {

@@ -1,8 +1,6 @@
 use std::path::{Path,PathBuf};
 use std::marker::PhantomData;
 
-use serde::de::DeserializeOwned;
-
 use crate::util;
 use crate::data::entity::*;
 use crate::protocol::statement::*;
@@ -12,6 +10,7 @@ use crate::crypto::elgamal::PublicKey;
 use crate::crypto::base::Element;
 use crate::crypto::base::Group;
 use crate::bulletinboard::*;
+use crate::data::bytes::*;
 
 pub struct LocalStore<E, G> {
     pub fs_path: PathBuf,
@@ -19,9 +18,7 @@ pub struct LocalStore<E, G> {
     phantom_g: PhantomData<G>
 }
 
-impl<E: Element + DeserializeOwned, 
-    G: Group<E> + DeserializeOwned> 
-    LocalStore<E, G> {
+impl<E: Element, G: Group<E>> LocalStore<E, G> {
     
     pub fn new(fs_path: String) -> LocalStore<E, G> {
         let target = Path::new(&fs_path);
@@ -35,7 +32,9 @@ impl<E: Element + DeserializeOwned,
     pub fn set_config_stmt(&self, act: &Act, stmt: &SignedStatement) -> ConfigStmtPath {
         assert!(matches!(act, Act::CheckConfig(_)));
         assert!(matches!(stmt.statement.stype, StatementType::Config));
-        let stmt_b = bincode::serialize(&stmt).unwrap();
+        // let stmt_b = bincode::serialize(&stmt).unwrap();
+        let stmt_b = stmt.ser();
+
         let stmt_p = self.set_work(act, vec![stmt_b]).remove(0);
 
         ConfigStmtPath(stmt_p)
@@ -43,8 +42,10 @@ impl<E: Element + DeserializeOwned,
     pub fn set_share(&self, act: &Act, share: Keyshare<E, G>, stmt: &SignedStatement) -> KeysharePath {
         assert!(matches!(act, Act::PostShare(..)));
         assert!(matches!(stmt.statement.stype, StatementType::Keyshare));
-        let share_b = bincode::serialize(&share).unwrap();
-        let stmt_b = bincode::serialize(&stmt).unwrap();
+        // let share_b = bincode::serialize(&share).unwrap();
+        let share_b = share.ser();
+        // let stmt_b = bincode::serialize(&stmt).unwrap();
+        let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![share_b, stmt_b]);
         let share_p = paths.remove(0);
         let stmt_p = paths.remove(0);
@@ -54,8 +55,10 @@ impl<E: Element + DeserializeOwned,
     pub fn set_pk(&self, act: &Act, pk: PublicKey<E, G>, stmt: &SignedStatement) -> PkPath {
         assert!(matches!(act, Act::CombineShares(..)));
         assert!(matches!(stmt.statement.stype, StatementType::PublicKey));
-        let pk_b = bincode::serialize(&pk).unwrap();
-        let stmt_b = bincode::serialize(&stmt).unwrap();
+        // let pk_b = bincode::serialize(&pk).unwrap();
+        let pk_b = pk.ser();
+        // let stmt_b = bincode::serialize(&stmt).unwrap();
+        let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![pk_b, stmt_b]);
         let pk_p = paths.remove(0);
         let stmt_p = paths.remove(0);
@@ -65,7 +68,8 @@ impl<E: Element + DeserializeOwned,
     pub fn set_pk_stmt(&self, act: &Act, stmt: &SignedStatement) -> PkStmtPath {
         assert!(matches!(act, Act::CheckPk(..)));
         assert!(matches!(stmt.statement.stype, StatementType::PublicKey));
-        let stmt_b = bincode::serialize(&stmt).unwrap();
+        // let stmt_b = bincode::serialize(&stmt).unwrap();
+        let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![stmt_b]);
         let stmt_p = paths.remove(0);
         
@@ -74,8 +78,10 @@ impl<E: Element + DeserializeOwned,
     pub fn set_mix(&self, act: &Act, mix: Mix<E>, stmt: &SignedStatement) -> MixPath {
         assert!(matches!(act, Act::Mix(..)));
         assert!(matches!(stmt.statement.stype, StatementType::Mix));
-        let mix_b = bincode::serialize(&mix).unwrap();
-        let stmt_b = bincode::serialize(&stmt).unwrap();
+        // let mix_b = bincode::serialize(&mix).unwrap();
+        let mix_b = mix.ser();
+        // let stmt_b = bincode::serialize(&stmt).unwrap();
+        let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![mix_b, stmt_b]);
         let pk_p = paths.remove(0);
         let stmt_p = paths.remove(0);
@@ -85,7 +91,8 @@ impl<E: Element + DeserializeOwned,
     pub fn set_mix_stmt(&self, act: &Act, stmt: &SignedStatement) -> MixStmtPath {
         assert!(matches!(act, Act::CheckMix(..)));
         assert!(matches!(stmt.statement.stype, StatementType::Mix));
-        let stmt_b = bincode::serialize(&stmt).unwrap();
+        // let stmt_b = bincode::serialize(&stmt).unwrap();
+        let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![stmt_b]);
         let stmt_p = paths.remove(0);
         
@@ -95,8 +102,10 @@ impl<E: Element + DeserializeOwned,
     pub fn set_pdecryptions(&self, act: &Act, pdecryptions: PartialDecryption<E>, stmt: &SignedStatement) -> PDecryptionsPath {
         assert!(matches!(act, Act::PartialDecrypt(..)));
         assert!(matches!(stmt.statement.stype, StatementType::PDecryption));
-        let pdecryptions_b = bincode::serialize(&pdecryptions).unwrap();
-        let stmt_b = bincode::serialize(&stmt).unwrap();
+        // let pdecryptions_b = bincode::serialize(&pdecryptions).unwrap();
+        let pdecryptions_b = pdecryptions.ser();
+        // let stmt_b = bincode::serialize(&stmt).unwrap();
+        let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![pdecryptions_b, stmt_b]);
         let pdecryptions_p = paths.remove(0);
         let stmt_p = paths.remove(0);
@@ -107,8 +116,10 @@ impl<E: Element + DeserializeOwned,
     pub fn set_plaintexts(&self, act: &Act, plaintexts: Plaintexts<E>, stmt: &SignedStatement) -> PlaintextsPath {
         assert!(matches!(act, Act::CombineDecryptions(..)));
         assert!(matches!(stmt.statement.stype, StatementType::Plaintexts));
-        let plaintexts_b = bincode::serialize(&plaintexts).unwrap();
-        let stmt_b = bincode::serialize(&stmt).unwrap();
+        // let plaintexts_b = bincode::serialize(&plaintexts).unwrap();
+        let plaintexts_b = plaintexts.ser();
+        // let stmt_b = bincode::serialize(&stmt).unwrap();
+        let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![plaintexts_b, stmt_b]);
         let plaintexts_p = paths.remove(0);
         let stmt_p = paths.remove(0);
@@ -118,7 +129,8 @@ impl<E: Element + DeserializeOwned,
     pub fn set_plaintexts_stmt(&self, act: &Act, stmt: &SignedStatement) -> PlaintextsStmtPath {
         assert!(matches!(act, Act::CheckPlaintexts(..)));
         assert!(matches!(stmt.statement.stype, StatementType::Plaintexts));
-        let stmt_b = bincode::serialize(&stmt).unwrap();
+        // let stmt_b = bincode::serialize(&stmt).unwrap();
+        let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![stmt_b]);
         let stmt_p = paths.remove(0);
         
@@ -164,7 +176,6 @@ impl<E: Element + DeserializeOwned,
         let encoded = hex::encode(&hash);
         let work_path = Path::new(&encoded);
         let ret = Path::new(&self.fs_path).join(work_path);
-        // println!("action {:?}, returning path {:?}", action, ret);
 
         ret
     }

@@ -15,6 +15,7 @@ use crate::crypto::base::Element;
 use crate::crypto::base::Group;
 use crate::crypto::backend::rug_b::RugGroup;
 use crate::crypto::backend::ristretto_b::RistrettoGroup;
+use crate::data::bytes::*;
 use crate::protocol::statement::SignedStatement;
 use crate::protocol::statement::StatementVerifier;
 use crate::util;
@@ -34,12 +35,14 @@ impl MBasicBulletinBoard {
     fn list(&self) -> Vec<String> {
         self.data.iter().map(|(a, _)| a.clone()).collect()
     }
-    fn get<A: HashBytes + DeserializeOwned>(&self, target: String, hash: Hash) -> Result<A, String> {
+    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<A, String> {
         let key = target;
         let bytes = self.data.get(&key).ok_or("Not found")?;
 
         let now_ = std::time::Instant::now();
-        let artifact = bincode::deserialize::<A>(bytes)
+        // let artifact = bincode::deserialize::<A>(bytes)
+        //    .map_err(|e| std::format!("serde error {}", e))?;
+        let artifact = A::deser(bytes)
             .map_err(|e| std::format!("serde error {}", e))?;
         info!(">> Deser {}, bytes {}", now_.elapsed().as_millis(), bytes.len());
         
@@ -67,8 +70,11 @@ impl MBasicBulletinBoard {
     }
     fn get_config_type(&self, target: &str) -> Option<bool> {
         let bytes = self.data.get(target)?;
-        let config_rug = bincode::deserialize::<Config<Integer, RugGroup>>(bytes);
-        let config_ristretto = bincode::deserialize::<Config<RistrettoPoint, RistrettoGroup>>(bytes);
+        // let config_rug = bincode::deserialize::<Config<Integer, RugGroup>>(bytes);
+        let config_rug = Config::<Integer, RugGroup>::deser(bytes);
+
+        // let config_ristretto = bincode::deserialize::<Config<RistrettoPoint, RistrettoGroup>>(bytes);
+        let config_ristretto = Config::<RistrettoPoint, RistrettoGroup>::deser(bytes);
         if config_rug.is_ok() {
             Some(true)
         }
@@ -91,7 +97,7 @@ pub struct MemoryBulletinBoard<E, G> {
     
 }
 
-impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned> MemoryBulletinBoard<E, G> {
+impl<E: Element + DeserializeOwned + FromByteTree, G: Group<E> + DeserializeOwned + FromByteTree> MemoryBulletinBoard<E, G> {
     pub fn new() -> MemoryBulletinBoard<E, G> {
         MemoryBulletinBoard {
             basic: MBasicBulletinBoard::new(),
@@ -105,7 +111,7 @@ impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned> MemoryBullet
     fn put(&mut self, name: &str, data: &Path) {
         self.basic.put(name, data);
     }
-    fn get<A: HashBytes + DeserializeOwned>(&self, target: String, hash: Hash) -> Result<A, String> {
+    fn get<A: HashBytes + DeserializeOwned + FromByteTree>(&self, target: String, hash: Hash) -> Result<A, String> {
         self.basic.get(target, hash)
     }
     pub fn get_unsafe(&self, target: String) -> Option<&Vec<u8>> {
@@ -113,7 +119,7 @@ impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned> MemoryBullet
     }
 }
 
-impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned> 
+impl<E: Element + DeserializeOwned + FromByteTree, G: Group<E> + DeserializeOwned + FromByteTree> 
     BulletinBoard<E, G> for MemoryBulletinBoard<E, G> {
     
     fn list(&self) -> Vec<String> {
@@ -124,7 +130,8 @@ impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned>
     }
     fn get_config_unsafe(&self) -> Option<Config<E, G>> {
         let bytes = self.basic.get_unsafe(Self::CONFIG)?;
-        let ret: Config<E, G> = bincode::deserialize(bytes).unwrap();
+        // let ret: Config<E, G> = bincode::deserialize(bytes).unwrap();
+        let ret = Config::<E, G>::deser(bytes).unwrap();
 
         Some(ret)
     }
@@ -228,7 +235,8 @@ impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned>
         for s in sts.iter() {
             let s_bytes = self.basic.get_unsafe(s).unwrap().to_vec();
             let (trustee, contest) = artifact_location(s);
-            let stmt: SignedStatement = bincode::deserialize(&s_bytes).unwrap();
+            // let stmt: SignedStatement = bincode::deserialize(&s_bytes).unwrap();
+            let stmt = SignedStatement::deser(&s_bytes).unwrap();
 
             let next = StatementVerifier {
                 statement: stmt,
@@ -304,7 +312,8 @@ mod tests {
         };
 
         let mut bb = MemoryBulletinBoard::<Integer, RugGroup>::new();
-        let cfg_b = bincode::serialize(&cfg).unwrap();
+        // let cfg_b = bincode::serialize(&cfg).unwrap();
+        let cfg_b = cfg.ser();
         
         let tmp_file = NamedTempFile::new().unwrap();
         let target = "test";

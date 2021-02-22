@@ -26,6 +26,7 @@ use rmx::bulletinboard::memory_bb::*;
 use rmx::protocol::logic::Protocol;
 use rmx::protocol::trustee::Trustee;
 use rmx::protocol::facts::AllFacts;
+use rmx::data::bytes::*;
 use rmx::util;
 
 use cursive::align::HAlign;
@@ -82,7 +83,8 @@ impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned> Demo<E, G>
         let bb_keypair = Keypair::generate(&mut csprng);
         let mut bb = MemoryBulletinBoard::<E, G>::new();
         let cfg = gen_config(group, contests, trustee_pks, bb_keypair.public);
-        let cfg_b = bincode::serialize(&cfg).unwrap();
+        // let cfg_b = bincode::serialize(&cfg).unwrap();
+        let cfg_b = cfg.ser();
         let tmp_file = util::write_tmp(cfg_b).unwrap();
         bb.add_config(&ConfigPath(tmp_file.path().to_path_buf()));
 
@@ -103,18 +105,21 @@ impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned> Demo<E, G>
             let ballots_b = self.board.get_unsafe(MemoryBulletinBoard::<E, G>::ballots(i));
             if pk_b.is_some() && ballots_b.is_none() {
                 info!(">> Adding {} ballots..", self.ballots);
-                let pk: PublicKey<E, G> = bincode::deserialize(pk_b.unwrap()).unwrap();
+                // let pk: PublicKey<E, G> = bincode::deserialize(pk_b.unwrap()).unwrap();
+                let pk = PublicKey::<E, G>::deser(pk_b.unwrap()).unwrap();
                 
                 let (plaintexts, ciphertexts) = util::random_encrypt_ballots(self.ballots as usize, &pk);
                 self.all_plaintexts.push(plaintexts);
                 
                 let ballots = Ballots { ciphertexts };
-                let ballots_b = bincode::serialize(&ballots).unwrap();
+                // let ballots_b = bincode::serialize(&ballots).unwrap();
+                let ballots_b = ballots.ser();
                 let ballots_h = hashing::hash(&ballots);
                 let cfg_h = hashing::hash(&self.config);
                 let ss = SignedStatement::ballots(&cfg_h, &ballots_h, i, &self.bb_keypair);
                 
-                let ss_b = bincode::serialize(&ss).unwrap();
+                // let ss_b = bincode::serialize(&ss).unwrap();
+                let ss_b = ss.ser();
                 
                 let f1 = util::write_tmp(ballots_b).unwrap();
                 let f2 = util::write_tmp(ss_b).unwrap();
@@ -130,7 +135,8 @@ impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned> Demo<E, G>
     fn check_plaintexts(&self) {
         for i in 0..self.config.contests {
             if let Some(decrypted_b) = self.board.get_unsafe(MemoryBulletinBoard::<E, G>::plaintexts(i, 0)) {
-                let decrypted: Plaintexts<E> = bincode::deserialize(decrypted_b).unwrap();
+                // let decrypted: Plaintexts<E> = bincode::deserialize(decrypted_b).unwrap();
+                let decrypted = Plaintexts::<E>::deser(decrypted_b).unwrap();
                 let decoded: Vec<E::Plaintext> = decrypted.plaintexts.iter().map(|p| {
                     self.config.group.decode(&p)
                 }).collect();
@@ -390,7 +396,7 @@ fn demo_ristretto() {
     demo(group);
 }
 
-fn demo<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned>(group: G) 
+fn demo<E: Element + DeserializeOwned + std::cmp::PartialEq + FromByteTree + ToByteTree, G: Group<E> + DeserializeOwned + FromByteTree + ToByteTree>(group: G) 
     where <E as Element>::Plaintext: std::hash::Hash {
     
     let local1 = "/tmp/local";
@@ -414,7 +420,9 @@ fn demo<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deser
     
     let contests = 3;
     let cfg = gen_config(&group, contests, trustee_pks, bb_keypair.public);
-    let cfg_b = bincode::serialize(&cfg).unwrap();
+    // let cfg_b = bincode::serialize(&cfg).unwrap();
+    let cfg_b = cfg.ser();
+
     let tmp_file = util::write_tmp(cfg_b).unwrap();
     bb.add_config(&ConfigPath(tmp_file.path().to_path_buf()));
     
@@ -449,17 +457,20 @@ fn demo<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deser
     println!("=================== ballots ===================");
     for i in 0..contests {
         let pk_b = bb.get_unsafe(MemoryBulletinBoard::<E, G>::public_key(i, 0)).unwrap();
-        let pk: PublicKey<E, G> = bincode::deserialize(pk_b).unwrap();
+        // let pk: PublicKey<E, G> = bincode::deserialize(pk_b).unwrap();
+        let pk = PublicKey::<E, G>::deser(pk_b).unwrap();
         
         let (plaintexts, ciphertexts) = util::random_encrypt_ballots(100, &pk);
         all_plaintexts.push(plaintexts);
         let ballots = Ballots { ciphertexts };
-        let ballots_b = bincode::serialize(&ballots).unwrap();
+        // let ballots_b = bincode::serialize(&ballots).unwrap();
+        let ballots_b = ballots.ser();
         let ballots_h = hashing::hash(&ballots);
         let cfg_h = hashing::hash(&cfg);
         let ss = SignedStatement::ballots(&cfg_h, &ballots_h, i, &bb_keypair);
         
-        let ss_b = bincode::serialize(&ss).unwrap();
+        // let ss_b = bincode::serialize(&ss).unwrap();
+        let ss_b = ss.ser();
         
         let f1 = util::write_tmp(ballots_b).unwrap();
         let f2 = util::write_tmp(ss_b).unwrap();
@@ -493,7 +504,8 @@ fn demo<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + Deser
 
     for i in 0..contests {
         let decrypted_b = bb.get_unsafe(MemoryBulletinBoard::<E, G>::plaintexts(i, 0)).unwrap();
-        let decrypted: Plaintexts<E> = bincode::deserialize(decrypted_b).unwrap();
+        // let decrypted: Plaintexts<E> = bincode::deserialize(decrypted_b).unwrap();
+        let decrypted = Plaintexts::<E>::deser(decrypted_b).unwrap();
         let decoded: Vec<E::Plaintext> = decrypted.plaintexts.iter().map(|p| {
             group.decode(&p)
         }).collect();

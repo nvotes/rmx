@@ -396,7 +396,7 @@ fn demo_ristretto() {
     demo(group);
 }
 
-fn demo<E: Element + DeserializeOwned + std::cmp::PartialEq + FromByteTree + ToByteTree, G: Group<E> + DeserializeOwned + FromByteTree + ToByteTree>(group: G) 
+fn demo<E: Element + DeserializeOwned + std::cmp::PartialEq, G: Group<E> + DeserializeOwned>(group: G) 
     where <E as Element>::Plaintext: std::hash::Hash {
     
     let local1 = "/tmp/local";

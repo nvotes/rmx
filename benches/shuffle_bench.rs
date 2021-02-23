@@ -1,10 +1,12 @@
 use std::time::Duration;
 use rug::Integer;
-use rmx::group::*;
-use rmx::elgamal::*;
-use rmx::ristretto_b::*;
-use rmx::rug_b::*;
-use rmx::shuffler::*;
+use rmx::crypto::base::*;
+use rmx::crypto::elgamal::*;
+use rmx::crypto::backend::ristretto_b::*;
+use rmx::crypto::backend::rug_b::*;
+use rmx::crypto::shuffler::*;
+use rmx::data::entity::*;
+
 
 use criterion::{criterion_group, criterion_main, Criterion, SamplingMode, BenchmarkId};
 

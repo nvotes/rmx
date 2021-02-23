@@ -9,6 +9,7 @@ use ed25519_dalek::PublicKey as SPublicKey;
 // use sha2::{Sha512, Sha256, Digest};
 use rug::{Integer,integer::Order};
 use log::info;
+use serde_bytes::ByteBuf;
 
 
 use crate::crypto::base::*;

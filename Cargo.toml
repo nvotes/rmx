@@ -37,6 +37,7 @@ simplelog = "0.9.0"
 log = "0.4.11"
 quick-error = "2.0.0"
 num_enum = "0.5.1"
+serde_bytes = "0.11.5"
 
 [dev-dependencies]
 criterion = "0.3"

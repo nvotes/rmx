@@ -5,7 +5,7 @@ use std::{
 };
 use sha2::{Sha512, Digest};
 use rmx::util;
-use rmx::ristretto_b::*;
+use rmx::crypto::backend::ristretto_b::*;
 
 
 

@@ -105,7 +105,7 @@ fn deser_mix_ristretto_bt(bytes: &Vec<u8>) {
 fn criterion_benchmark(c: &mut Criterion) {
     
     let mut group = c.benchmark_group("serialize_bench");
-    
+    /*
     for size in [1000, 5000, 10000].iter() {
         let mix = shuffle_ristretto(*size);
     
@@ -120,7 +120,7 @@ fn criterion_benchmark(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("deser_mix_ristretto", size), size, |b, &_size| {
             b.iter(|| deser_mix_ristretto(&bytes));
         });
-    }
+    }*/
 
     for size in [1000, 5000, 10000].iter() {
         let mix = shuffle_ristretto(*size);
@@ -137,7 +137,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             b.iter(|| deser_mix_ristretto_bt(&bytes));
         });
     }
-
+/*
     for size in [100, 500, 1000].iter() {
         let mix = shuffle_rug(*size);
     
@@ -153,7 +153,7 @@ fn criterion_benchmark(c: &mut Criterion) {
             b.iter(|| deser_mix_rug(&bytes));
         });
     }
-
+    */
     for size in [100, 500, 1000].iter() {
         let mix = shuffle_rug(*size);
     

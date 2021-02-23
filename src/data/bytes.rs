@@ -46,7 +46,7 @@ quick_error! {
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub enum ByteTree {
-    Leaf(Vec<u8>),
+    Leaf(ByteBuf),
     Tree(Vec<ByteTree>)
 }
 use ByteTree::*;
@@ -162,7 +162,7 @@ impl<T: FromByteTree> FromByteTree for Vec<T> {
 
 impl ToByteTree for Vec<u8> {
     fn to_byte_tree(&self) -> ByteTree {
-        Leaf(self.to_vec())
+        Leaf(ByteBuf::from(self.to_vec()))
     }
 }
 
@@ -179,7 +179,7 @@ impl FromByteTree for Vec<u8> {
 
 impl ToByteTree for Scalar {
     fn to_byte_tree(&self) -> ByteTree {
-        Leaf(self.as_bytes().to_vec())
+        Leaf(ByteBuf::from(self.as_bytes().to_vec()))
     }
 }
 
@@ -195,7 +195,7 @@ impl FromByteTree for Scalar {
 
 impl ToByteTree for RistrettoPoint {
     fn to_byte_tree(&self) -> ByteTree {
-        Leaf(self.compress().as_bytes().to_vec())
+        Leaf(ByteBuf::from(self.compress().as_bytes().to_vec()))
     }
 }
 
@@ -211,7 +211,7 @@ impl FromByteTree for RistrettoPoint {
 
 impl ToByteTree for Signature {
     fn to_byte_tree(&self) -> ByteTree {
-        Leaf(self.to_bytes().to_vec())
+        Leaf(ByteBuf::from(self.to_bytes().to_vec()))
     } 
 }
 
@@ -226,7 +226,7 @@ impl FromByteTree for Signature {
 
 impl ToByteTree for Integer {
     fn to_byte_tree(&self) -> ByteTree {
-        Leaf(self.to_digits::<u8>(Order::LsfLe))
+        Leaf(ByteBuf::from(self.to_digits::<u8>(Order::LsfLe)))
     }
 }
 
@@ -240,7 +240,7 @@ impl FromByteTree for Integer {
 
 impl ToByteTree for SPublicKey {
     fn to_byte_tree(&self) -> ByteTree {
-        ByteTree::Leaf(self.as_bytes().to_vec())
+        ByteTree::Leaf(ByteBuf::from(self.as_bytes().to_vec()))
     }
 }
 
@@ -285,7 +285,7 @@ impl FromByteTree for RugGroup {
 
 impl ToByteTree for RistrettoGroup {
     fn to_byte_tree(&self) -> ByteTree {
-        ByteTree::Leaf(vec![])
+        ByteTree::Leaf(ByteBuf::new())
     }
 }
 
@@ -299,8 +299,8 @@ impl FromByteTree for RistrettoGroup {
 impl ToByteTree for EncryptedPrivateKey {
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
-        trees.push(ByteTree::Leaf(self.bytes.clone()));
-        trees.push(ByteTree::Leaf(self.iv.clone()));
+        trees.push(ByteTree::Leaf(ByteBuf::from(self.bytes.clone())));
+        trees.push(ByteTree::Leaf(ByteBuf::from(self.iv.clone())));
         ByteTree::Tree(trees)
     }
 }
@@ -322,9 +322,9 @@ impl FromByteTree for EncryptedPrivateKey {
 impl<E: ToByteTree, G: ToByteTree> ToByteTree for Config<E, G> {
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(5);
-        trees.push(ByteTree::Leaf(self.id.to_vec()));
+        trees.push(ByteTree::Leaf(ByteBuf::from(self.id.to_vec())));
         trees.push(self.group.to_byte_tree());
-        trees.push(ByteTree::Leaf(self.contests.to_le_bytes().to_vec()));
+        trees.push(ByteTree::Leaf(ByteBuf::from(self.contests.to_le_bytes().to_vec())));
         trees.push(self.ballotbox.to_byte_tree());
         trees.push(self.trustees.to_byte_tree());
         ByteTree::Tree(trees)
@@ -693,15 +693,15 @@ impl<E: FromByteTree> FromByteTree for Ciphertext<E> {
 impl ToByteTree for Statement {
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
-        trees.push(Leaf(vec![self.stype as u8]));
-        trees.push(Leaf(self.contest.to_le_bytes().to_vec()));
+        trees.push(Leaf(ByteBuf::from(vec![self.stype as u8])));
+        trees.push(Leaf(ByteBuf::from(self.contest.to_le_bytes().to_vec())));
         let trustee_aux = if let Some(t) = self.trustee_aux {
             t.to_le_bytes().to_vec()
         }
         else {
             vec![]
         };
-        trees.push(Leaf(trustee_aux));
+        trees.push(Leaf(ByteBuf::from(trustee_aux)));
         trees.push(self.hashes.to_byte_tree());
 
         ByteTree::Tree(trees)

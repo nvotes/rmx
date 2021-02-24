@@ -6,9 +6,7 @@ use curve25519_dalek::ristretto::{RistrettoPoint,CompressedRistretto};
 use curve25519_dalek::scalar::Scalar;
 use ed25519_dalek::Signature;
 use ed25519_dalek::PublicKey as SPublicKey;
-// use sha2::{Sha512, Sha256, Digest};
 use rug::{Integer,integer::Order};
-use log::info;
 use serde_bytes::ByteBuf;
 
 
@@ -712,7 +710,6 @@ impl FromByteTree for Statement {
     fn from_byte_tree(tree: &ByteTree) -> Result<Statement, ByteError> {
         let trees = tree.tree(4)?;
         let stype_ = &trees[0].leaf()?;
-        info!("fbt: {}", stype_[0]);
         let stype: StatementType = StatementType::try_from(stype_[0])?;
         let contest_ = trees[1].leaf()?;
         let contest = u32::from_le_bytes(contest_.as_slice().try_into().unwrap());

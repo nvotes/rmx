@@ -7,6 +7,14 @@ use tempfile::NamedTempFile;
 use walkdir::{DirEntry, WalkDir};
 
 use serde::{Deserialize, Serialize};
+use serde::de::DeserializeOwned;
+
+
+use crate::util;
+use crate::crypto::hashing;
+use crate::crypto::hashing::HashBytes;
+use crate::crypto::hashing::Hash;
+use crate::data::bytes::*;
 
 #[derive(Serialize, Deserialize)]
 struct GitBulletinBoard {
@@ -15,6 +23,138 @@ struct GitBulletinBoard {
     pub fs_path: String,
     pub append_only: bool
 }
+
+/*
+impl<E: Element + DeserializeOwned + FromByteTree, G: Group<E> + DeserializeOwned + FromByteTree> 
+    BulletinBoard<E, G> for MemoryBulletinBoard<E, G> {
+    
+    fn list(&self) -> Vec<String> {
+        self.basic.list()
+    }
+    fn add_config(&mut self, path: &ConfigPath) {
+        self.put(Self::CONFIG, &path.0);
+    }
+    fn get_config_unsafe(&self) -> Option<Config<E, G>> {
+        let bytes = self.basic.get_unsafe(Self::CONFIG)?;
+        // let ret: Config<E, G> = bincode::deserialize(bytes).unwrap();
+        let ret = Config::<E, G>::deser(bytes).unwrap();
+
+        Some(ret)
+    }
+    
+    fn get_config(&self, hash: Hash) -> Option<Config<E, G>> {
+        let ret = self.get(Self::CONFIG.to_string(), hash).ok()?;
+
+        Some(ret)
+    }
+    fn add_config_stmt(&mut self, path: &ConfigStmtPath, trustee: u32) {
+        self.put(&Self::config_stmt(trustee), &path.0);
+    }
+    
+    fn add_share(&mut self, path: &KeysharePath, contest: u32, trustee: u32) {
+        self.put(&Self::share(contest, trustee), &path.0);
+        self.put(&Self::share_stmt(contest, trustee), &path.1);
+    }
+    fn get_share(&self, contest: u32, auth: u32, hash: Hash) -> Option<Keyshare<E, G>> {
+        let key = Self::share(contest, auth).to_string();
+        let ret = self.get(key, hash).ok()?;
+
+        Some(ret)
+    }
+    
+    fn set_pk(&mut self, path: &PkPath, contest: u32) {
+        // 0: trustee 0 combines shares into pk
+        self.put(&Self::public_key(contest, 0), &path.0);
+        self.put(&Self::public_key_stmt(contest, 0), &path.1);
+    }
+    fn set_pk_stmt(&mut self, path: &PkStmtPath, contest: u32, trustee: u32) {
+        self.put(&Self::public_key_stmt(contest, trustee), &path.0);
+    }
+    fn get_pk(&mut self, contest: u32, hash: Hash) -> Option<PublicKey<E, G>> {
+        // 0: trustee 0 combines shares into pk
+        let key = Self::public_key(contest, 0).to_string();
+        let ret = self.get(key, hash).ok()?;
+
+        Some(ret)
+    }
+
+    fn add_ballots(&mut self, path: &BallotsPath, contest: u32) {
+        self.put(&Self::ballots(contest), &path.0);
+        self.put(&Self::ballots_stmt(contest), &path.1);
+    }
+    fn get_ballots(&self, contest: u32, hash: Hash) -> Option<Ballots<E>> {
+        let key = Self::ballots(contest).to_string();
+        let ret = self.get(key, hash).ok()?;
+
+        Some(ret)
+    }
+
+    fn add_mix(&mut self, path: &MixPath, contest: u32, trustee: u32) {
+        self.put(&Self::mix(contest, trustee), &path.0);
+        self.put(&Self::mix_stmt(contest, trustee), &path.1);
+    }
+    fn add_mix_stmt(&mut self, path: &MixStmtPath, contest: u32, trustee: u32, other_t: u32) {
+        self.put(&Self::mix_stmt_other(contest, trustee, other_t), &path.0);
+    }
+    fn get_mix(&self, contest: u32, trustee: u32, hash: Hash) -> Option<Mix<E>> {
+        let key = Self::mix(contest, trustee).to_string();
+        let now_ = std::time::Instant::now();
+        let ret = self.get(key, hash).ok()?;
+        info!(">> Get mix {}", now_.elapsed().as_millis());
+
+        Some(ret)
+    }
+
+    fn add_decryption(&mut self, path: &PDecryptionsPath, contest: u32, trustee: u32) {
+        self.put(&Self::decryption(contest, trustee), &path.0);
+        self.put(&Self::decryption_stmt(contest, trustee), &path.1);
+    }
+    fn get_decryption(&self, contest: u32, trustee: u32, hash: Hash) -> Option<PartialDecryption<E>> {
+        let key = Self::decryption(contest, trustee).to_string();
+        let ret = self.get(key, hash).ok()?;
+
+        Some(ret)
+    }
+
+    fn set_plaintexts(&mut self, path: &PlaintextsPath, contest: u32) {
+        // 0: trustee 0 combines shares into pk
+        self.put(&Self::plaintexts(contest, 0), &path.0);
+        self.put(&Self::plaintexts_stmt(contest, 0), &path.1);
+    }
+    fn set_plaintexts_stmt(&mut self, path: &PlaintextsStmtPath, contest: u32, trustee: u32) {
+        self.put(&Self::plaintexts_stmt(contest, trustee), &path.0);
+    }
+    fn get_plaintexts(&self, contest: u32, hash: Hash) -> Option<Plaintexts<E>> {
+        // 0: trustee 0 combines shares into pk
+        let key = Self::plaintexts(contest, 0).to_string();
+        let ret = self.get(key, hash).ok()?;
+
+        Some(ret)
+    }
+
+    fn get_statements(&self) -> Vec<StatementVerifier> {
+        
+        let sts = self.get_stmts();
+        let mut ret = Vec::new();
+        // println!("Statements {:?}", sts);
+        
+        for s in sts.iter() {
+            let s_bytes = self.basic.get_unsafe(s).unwrap().to_vec();
+            let (trustee, contest) = artifact_location(s);
+            // let stmt: SignedStatement = bincode::deserialize(&s_bytes).unwrap();
+            let stmt = SignedStatement::deser(&s_bytes).unwrap();
+
+            let next = StatementVerifier {
+                statement: stmt,
+                trustee: trustee,
+                contest: contest
+            };
+            ret.push(next);
+        }
+
+        ret
+    }
+}*/
 
 impl GitBulletinBoard {
 
@@ -54,13 +194,16 @@ impl GitBulletinBoard {
         files
     }
 
-    /*fn get<A: HashBytes + DeserializeOwned>(&self, _target: 
-        &Path, hash: Hash) -> Result<A, bincode::Error> {
+    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target_path: 
+        &Path, hash: Hash) -> Result<A, String> {
 
-        // FIXME: get the bytes from file in working copy
-        let bytes: Vec<u8> = vec![];
+        let target_file = Path::new(&self.fs_path).join(target_path);
 
-        let artifact = bincode::deserialize::<A>(&bytes)?;
+        let bytes: Vec<u8> = util::read_file_bytes(&target_file)
+            .map_err(|e| std::format!("IO error {}", e))?;
+
+        // let artifact = bincode::deserialize::<A>(&bytes)?;
+        let artifact = A::deser(&bytes).map_err(|e| std::format!("serialization error {}", e))?;
 
         let hashed = hashing::hash(&artifact);
         
@@ -68,10 +211,82 @@ impl GitBulletinBoard {
             Ok(artifact)
         }
         else {
-            Err(Box::new(bincode::ErrorKind::Custom("Mismatched hash".to_string())))
+            Err("Mismatched hash".to_string())
         }
-    }*/
+    }
+
+    fn post(&mut self, files: Vec<(&Path, &Path)>, message: &str) -> Result<(), Error> {
+        let repo = self.open_or_clone()?;
+        // includes sync_down before commit
+        self.add_commit_many(&repo, files, message, self.append_only)?;
+        self.push(&repo)
+    }
+
+    fn add_commit_many(&self, repo: &Repository, files: Vec<(&Path, &Path)>, 
+        message: &str, append_only: bool) -> Result<(), Error> {
+        let mut entries = vec![];
+        for (target, source) in files {
+            let next = self.prepare_add(target, source);
+            entries.push(next);
+        }
+        // sync_down right before commiting
+        self.sync_down(&repo)?;
+        // adding to repo index uses relative path
+        add_and_commit(&repo, entries, message, append_only)
+    }
     
+    fn add_commit(&self, repo: &Repository, target: &Path, source: &Path, message: &str,
+        append_only: bool) -> Result<(), Error> {
+        
+        let entry = self.prepare_add(target, source);
+        // sync_down right before commiting
+        self.sync_down(&repo)?;
+        // adding to repo index uses relative path
+        add_and_commit(&repo, vec![entry], message, append_only)
+    }
+
+    // syncs the working copy to match that of the remote
+    // local commits and working copy are discarded
+    fn sync_down(&self, repo: &Repository) -> Result<(), Error> {
+        let mut remote = repo.find_remote("origin")?;
+        let mut fo = FetchOptions::new();
+        fo.remote_callbacks(remote_callbacks(&self.ssh_key_path));
+        fo.download_tags(git2::AutotagOption::All);
+        remote.fetch(&["master"], Some(&mut fo), None)?;
+        let fetch_head = repo.find_reference("FETCH_HEAD")?;
+        let commit = repo.reference_to_annotated_commit(&fetch_head)?;
+        let object = repo.find_object(commit.id(), None)?;
+        repo.reset(&object, git2::ResetType::Hard, None)
+    }
+
+    fn prepare_add(&self, target_path: &Path, source: &Path) -> GitAddEntry {
+        let target_file = Path::new(&self.fs_path).join(target_path);
+        if target_file.is_file() && target_file.exists() {
+            fs::remove_file(&target_file).unwrap();
+        }
+        let tmp_file = NamedTempFile::new().unwrap();
+        let tmp_file_path = tmp_file.path();
+        fs::copy(source, tmp_file_path).unwrap();
+        
+        GitAddEntry {
+            tmp_file: tmp_file, 
+            fs_path: target_file.to_path_buf(), 
+            repo_path: target_path.to_path_buf()
+        }
+    }
+
+    fn push(&self, repo: &Repository) -> Result<(), Error> {
+        let mut options = PushOptions::new();
+        options.remote_callbacks(remote_callbacks(&self.ssh_key_path));
+        let mut remote = repo.find_remote("origin").unwrap();
+        repo.remote_add_push("origin", "refs/heads/master:refs/heads/master").unwrap();
+        remote.connect_auth(Direction::Push, Some(remote_callbacks(&self.ssh_key_path)), None)?;
+        remote.push(&["refs/heads/master:refs/heads/master"], Some(&mut options))
+    }
+
+    // refreshes the local copy with remote updates,
+    // preserving local commits, uncommitted changes are discarded.
+    // upstream changes only applied in fast forward mode, conflicts cause panic
     fn refresh(&self) -> Result<(), Error> {
         let repo = self.open_or_clone()?;
         let mut remote = repo.find_remote("origin").unwrap();
@@ -119,76 +334,6 @@ impl GitBulletinBoard {
             // Err(git2::Error::from_str("Unexpected merge required"))
             panic!("Unexpected merge required");
         }
-    }
-
-    fn post(&mut self, files: Vec<(&Path, &Path)>, message: &str) -> Result<(), Error> {
-        let repo = self.open_or_clone()?;
-        // includes resetting before commit
-        self.add_commit_many(&repo, files, message, self.append_only)?;
-        self.push(&repo)
-    }
-
-    fn add_commit_many(&self, repo: &Repository, files: Vec<(&Path, &Path)>, 
-        message: &str, append_only: bool) -> Result<(), Error> {
-        let mut entries = vec![];
-        for (target, source) in files {
-            let next = self.prepare_add(target, source);
-            entries.push(next);
-        }
-        // reset right before commiting
-        self.reset(&repo)?;
-        // adding to repo index uses relative path
-        add_and_commit(&repo, entries, message, append_only)
-    }
-    
-    fn add_commit(&self, repo: &Repository, target: &Path, source: &Path, message: &str,
-        append_only: bool) -> Result<(), Error> {
-        
-        let entry = self.prepare_add(target, source);
-        // reset right before commiting
-        self.reset(&repo)?;
-        // adding to repo index uses relative path
-        add_and_commit(&repo, vec![entry], message, append_only)
-    }
-
-    // resets the working copy to match that of the remote
-    // local commits and working copy are discarded
-    fn reset(&self, repo: &Repository) -> Result<(), Error> {
-        let mut remote = repo.find_remote("origin")?;
-        let mut fo = FetchOptions::new();
-        fo.remote_callbacks(remote_callbacks(&self.ssh_key_path));
-        fo.download_tags(git2::AutotagOption::All);
-        remote.fetch(&["master"], Some(&mut fo), None)?;
-        let fetch_head = repo.find_reference("FETCH_HEAD")?;
-        let commit = repo.reference_to_annotated_commit(&fetch_head)?;
-        let object = repo.find_object(commit.id(), None)?;
-        repo.reset(&object, git2::ResetType::Hard, None)
-    }
-
-    fn prepare_add(&self, target_path: &Path, source: &Path) -> GitAddEntry {
-        // let target_path = Path::new(target);
-        let target_file = Path::new(&self.fs_path).join(target_path);
-        if target_file.is_file() && target_file.exists() {
-            fs::remove_file(&target_file).unwrap();
-        }
-        let tmp_file = NamedTempFile::new().unwrap();
-        let tmp_file_path = tmp_file.path();
-        fs::copy(source, tmp_file_path).unwrap();
-        
-        GitAddEntry {
-            tmp_file: tmp_file, 
-            fs_path: target_file.to_path_buf(), 
-            repo_path: target_path.to_path_buf()
-        }
-    }
-
-    fn push(&self, repo: &Repository) -> Result<(), Error> {
-        let mut options = PushOptions::new();
-        options.remote_callbacks(remote_callbacks(&self.ssh_key_path));
-        let mut remote = repo.find_remote("origin").unwrap();
-        repo.remote_add_push("origin", "refs/heads/master:refs/heads/master").unwrap();
-        remote.connect_auth(Direction::Push, Some(remote_callbacks(&self.ssh_key_path)), None)?;
-        remote.push(&["refs/heads/master:refs/heads/master"], Some(&mut options))
     }
 }
 

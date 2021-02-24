@@ -291,8 +291,11 @@ pub struct Protocol <E, G, B> {
     phantom_b: PhantomData<B>
 }
 
-impl<E: Element + DeserializeOwned, G: Group<E>,
-    B: BulletinBoard<E, G>> Protocol<E, G, B> {
+impl<
+    E: Element + DeserializeOwned, 
+    G: Group<E>,
+    B: BulletinBoard<E, G>
+    > Protocol<E, G, B> {
 
     pub fn new(trustee: Trustee<E, G>) -> Protocol<E, G, B> {
         Protocol {

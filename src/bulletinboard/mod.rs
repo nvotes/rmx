@@ -1,8 +1,11 @@
-pub mod memory_bb;
+// pub mod memory_bb;
+pub mod basic;
+pub mod generic;
 pub mod git;
 pub mod localstore;
 
 use std::path::PathBuf;
+use std::path::Path;
 
 use crate::data::entity::*;
 use crate::crypto::hashing::{Hash};
@@ -48,42 +51,28 @@ pub trait BulletinBoard<E: Element, G: Group<E>> {
             s.ends_with(".stmt")
         }).collect()
     }
+
+    fn artifact_location(&self, path: &str) -> (i32, u32) {
+        let p = Path::new(&path);
+        let comp: Vec<&str> = p.components()
+            .take(2)
+            .map(|comp| comp.as_os_str().to_str().unwrap())
+            .collect();
+        
+        let trustee: i32 =
+        if comp[0] == "ballotbox" {
+            -1
+        }
+        else {
+            comp[0].parse().unwrap()
+        };
+        // root artifacts (eg config) have no contest
+        let contest: u32 = comp[1].parse().unwrap_or(0);
+    
+        (trustee, contest)
+    }
 }
 
-pub trait Names {
-    const CONFIG: &'static str = "config";
-    const CONFIG_STMT: &'static str = "config.stmt";
-    const PAUSE: &'static str = "pause";
-    const ERROR: &'static str = "error";
-
-    fn config_stmt(auth: u32) -> String { format!("{}/config.stmt", auth).to_string() }
-
-    fn share(contest: u32, auth: u32) -> String { format!("{}/{}/share", auth, contest).to_string() }
-    fn share_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/share.stmt", auth, contest).to_string() }
-    
-
-    fn public_key(contest: u32, auth: u32) -> String { format!("{}/{}/public_key", auth, contest).to_string() }
-    fn public_key_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/public_key.stmt", auth, contest).to_string() }
-    
-
-    fn ballots(contest: u32) -> String { format!("ballotbox/{}/ballots", contest).to_string() }
-    fn ballots_stmt(contest: u32) -> String { format!("ballotbox/{}/ballots.stmt", contest).to_string() }
-    
-    
-    fn mix(contest: u32, auth: u32) -> String { format!("{}/{}/mix", auth, contest).to_string() }
-    fn mix_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/mix.stmt", auth, contest).to_string() }
-    fn mix_stmt_other(contest: u32, auth: u32, other_t: u32) -> String { format!("{}/{}/mix.{}.stmt", auth, contest, other_t).to_string() }
-
-    fn decryption(contest: u32, auth: u32) -> String { format!("{}/{}/decryption", auth, contest).to_string() }
-    fn decryption_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/decryption.stmt", auth, contest).to_string() }
-    
-
-    fn plaintexts(contest: u32, auth: u32) -> String { format!("{}/{}/plaintexts", auth, contest).to_string() }
-    fn plaintexts_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/plaintexts.stmt", auth, contest).to_string() }
-    
-    
-    fn auth_error(auth: u32) -> String { format!("{}/error", auth).to_string() }
-}
 
 pub struct ConfigPath(pub PathBuf);
 pub struct ConfigStmtPath(pub PathBuf);
@@ -109,3 +98,4 @@ pub struct PlaintextsStmtPath(pub PathBuf);
     fn get<A: HashBytes + DeserializeOwned>(&self, target: String, hash: Hash) -> Result<A, String>;
     fn put(&mut self, name: &str, data: &Path);
 }*/
+

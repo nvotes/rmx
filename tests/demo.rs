@@ -112,7 +112,7 @@ fn demo<
     for i in 0..contests {
         let pk_b = bb.get_unsafe(GenericBulletinBoard::<E, G, B>::public_key(i, 0)).unwrap();
         // let pk: PublicKey<E, G> = bincode::deserialize(pk_b).unwrap();
-        let pk = PublicKey::<E, G>::deser(pk_b).unwrap();
+        let pk = PublicKey::<E, G>::deser(&pk_b).unwrap();
         
         let (plaintexts, ciphertexts) = util::random_encrypt_ballots(100, &pk);
         all_plaintexts.push(plaintexts);
@@ -159,7 +159,7 @@ fn demo<
     for i in 0..contests {
         let decrypted_b = bb.get_unsafe(GenericBulletinBoard::<E, G, B>::plaintexts(i, 0)).unwrap();
         // let decrypted: Plaintexts<E> = bincode::deserialize(decrypted_b).unwrap();
-        let decrypted = Plaintexts::<E>::deser(decrypted_b).unwrap();
+        let decrypted = Plaintexts::<E>::deser(&decrypted_b).unwrap();
         let decoded: Vec<E::Plaintext> = decrypted.plaintexts.iter().map(|p| {
             group.decode(&p)
         }).collect();

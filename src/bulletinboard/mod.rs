@@ -8,11 +8,21 @@ use std::path::PathBuf;
 use std::path::Path;
 
 use crate::data::entity::*;
-use crate::crypto::hashing::{Hash};
+use crate::crypto::hashing::Hash;
 use crate::crypto::elgamal::PublicKey;
 use crate::crypto::base::Element;
 use crate::crypto::base::Group;
 use crate::protocol::statement::StatementVerifier;
+
+quick_error! {
+    #[derive(Debug)]
+    pub enum BBError {
+        Empty{}
+        Signature(err: git2::Error) {
+            from()
+        }
+    }
+}
 
 pub trait BulletinBoard<E: Element, G: Group<E>> {
 
@@ -85,17 +95,3 @@ pub struct MixStmtPath(pub PathBuf);
 pub struct PDecryptionsPath(pub PathBuf, pub PathBuf);
 pub struct PlaintextsPath(pub PathBuf, pub PathBuf);
 pub struct PlaintextsStmtPath(pub PathBuf);
-
-
-/*trait BasicBulletinBoard {
-    fn list(&self) -> Vec<String>;
-    fn get_stmts(&self) -> Vec<String> {
-        self.list().into_iter().filter(|s| {
-            s.ends_with(".stmt")
-        }).collect()
-    }
-    fn get_config_unsafe(&self) -> Option<Config>;
-    fn get<A: HashBytes + DeserializeOwned>(&self, target: String, hash: Hash) -> Result<A, String>;
-    fn put(&mut self, name: &str, data: &Path);
-}*/
-

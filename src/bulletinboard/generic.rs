@@ -38,13 +38,14 @@ impl<
             phantom_g: PhantomData
         }
     }
-    fn put(&mut self, entries: Vec<(&str, &Path)>) {
-        self.basic.put(entries);
+    fn put(&mut self, entries: Vec<(&str, &Path)>) -> Result<(), String> {
+        let entries_ = entries.iter().map(|(a, b)| (Path::new(a), *b)).collect();
+        self.basic.put(entries_)
     }
     fn get<A: HashBytes + DeserializeOwned + FromByteTree>(&self, target: String, hash: Hash) -> Result<A, String> {
         self.basic.get(target, hash)
     }
-    pub fn get_unsafe(&self, target: String) -> Option<&Vec<u8>> {
+    pub fn get_unsafe(&self, target: String) -> Option<Vec<u8>> {
         self.basic.get_unsafe(&target)
     }
 
@@ -100,7 +101,7 @@ impl<
     fn get_config_unsafe(&self) -> Option<Config<E, G>> {
         let bytes = self.basic.get_unsafe(Self::CONFIG)?;
         // let ret: Config<E, G> = bincode::deserialize(bytes).unwrap();
-        let ret = Config::<E, G>::deser(bytes).unwrap();
+        let ret = Config::<E, G>::deser(&bytes).unwrap();
 
         Some(ret)
     }

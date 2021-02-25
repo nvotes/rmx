@@ -9,11 +9,13 @@ use crate::crypto::hashing;
 use crate::crypto::hashing::{HashBytes, Hash};
 use crate::util;
 
+
+
 pub trait BasicBoard {
     fn list(&self) -> Vec<String>;
     fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<A, String>;
-    fn put(&mut self, entries: Vec<(&str, &Path)>);
-    fn get_unsafe(&self, target: &str) -> Option<&Vec<u8>>;
+    fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), String>;
+    fn get_unsafe(&self, target: &str) -> Option<Vec<u8>>;
 }
 
 pub struct MBasic {
@@ -55,17 +57,20 @@ impl BasicBoard for MBasic {
             Err("Hash mismatch".to_string())
         }
     }
-    fn put(&mut self, entries: Vec<(&str, &Path)>) {
+    fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), String> {
         for (name, data) in entries {
             let bytes = util::read_file_bytes(data).unwrap();
-            if self.data.contains_key(name) {
-                panic!("Attempted to overwrite bulletin board value for key '{}'", name);
+            let key = name.to_str().unwrap().to_string();
+            if self.data.contains_key(&key) {
+                panic!("Attempted to overwrite bulletin board value for key '{}'", key);
             }
-            self.data.insert(name.to_string(), bytes);
+            self.data.insert(key, bytes);
         }
+
+        Ok(())
     }
-    fn get_unsafe(&self, target: &str) -> Option<&Vec<u8>> {
-        self.data.get(target)
+    fn get_unsafe(&self, target: &str) -> Option<Vec<u8>> {
+        self.data.get(target).map(|v| v.to_vec())
     }
     /* fn get_config_type(&self, target: &str) -> Option<bool> {
         let bytes = self.data.get(target)?;

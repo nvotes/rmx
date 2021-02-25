@@ -15,6 +15,7 @@ use crate::crypto::hashing;
 use crate::crypto::hashing::HashBytes;
 use crate::crypto::hashing::Hash;
 use crate::data::bytes::*;
+use crate::bulletinboard::basic::BasicBoard;
 
 #[derive(Serialize, Deserialize)]
 struct GitBulletinBoard {
@@ -24,137 +25,46 @@ struct GitBulletinBoard {
     pub append_only: bool
 }
 
-/*
-impl<E: Element + DeserializeOwned + FromByteTree, G: Group<E> + DeserializeOwned + FromByteTree> 
-    BulletinBoard<E, G> for MemoryBulletinBoard<E, G> {
-    
+impl BasicBoard for GitBulletinBoard {
     fn list(&self) -> Vec<String> {
-        self.basic.list()
+       self.list_entries()
     }
-    fn add_config(&mut self, path: &ConfigPath) {
-        self.put(Self::CONFIG, &path.0);
-    }
-    fn get_config_unsafe(&self) -> Option<Config<E, G>> {
-        let bytes = self.basic.get_unsafe(Self::CONFIG)?;
-        // let ret: Config<E, G> = bincode::deserialize(bytes).unwrap();
-        let ret = Config::<E, G>::deser(bytes).unwrap();
-
-        Some(ret)
-    }
-    
-    fn get_config(&self, hash: Hash) -> Option<Config<E, G>> {
-        let ret = self.get(Self::CONFIG.to_string(), hash).ok()?;
-
-        Some(ret)
-    }
-    fn add_config_stmt(&mut self, path: &ConfigStmtPath, trustee: u32) {
-        self.put(&Self::config_stmt(trustee), &path.0);
-    }
-    
-    fn add_share(&mut self, path: &KeysharePath, contest: u32, trustee: u32) {
-        self.put(&Self::share(contest, trustee), &path.0);
-        self.put(&Self::share_stmt(contest, trustee), &path.1);
-    }
-    fn get_share(&self, contest: u32, auth: u32, hash: Hash) -> Option<Keyshare<E, G>> {
-        let key = Self::share(contest, auth).to_string();
-        let ret = self.get(key, hash).ok()?;
-
-        Some(ret)
-    }
-    
-    fn set_pk(&mut self, path: &PkPath, contest: u32) {
-        // 0: trustee 0 combines shares into pk
-        self.put(&Self::public_key(contest, 0), &path.0);
-        self.put(&Self::public_key_stmt(contest, 0), &path.1);
-    }
-    fn set_pk_stmt(&mut self, path: &PkStmtPath, contest: u32, trustee: u32) {
-        self.put(&Self::public_key_stmt(contest, trustee), &path.0);
-    }
-    fn get_pk(&mut self, contest: u32, hash: Hash) -> Option<PublicKey<E, G>> {
-        // 0: trustee 0 combines shares into pk
-        let key = Self::public_key(contest, 0).to_string();
-        let ret = self.get(key, hash).ok()?;
-
-        Some(ret)
-    }
-
-    fn add_ballots(&mut self, path: &BallotsPath, contest: u32) {
-        self.put(&Self::ballots(contest), &path.0);
-        self.put(&Self::ballots_stmt(contest), &path.1);
-    }
-    fn get_ballots(&self, contest: u32, hash: Hash) -> Option<Ballots<E>> {
-        let key = Self::ballots(contest).to_string();
-        let ret = self.get(key, hash).ok()?;
-
-        Some(ret)
-    }
-
-    fn add_mix(&mut self, path: &MixPath, contest: u32, trustee: u32) {
-        self.put(&Self::mix(contest, trustee), &path.0);
-        self.put(&Self::mix_stmt(contest, trustee), &path.1);
-    }
-    fn add_mix_stmt(&mut self, path: &MixStmtPath, contest: u32, trustee: u32, other_t: u32) {
-        self.put(&Self::mix_stmt_other(contest, trustee, other_t), &path.0);
-    }
-    fn get_mix(&self, contest: u32, trustee: u32, hash: Hash) -> Option<Mix<E>> {
-        let key = Self::mix(contest, trustee).to_string();
-        let now_ = std::time::Instant::now();
-        let ret = self.get(key, hash).ok()?;
-        info!(">> Get mix {}", now_.elapsed().as_millis());
-
-        Some(ret)
-    }
-
-    fn add_decryption(&mut self, path: &PDecryptionsPath, contest: u32, trustee: u32) {
-        self.put(&Self::decryption(contest, trustee), &path.0);
-        self.put(&Self::decryption_stmt(contest, trustee), &path.1);
-    }
-    fn get_decryption(&self, contest: u32, trustee: u32, hash: Hash) -> Option<PartialDecryption<E>> {
-        let key = Self::decryption(contest, trustee).to_string();
-        let ret = self.get(key, hash).ok()?;
-
-        Some(ret)
-    }
-
-    fn set_plaintexts(&mut self, path: &PlaintextsPath, contest: u32) {
-        // 0: trustee 0 combines shares into pk
-        self.put(&Self::plaintexts(contest, 0), &path.0);
-        self.put(&Self::plaintexts_stmt(contest, 0), &path.1);
-    }
-    fn set_plaintexts_stmt(&mut self, path: &PlaintextsStmtPath, contest: u32, trustee: u32) {
-        self.put(&Self::plaintexts_stmt(contest, trustee), &path.0);
-    }
-    fn get_plaintexts(&self, contest: u32, hash: Hash) -> Option<Plaintexts<E>> {
-        // 0: trustee 0 combines shares into pk
-        let key = Self::plaintexts(contest, 0).to_string();
-        let ret = self.get(key, hash).ok()?;
-
-        Some(ret)
-    }
-
-    fn get_statements(&self) -> Vec<StatementVerifier> {
+    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<A, String> {
         
-        let sts = self.get_stmts();
-        let mut ret = Vec::new();
-        // println!("Statements {:?}", sts);
-        
-        for s in sts.iter() {
-            let s_bytes = self.basic.get_unsafe(s).unwrap().to_vec();
-            let (trustee, contest) = artifact_location(s);
-            // let stmt: SignedStatement = bincode::deserialize(&s_bytes).unwrap();
-            let stmt = SignedStatement::deser(&s_bytes).unwrap();
+        self.get_object(Path::new(&target), hash)
+    }
+    fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), String> {
+        self.post(entries, "Test")
+            .map_err(|e| std::format!("git error {}", e))
+    }
+    fn get_unsafe(&self, target: &str) -> Option<Vec<u8>> {
+        let target_file = Path::new(&self.fs_path).join(target);
 
-            let next = StatementVerifier {
-                statement: stmt,
-                trustee: trustee,
-                contest: contest
-            };
-            ret.push(next);
+        util::read_file_bytes(&target_file)
+            .map_err(|e| std::format!("IO error {}", e)).ok()
+    }
+    /* fn get_config_type(&self, target: &str) -> Option<bool> {
+        let bytes = self.data.get(target)?;
+        // let config_rug = bincode::deserialize::<Config<Integer, RugGroup>>(bytes);
+        let config_rug = Config::<Integer, RugGroup>::deser(bytes);
+
+        // let config_ristretto = bincode::deserialize::<Config<RistrettoPoint, RistrettoGroup>>(bytes);
+        let config_ristretto = Config::<RistrettoPoint, RistrettoGroup>::deser(bytes);
+        if config_rug.is_ok() {
+            Some(true)
         }
-
-        ret
+        else if config_ristretto.is_ok() {
+            Some(false)
+        }
+        else {
+            None
+        }
     }
-}*/
+    fn clear(&mut self) {
+        self.data.clear();
+    }*/
+}
+
 
 impl GitBulletinBoard {
 
@@ -174,7 +84,7 @@ impl GitBulletinBoard {
         }
     }
     
-    fn list(&self) -> Vec<String> {
+    fn list_entries(&self) -> Vec<String> {
         let walker = WalkDir::new(&self.fs_path).min_depth(1).into_iter();
         let entries: Vec<DirEntry> = walker
             .filter_entry(|e| !is_hidden(e))
@@ -194,7 +104,7 @@ impl GitBulletinBoard {
         files
     }
 
-    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target_path: 
+    fn get_object<A: HashBytes + DeserializeOwned + Deser>(&self, target_path: 
         &Path, hash: Hash) -> Result<A, String> {
 
         let target_file = Path::new(&self.fs_path).join(target_path);
@@ -217,7 +127,7 @@ impl GitBulletinBoard {
 
     fn post(&mut self, files: Vec<(&Path, &Path)>, message: &str) -> Result<(), Error> {
         let repo = self.open_or_clone()?;
-        // includes sync_down before commit
+        // includes refresh before commit
         self.add_commit_many(&repo, files, message, self.append_only)?;
         self.push(&repo)
     }
@@ -229,8 +139,8 @@ impl GitBulletinBoard {
             let next = self.prepare_add(target, source);
             entries.push(next);
         }
-        // sync_down right before commiting
-        self.sync_down(&repo)?;
+        // refresh right before commiting
+        self.refresh()?;
         // adding to repo index uses relative path
         add_and_commit(&repo, entries, message, append_only)
     }
@@ -239,24 +149,10 @@ impl GitBulletinBoard {
         append_only: bool) -> Result<(), Error> {
         
         let entry = self.prepare_add(target, source);
-        // sync_down right before commiting
-        self.sync_down(&repo)?;
+        // refresh right before commiting
+        self.refresh()?;
         // adding to repo index uses relative path
         add_and_commit(&repo, vec![entry], message, append_only)
-    }
-
-    // syncs the working copy to match that of the remote
-    // local commits and working copy are discarded
-    fn sync_down(&self, repo: &Repository) -> Result<(), Error> {
-        let mut remote = repo.find_remote("origin")?;
-        let mut fo = FetchOptions::new();
-        fo.remote_callbacks(remote_callbacks(&self.ssh_key_path));
-        fo.download_tags(git2::AutotagOption::All);
-        remote.fetch(&["master"], Some(&mut fo), None)?;
-        let fetch_head = repo.find_reference("FETCH_HEAD")?;
-        let commit = repo.reference_to_annotated_commit(&fetch_head)?;
-        let object = repo.find_object(commit.id(), None)?;
-        repo.reset(&object, git2::ResetType::Hard, None)
     }
 
     fn prepare_add(&self, target_path: &Path, source: &Path) -> GitAddEntry {
@@ -335,6 +231,46 @@ impl GitBulletinBoard {
             panic!("Unexpected merge required");
         }
     }
+
+    // syncs the working copy to match that of the remote
+    // local commits and working copy are discarded
+    // ignore or untracked files are not affected
+    fn sync_down(&self, repo: &Repository) -> Result<(), Error> {
+        let mut remote = repo.find_remote("origin")?;
+        let mut fo = FetchOptions::new();
+        fo.remote_callbacks(remote_callbacks(&self.ssh_key_path));
+        fo.download_tags(git2::AutotagOption::All);
+        remote.fetch(&["master"], Some(&mut fo), None)?;
+        let fetch_head = repo.find_reference("FETCH_HEAD")?;
+        let commit = repo.reference_to_annotated_commit(&fetch_head)?;
+        let object = repo.find_object(commit.id(), None)?;
+        repo.reset(&object, git2::ResetType::Hard, None)
+    }
+
+    // clears the repository of any files, and pushes
+    // note that files in the working directory are not eliminated
+    // and would be considered untracked, so a sync_down will not delete them
+    fn __delete(&self) -> Result<(), Error> {
+        let repo = self.open_or_clone()?;
+        let mut index = repo.index()?;
+        index.clear()?;
+
+        let oid = index.write_tree()?;
+        let signature = Signature::now("rmx", "rmx@foo.bar")?;
+        let parent_commit = find_last_commit(&repo)?;
+        let tree = repo.find_tree(oid)?;
+
+        index.write()?;
+        repo.commit(
+            Some("HEAD"),
+            &signature,
+            &signature,
+            "reset",
+            &tree,
+            &[&parent_commit])?;
+        
+        self.push(&repo)
+    }
 }
 
 struct GitAddEntry {
@@ -395,11 +331,11 @@ fn add_and_commit(repo: &Repository, entries: Vec<GitAddEntry>, message: &str,
 
     index.write()?;
     repo.commit(Some("HEAD"),
-                &signature,
-                &signature,
-                message,
-                &tree,
-                &[&parent_commit])?;
+        &signature,
+        &signature,
+        message,
+        &tree,
+        &[&parent_commit])?;
     Ok(())
 }
 
@@ -533,5 +469,19 @@ mod tests {
         g2.append_only = false;
         result = g2.refresh();
         assert!(result.is_ok());
+    }
+
+    #[test]
+    #[serial]
+    fn test_delete() {
+        let mut g = read_config();
+        fs::remove_dir_all(&g.fs_path).ok();
+        g.open_or_clone().unwrap();
+        g.__delete().unwrap();
+        
+        fs::remove_dir_all(&g.fs_path).ok();
+        g.open_or_clone().unwrap();
+        let files = g.list();
+        assert!(files.len() == 0);
     }
 }

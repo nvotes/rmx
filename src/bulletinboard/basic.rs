@@ -5,17 +5,17 @@ use std::collections::HashMap;
 use log::info;
 
 use crate::data::bytes::*;
+use crate::bulletinboard::BBError;
 use crate::crypto::hashing;
 use crate::crypto::hashing::{HashBytes, Hash};
 use crate::util;
 
 
-
 pub trait BasicBoard {
-    fn list(&self) -> Vec<String>;
-    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<A, String>;
-    fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), String>;
-    fn get_unsafe(&self, target: &str) -> Option<Vec<u8>>;
+    fn list(&self) -> Result<Vec<String>, BBError>;
+    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError>;
+    fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError>;
+    fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError>;
 }
 
 pub struct MBasic {
@@ -31,36 +31,41 @@ impl MBasic {
 }
 
 impl BasicBoard for MBasic {
-    fn list(&self) -> Vec<String> {
-        self.data.iter().map(|(a, _)| a.clone()).collect()
+    fn list(&self) -> Result<Vec<String>, BBError> {
+        Ok(self.data.iter().map(|(a, _)| a.clone()).collect())
     }
-    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<A, String> {
+    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError> {
         let key = target;
-        let bytes = self.data.get(&key).ok_or("Not found")?;
+        if let Some(bytes) = self.data.get(&key) {
+            let now_ = std::time::Instant::now();
+            // let artifact = bincode::deserialize::<A>(bytes)
+            //    .map_err(|e| std::format!("serde error {}", e))?;
+            let artifact = A::deser(bytes)
+                .map_err(|e| std::format!("serde error {}", e))?;
+            info!(">> Deser {}, bytes {}", now_.elapsed().as_millis(), bytes.len());
+            
+            let now_ = std::time::Instant::now();
+            let hashed = hashing::hash(&artifact);
+            info!(">> Hash {}", now_.elapsed().as_millis());
 
-        let now_ = std::time::Instant::now();
-        // let artifact = bincode::deserialize::<A>(bytes)
-        //    .map_err(|e| std::format!("serde error {}", e))?;
-        let artifact = A::deser(bytes)
-            .map_err(|e| std::format!("serde error {}", e))?;
-        info!(">> Deser {}, bytes {}", now_.elapsed().as_millis(), bytes.len());
-        
-        let now_ = std::time::Instant::now();
-        let hashed = hashing::hash(&artifact);
-        info!(">> Hash {}", now_.elapsed().as_millis());
-
-        
-        if hashed == hash {
-            Ok(artifact)
+            
+            if hashed == hash {
+                Ok(Some(artifact))
+            }
+            else {
+                Err(BBError::Msg("Hash mismatch".to_string()))
+            }
         }
         else {
-            Err("Hash mismatch".to_string())
+            Ok(None)
         }
     }
-    fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), String> {
+    fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError> {
         for (name, data) in entries {
-            let bytes = util::read_file_bytes(data).unwrap();
-            let key = name.to_str().unwrap().to_string();
+            let bytes = util::read_file_bytes(data)?;
+            let key = name.to_str()
+                .ok_or(BBError::Msg("Invalid path string when putting".to_string()))?
+                .to_string();
             if self.data.contains_key(&key) {
                 panic!("Attempted to overwrite bulletin board value for key '{}'", key);
             }
@@ -69,8 +74,8 @@ impl BasicBoard for MBasic {
 
         Ok(())
     }
-    fn get_unsafe(&self, target: &str) -> Option<Vec<u8>> {
-        self.data.get(target).map(|v| v.to_vec())
+    fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError> {
+        Ok(self.data.get(target).map(|v| v.to_vec()))
     }
     /* fn get_config_type(&self, target: &str) -> Option<bool> {
         let bytes = self.data.get(target)?;

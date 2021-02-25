@@ -16,6 +16,7 @@ use crate::crypto::base::Group;
 use crate::crypto::backend::rug_b::RugGroup;
 use crate::crypto::backend::ristretto_b::RistrettoGroup;
 use crate::bulletinboard::basic::BasicBoard;
+use crate::bulletinboard::BBError;
 use crate::protocol::statement::SignedStatement;
 use crate::protocol::statement::StatementVerifier;
 
@@ -38,14 +39,14 @@ impl<
             phantom_g: PhantomData
         }
     }
-    fn put(&mut self, entries: Vec<(&str, &Path)>) -> Result<(), String> {
+    fn put(&mut self, entries: Vec<(&str, &Path)>) -> Result<(), BBError> {
         let entries_ = entries.iter().map(|(a, b)| (Path::new(a), *b)).collect();
         self.basic.put(entries_)
     }
-    fn get<A: HashBytes + DeserializeOwned + FromByteTree>(&self, target: String, hash: Hash) -> Result<A, String> {
+    fn get<A: HashBytes + DeserializeOwned + FromByteTree>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError> {
         self.basic.get(target, hash)
     }
-    pub fn get_unsafe(&self, target: String) -> Option<Vec<u8>> {
+    pub fn get_unsafe(&self, target: String) ->  Result<Option<Vec<u8>>, BBError> {
         self.basic.get_unsafe(&target)
     }
 
@@ -90,137 +91,129 @@ impl<
     > 
     BulletinBoard<E, G> for GenericBulletinBoard<E, G, B> {
     
-    fn list(&self) -> Vec<String> {
+    fn list(&self) -> Result<Vec<String>, BBError> {
         self.basic.list()
     }
-    fn add_config(&mut self, path: &ConfigPath) {
+    fn add_config(&mut self, path: &ConfigPath) -> Result<(), BBError> {
         self.put(
             vec![(Self::CONFIG, &path.0)]
-        );
+        )
     }
-    fn get_config_unsafe(&self) -> Option<Config<E, G>> {
-        let bytes = self.basic.get_unsafe(Self::CONFIG)?;
+    fn get_config_unsafe(&self) -> Result<Option<Config<E, G>>, BBError> {
+        let bytes_option = self.basic.get_unsafe(Self::CONFIG)?;
         // let ret: Config<E, G> = bincode::deserialize(bytes).unwrap();
-        let ret = Config::<E, G>::deser(&bytes).unwrap();
-
-        Some(ret)
+        if let Some(bytes) = bytes_option {
+            let ret = Config::<E, G>::deser(&bytes)?;
+            Ok(Some(ret))
+        }
+        else {
+            Ok(None)
+        }
     }
     
-    fn get_config(&self, hash: Hash) -> Option<Config<E, G>> {
-        let ret = self.get(Self::CONFIG.to_string(), hash).ok()?;
-
-        Some(ret)
+    fn get_config(&self, hash: Hash) -> Result<Option<Config<E, G>>, BBError> {
+        self.get(Self::CONFIG.to_string(), hash)
     }
-    fn add_config_stmt(&mut self, path: &ConfigStmtPath, trustee: u32) {
+    fn add_config_stmt(&mut self, path: &ConfigStmtPath, trustee: u32) -> Result<(), BBError> {
         self.put(
             vec![(&Self::config_stmt(trustee), &path.0)]
-        );
+        )
     }
     
-    fn add_share(&mut self, path: &KeysharePath, contest: u32, trustee: u32) {
+    fn add_share(&mut self, path: &KeysharePath, contest: u32, trustee: u32) -> Result<(), BBError> {
         self.put(
             vec![(&Self::share(contest, trustee), &path.0),
                  (&Self::share_stmt(contest, trustee), &path.1)]
-        );
+        )
     }
-    fn get_share(&self, contest: u32, auth: u32, hash: Hash) -> Option<Keyshare<E, G>> {
+    fn get_share(&self, contest: u32, auth: u32, hash: Hash) -> Result<Option<Keyshare<E, G>>, BBError> {
         let key = Self::share(contest, auth).to_string();
-        let ret = self.get(key, hash).ok()?;
-
-        Some(ret)
+        self.get(key, hash)
     }
     
-    fn set_pk(&mut self, path: &PkPath, contest: u32) {
+    fn set_pk(&mut self, path: &PkPath, contest: u32) -> Result<(), BBError> {
         // 0: trustee 0 combines shares into pk
         self.put(
             vec![(&Self::public_key(contest, 0), &path.0),
                 (&Self::public_key_stmt(contest, 0), &path.1)]
-        );
+        )
     }
-    fn set_pk_stmt(&mut self, path: &PkStmtPath, contest: u32, trustee: u32) {
-        self.put(vec![(&Self::public_key_stmt(contest, trustee), &path.0)]);
+    fn set_pk_stmt(&mut self, path: &PkStmtPath, contest: u32, trustee: u32) -> Result<(), BBError> {
+        self.put(vec![(&Self::public_key_stmt(contest, trustee), &path.0)])
     }
-    fn get_pk(&mut self, contest: u32, hash: Hash) -> Option<PublicKey<E, G>> {
+    fn get_pk(&mut self, contest: u32, hash: Hash) -> Result<Option<PublicKey<E, G>>, BBError> {
         // 0: trustee 0 combines shares into pk
         let key = Self::public_key(contest, 0).to_string();
-        let ret = self.get(key, hash).ok()?;
-
-        Some(ret)
+        self.get(key, hash)
     }
 
-    fn add_ballots(&mut self, path: &BallotsPath, contest: u32) {
+    fn add_ballots(&mut self, path: &BallotsPath, contest: u32) -> Result<(), BBError> {
         self.put(
             vec![(&Self::ballots(contest), &path.0),
                 (&Self::ballots_stmt(contest), &path.1)]
-        );
+        )
     }
-    fn get_ballots(&self, contest: u32, hash: Hash) -> Option<Ballots<E>> {
+    fn get_ballots(&self, contest: u32, hash: Hash) -> Result<Option<Ballots<E>>, BBError> {
         let key = Self::ballots(contest).to_string();
-        let ret = self.get(key, hash).ok()?;
-
-        Some(ret)
+        self.get(key, hash)
     }
 
-    fn add_mix(&mut self, path: &MixPath, contest: u32, trustee: u32) {
+    fn add_mix(&mut self, path: &MixPath, contest: u32, trustee: u32) -> Result<(), BBError> {
         self.put(
             vec![(&Self::mix(contest, trustee), &path.0),
                 (&Self::mix_stmt(contest, trustee), &path.1)]
-        );
+        )
     }
-    fn add_mix_stmt(&mut self, path: &MixStmtPath, contest: u32, trustee: u32, other_t: u32) {
-        self.put(vec![(&Self::mix_stmt_other(contest, trustee, other_t), &path.0)]);
+    fn add_mix_stmt(&mut self, path: &MixStmtPath, contest: u32, trustee: u32, other_t: u32) -> Result<(), BBError> {
+        self.put(vec![(&Self::mix_stmt_other(contest, trustee, other_t), &path.0)])
     }
-    fn get_mix(&self, contest: u32, trustee: u32, hash: Hash) -> Option<Mix<E>> {
+    fn get_mix(&self, contest: u32, trustee: u32, hash: Hash) -> Result<Option<Mix<E>>, BBError> {
         let key = Self::mix(contest, trustee).to_string();
         let now_ = std::time::Instant::now();
-        let ret = self.get(key, hash).ok()?;
+        let ret = self.get(key, hash);
         info!(">> Get mix {}", now_.elapsed().as_millis());
 
-        Some(ret)
+        ret
     }
 
-    fn add_decryption(&mut self, path: &PDecryptionsPath, contest: u32, trustee: u32) {
+    fn add_decryption(&mut self, path: &PDecryptionsPath, contest: u32, trustee: u32) -> Result<(), BBError> {
         self.put(
             vec![(&Self::decryption(contest, trustee), &path.0),
                 (&Self::decryption_stmt(contest, trustee), &path.1)]
-        );
+        )
     }
-    fn get_decryption(&self, contest: u32, trustee: u32, hash: Hash) -> Option<PartialDecryption<E>> {
+    fn get_decryption(&self, contest: u32, trustee: u32, hash: Hash) -> Result<Option<PartialDecryption<E>>, BBError> {
         let key = Self::decryption(contest, trustee).to_string();
-        let ret = self.get(key, hash).ok()?;
-
-        Some(ret)
+        self.get(key, hash)
     }
 
-    fn set_plaintexts(&mut self, path: &PlaintextsPath, contest: u32) {
+    fn set_plaintexts(&mut self, path: &PlaintextsPath, contest: u32) -> Result<(), BBError> {
         // 0: trustee 0 combines shares into pk
         self.put(
             vec![(&Self::plaintexts(contest, 0), &path.0),
                 (&Self::plaintexts_stmt(contest, 0), &path.1)]
-        );
+        )
     }
-    fn set_plaintexts_stmt(&mut self, path: &PlaintextsStmtPath, contest: u32, trustee: u32) {
-        self.put(vec![(&Self::plaintexts_stmt(contest, trustee), &path.0)]);
+    fn set_plaintexts_stmt(&mut self, path: &PlaintextsStmtPath, contest: u32, trustee: u32) -> Result<(), BBError> {
+        self.put(vec![(&Self::plaintexts_stmt(contest, trustee), &path.0)])
     }
-    fn get_plaintexts(&self, contest: u32, hash: Hash) -> Option<Plaintexts<E>> {
+    fn get_plaintexts(&self, contest: u32, hash: Hash) -> Result<Option<Plaintexts<E>>, BBError> {
         // 0: trustee 0 combines shares into pk
         let key = Self::plaintexts(contest, 0).to_string();
-        let ret = self.get(key, hash).ok()?;
-
-        Some(ret)
+        self.get(key, hash)
     }
 
-    fn get_statements(&self) -> Vec<StatementVerifier> {
+    fn get_statements(&self) -> Result<Vec<StatementVerifier>, BBError> {
         
-        let sts = self.get_stmts();
+        let sts = self.get_stmts()?;
         let mut ret = Vec::new();
         // println!("Statements {:?}", sts);
         
         for s in sts.iter() {
-            let s_bytes = self.basic.get_unsafe(s).unwrap().to_vec();
+            let s_bytes = self.basic.get_unsafe(s)?.ok_or(BBError::Msg("Statement not found".to_string()))?;
             let (trustee, contest) = self.artifact_location(s);
             // let stmt: SignedStatement = bincode::deserialize(&s_bytes).unwrap();
-            let stmt = SignedStatement::deser(&s_bytes).unwrap();
+            let stmt = SignedStatement::deser(&s_bytes)?;
 
             let next = StatementVerifier {
                 statement: stmt,
@@ -230,7 +223,7 @@ impl<
             ret.push(next);
         }
 
-        ret
+        Ok(ret)
     }
 }
 
@@ -283,7 +276,7 @@ mod tests {
         let target = "test";
         let path = tmp_file.path();
         std::fs::write(path, &cfg_b).unwrap();
-        bb.put(vec![("test", path)]);
+        bb.put(vec![("test", path)]).unwrap();
         
         let hash = hashing::hash(&cfg);
         let mut cfg_result = bb.get::<Config<Integer, RugGroup>>(target.to_string(), hash);

@@ -9,8 +9,10 @@ use crate::crypto::base::Group;
 use crate::crypto::hashing;
 use crate::crypto::hashing::*;
 use crate::protocol::trustee::Trustee;
+use crate::protocol::trustee::TrusteeError;
 use crate::protocol::facts::{InputFact, AllFacts};
 use crate::protocol::facts::Act;
+
 
 type TrusteeTotal = u32;
 pub(super) type TrusteeIndex = u32;
@@ -286,7 +288,7 @@ fn array_set(mut input: Hashes, index: u32, value: Hash) -> Hashes {
     input
 }
 
-pub struct Protocol <E, G, B> {
+pub struct Driver <E, G, B> {
     trustee: Trustee<E, G>,
     phantom_b: PhantomData<B>
 }
@@ -295,10 +297,10 @@ impl<
     E: Element + DeserializeOwned, 
     G: Group<E>,
     B: BulletinBoard<E, G>
-    > Protocol<E, G, B> {
+    > Driver<E, G, B> {
 
-    pub fn new(trustee: Trustee<E, G>) -> Protocol<E, G, B> {
-        Protocol {
+    pub fn new(trustee: Trustee<E, G>) -> Driver<E, G, B> {
+        Driver {
             trustee,
             phantom_b: PhantomData
         }
@@ -309,33 +311,44 @@ impl<
         let self_pk = self.trustee.keypair.public;
         let now = std::time::Instant::now();
         let svs = board.get_statements();
-        // info!("SVerifiers: {}", svs.len());
-        let mut facts: Vec<InputFact> = svs.iter()
-            .map(|sv| sv.verify(board))
-            .filter(|f| f.is_some())
-            .map(|f| f.unwrap())
-            .collect();
-        
-        if let Some(cfg) = board.get_config_unsafe() {
-            let trustees = cfg.trustees.len();
-            
-            let self_pos = cfg.trustees.iter()
-                .position(|s| s.to_bytes() == self_pk.to_bytes())
-                .unwrap();
-            let hash = hashing::hash(&cfg);
-            let contests = cfg.contests;
+        if svs.is_ok() {
+            // info!("SVerifiers: {}", svs.len());
+            let mut facts: Vec<InputFact> = svs.unwrap().iter()
+                .map(|sv| sv.verify(board))
+                .filter(|f| f.is_some())
+                .map(|f| f.unwrap())
+                .collect();
 
-            let f = InputFact::config_present(
-                hash,
-                contests,
-                trustees as u32,
-                self_pos as u32
-            );
-            facts.push(f);
-        };
-        info!("Input facts derived in [{}ms]", now.elapsed().as_millis());
-        info!("");
-        facts
+            let cfg_ = board.get_config_unsafe();
+            if cfg_.is_err() {
+                // FIXME log
+            }
+            
+            if let Ok(Some(cfg)) = cfg_ {
+                let trustees = cfg.trustees.len();
+                
+                let self_pos = cfg.trustees.iter()
+                    .position(|s| s.to_bytes() == self_pk.to_bytes())
+                    .unwrap();
+                let hash = hashing::hash(&cfg);
+                let contests = cfg.contests;
+
+                let f = InputFact::config_present(
+                    hash,
+                    contests,
+                    trustees as u32,
+                    self_pos as u32
+                );
+                facts.push(f);
+            };
+            info!("Input facts derived in [{}ms]", now.elapsed().as_millis());
+            info!("");
+            facts
+        }
+        else {
+            // FIXME log
+            vec![]
+        }
     }
     
     pub fn process_facts(&self, board: &B) -> AllFacts {
@@ -357,11 +370,11 @@ impl<
         ret
     }
 
-    pub fn run(&self, facts: AllFacts, board: &mut B) -> u32 {
+    pub fn run(&self, facts: AllFacts, board: &mut B) -> Result<u32, TrusteeError> {
         self.trustee.run(facts, board)
     }
 
-    pub fn step(&self, board: &mut B) -> u32 {
+    pub fn step(&self, board: &mut B) -> Result<u32, TrusteeError> {
         let output = self.process_facts(&board);
 
         self.trustee.run(output, board)

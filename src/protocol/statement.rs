@@ -189,7 +189,8 @@ impl StatementVerifier {
     
     pub(super) fn verify<E: Element, G: Group<E>, B: BulletinBoard<E, G>>(&self, board: &B) -> Option<InputFact> {
         let statement = &self.statement.statement;
-        let config = board.get_config_unsafe()?;
+        let config_opt = board.get_config_unsafe().ok()?;
+        let config = config_opt?;
         
         let (pk, self_t): (SPublicKey, u32) =
         if self.trustee >= 0 {

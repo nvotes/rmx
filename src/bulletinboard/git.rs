@@ -16,6 +16,7 @@ use crate::crypto::hashing::HashBytes;
 use crate::crypto::hashing::Hash;
 use crate::data::bytes::*;
 use crate::bulletinboard::basic::BasicBoard;
+use crate::bulletinboard::BBError;
 
 #[derive(Serialize, Deserialize)]
 struct GitBulletinBoard {
@@ -26,22 +27,27 @@ struct GitBulletinBoard {
 }
 
 impl BasicBoard for GitBulletinBoard {
-    fn list(&self) -> Vec<String> {
+    fn list(&self) -> Result<Vec<String>, BBError> {
        self.list_entries()
     }
-    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<A, String> {
+    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError> {
         
         self.get_object(Path::new(&target), hash)
     }
-    fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), String> {
-        self.post(entries, "Test")
-            .map_err(|e| std::format!("git error {}", e))
-    }
-    fn get_unsafe(&self, target: &str) -> Option<Vec<u8>> {
-        let target_file = Path::new(&self.fs_path).join(target);
+    fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError> {
+        let ret = self.post(entries, "Test")?;
 
-        util::read_file_bytes(&target_file)
-            .map_err(|e| std::format!("IO error {}", e)).ok()
+        Ok(ret)
+    }
+    fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError> {
+        let target_file = Path::new(&self.fs_path).join(target);
+        if target_file.exists() {
+            let bytes = util::read_file_bytes(&target_file)?;
+            Ok(Some(bytes))
+        }
+        else {
+            Ok(None)
+        }
     }
     /* fn get_config_type(&self, target: &str) -> Option<bool> {
         let bytes = self.data.get(target)?;
@@ -84,7 +90,7 @@ impl GitBulletinBoard {
         }
     }
     
-    fn list_entries(&self) -> Vec<String> {
+    fn list_entries(&self) -> Result<Vec<String>, BBError> {
         let walker = WalkDir::new(&self.fs_path).min_depth(1).into_iter();
         let entries: Vec<DirEntry> = walker
             .filter_entry(|e| !is_hidden(e))
@@ -101,27 +107,31 @@ impl GitBulletinBoard {
             })
             .collect();
 
-        files
+        Ok(files)
     }
 
     fn get_object<A: HashBytes + DeserializeOwned + Deser>(&self, target_path: 
-        &Path, hash: Hash) -> Result<A, String> {
+        &Path, hash: Hash) -> Result<Option<A>, BBError> {
 
         let target_file = Path::new(&self.fs_path).join(target_path);
+        if target_file.exists() {
 
-        let bytes: Vec<u8> = util::read_file_bytes(&target_file)
-            .map_err(|e| std::format!("IO error {}", e))?;
+            let bytes: Vec<u8> = util::read_file_bytes(&target_file)?;
 
-        // let artifact = bincode::deserialize::<A>(&bytes)?;
-        let artifact = A::deser(&bytes).map_err(|e| std::format!("serialization error {}", e))?;
+            // let artifact = bincode::deserialize::<A>(&bytes)?;
+            let artifact = A::deser(&bytes).map_err(|e| std::format!("serialization error {}", e))?;
 
-        let hashed = hashing::hash(&artifact);
-        
-        if hashed == hash {
-            Ok(artifact)
+            let hashed = hashing::hash(&artifact);
+            
+            if hashed == hash {
+                Ok(Some(artifact))
+            }
+            else {
+                Err(BBError::Msg("Mismatched hash".to_string()))
+            }
         }
         else {
-            Err("Mismatched hash".to_string())
+            Ok(None)
         }
     }
 
@@ -421,7 +431,7 @@ mod tests {
         g.post(vec![(name, &added)], "new file").unwrap();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
-        let files = g.list();
+        let files = g.list().unwrap();
         assert!(files.contains(&name.to_str().unwrap().to_string()));
     }
 
@@ -447,7 +457,7 @@ mod tests {
 
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
-        let files = g.list();
+        let files = g.list().unwrap();
         assert!(files.contains(&name.to_str().unwrap().to_string()));
         
         let modify = added.to_str().unwrap();
@@ -474,14 +484,14 @@ mod tests {
     #[test]
     #[serial]
     fn test_delete() {
-        let mut g = read_config();
+        let g = read_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
         g.__delete().unwrap();
         
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
-        let files = g.list();
+        let files = g.list().unwrap();
         assert!(files.len() == 0);
     }
 }

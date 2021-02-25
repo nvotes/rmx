@@ -17,8 +17,25 @@ use crate::crypto::symmetric;
 use crate::crypto::hashing;
 use crate::crypto::hashing::*;
 use crate::bulletinboard::*;
+use crate::data::bytes::ByteError;
 use crate::bulletinboard::localstore::LocalStore;
 use crate::util::short;
+
+quick_error! {
+    #[derive(Debug)]
+    pub enum TrusteeError {
+        Empty{}
+        BBError(err: BBError) {
+            from()
+        }
+        IOError(err: std::io::Error) {
+            from()
+        }
+        Msg(message: String) {
+            from()
+        }
+    }
+}
 
 pub struct Trustee<E, G> {
     pub keypair: Keypair,
@@ -41,7 +58,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         }
     }
     
-    pub fn run<B: BulletinBoard<E, G>>(&self, facts: AllFacts, board: &mut B) -> u32 {
+    pub fn run<B: BulletinBoard<E, G>>(&self, facts: AllFacts, board: &mut B) -> Result<u32, TrusteeError> {
         let self_index = facts.get_self_index();
         let actions = facts.all_actions;
         let ret = actions.len();
@@ -51,59 +68,77 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         for action in actions {
             match action {
                 Act::CheckConfig(cfg_h) => {
+                    let self_t = self_index
+                        .ok_or(TrusteeError::Msg("Could not find self index".to_string()))?;
                     info!(">> Action: checking config..");
                     // FIXME validate the config somehow
                     let ss = SignedStatement::config(&cfg_h, &self.keypair);
-                    let stmt_path = self.localstore.set_config_stmt(&action, &ss);
-                    board.add_config_stmt(&stmt_path, self_index.unwrap());
+                    let stmt_path = self.localstore.set_config_stmt(&action, &ss)?;
+                    board.add_config_stmt(&stmt_path, self_t)?;
                     info!(">> OK");
                 }
                 Act::PostShare(cfg_h, cnt) => {
-                    info!(">> Action: Computing shares (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
-                    let cfg = board.get_config(cfg_h).unwrap();
+                    let self_t = self_index
+                        .ok_or(TrusteeError::Msg("Could not find self index".to_string()))?;
+                    info!(">> Action: Computing shares (contest=[{}], self=[{}])..", cnt, self_t);
+                    let cfg = board.get_config(cfg_h)?
+                        .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+                    
                     let share = self.gen_share(&cfg.group);
                     let share_h = hashing::hash(&share);
                     let ss = SignedStatement::keyshare(&cfg_h, &share_h, cnt, &self.keypair);
-                    let share_path = self.localstore.set_share(&action, share, &ss);
+                    let share_path = self.localstore.set_share(&action, share, &ss)?;
                     
-                    board.add_share(&share_path, cnt, self_index.unwrap());
+                    board.add_share(&share_path, cnt, self_t)?;
                     info!(">> OK");
                 }
                 Act::CombineShares(cfg_h, cnt, hs) => {
-                    info!(">> Action: Combining shares (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
-                    let cfg = board.get_config(cfg_h).unwrap();
+                    let self_t = self_index
+                        .ok_or(TrusteeError::Msg("Could not find self index".to_string()))?;
+                    info!(">> Action: Combining shares (contest=[{}], self=[{}])..", cnt, self_t);
+                    let cfg = board.get_config(cfg_h)?
+                        .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
                     let hashes = clear_zeroes(&hs);
                     assert!(hashes.len() == cfg.trustees.len());
-                    let pk = self.get_pk(board, hashes, &cfg.group, cnt).unwrap();
+                    let pk = self.get_pk(board, hashes, &cfg.group, cnt)
+                        .ok_or(TrusteeError::Msg("Could not build pk".to_string()))?;
                     let pk_h = hashing::hash(&pk);
                     let ss = SignedStatement::public_key(&cfg_h, &pk_h, cnt, &self.keypair);
                     
-                    let pk_path = self.localstore.set_pk(&action, pk, &ss);
-                    board.set_pk(&pk_path, cnt);
+                    let pk_path = self.localstore.set_pk(&action, pk, &ss)?;
+                    board.set_pk(&pk_path, cnt)?;
                     info!(">> OK");
                 }
                 Act::CheckPk(cfg_h, cnt, pk_h, hs) => {
-                    info!(">> Action: Verifying pk (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
-                    let cfg = board.get_config(cfg_h).unwrap();
+                    let self_t = self_index
+                        .ok_or(TrusteeError::Msg("Could not find self index".to_string()))?;
+                    info!(">> Action: Verifying pk (contest=[{}], self=[{}])..", cnt, self_t);
+                    let cfg = board.get_config(cfg_h)?
+                        .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
                     let hashes = clear_zeroes(&hs);
                     assert!(hashes.len() == cfg.trustees.len());
-                    let pk = self.get_pk(board, hashes, &cfg.group, cnt).unwrap();
+                    let pk = self.get_pk(board, hashes, &cfg.group, cnt)
+                        .ok_or(TrusteeError::Msg("Could not build pk".to_string()))?;
                     let pk_h_ = hashing::hash(&pk);
                     assert!(pk_h == pk_h_);
                     let ss = SignedStatement::public_key(&cfg_h, &pk_h, cnt, &self.keypair);
                     
-                    let pk_stmt_path = self.localstore.set_pk_stmt(&action, &ss);
-                    board.set_pk_stmt(&pk_stmt_path, cnt, self_index.unwrap());
+                    let pk_stmt_path = self.localstore.set_pk_stmt(&action, &ss)?;
+                    board.set_pk_stmt(&pk_stmt_path, cnt, self_t)?;
                     info!(">> OK");
                 }
                 Act::Mix(cfg_h, cnt, ballots_h, pk_h) => {
-                    let self_t = self_index.unwrap();
+                    let self_t = self_index
+                        .ok_or(TrusteeError::Msg("Could not find self index".to_string()))?;
                     info!(">> Computing mix (contest=[{}], self=[{}])..", cnt, self_t);
-                    let cfg = board.get_config(cfg_h).unwrap();
-                    let ciphertexts = self.get_mix_src(board, cnt, self_t, ballots_h);
-                    let pk = board.get_pk(cnt, pk_h).unwrap();
-                    let group = &cfg.group;
+                    let cfg = board.get_config(cfg_h)?
+                        .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+                    let ciphertexts = self.get_mix_src(board, cnt, self_t, ballots_h)
+                        .ok_or(TrusteeError::Msg("Could not find source ciphertexts".to_string()))?;
+                    let pk = board.get_pk(cnt, pk_h)?
+                        .ok_or(TrusteeError::Msg("Could not find pk".to_string()))?;
                     
+                    let group = &cfg.group;
                     let hs = generators(ciphertexts.len() + 1, group, cnt, cfg.id.to_vec());
                     
                     let exp_hasher = &*group.exp_hasher();
@@ -129,20 +164,27 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_h, None, cnt, &self.keypair);
                     
                     let now_ = std::time::Instant::now();
-                    let mix_path = self.localstore.set_mix(&action, mix, &ss);
+                    let mix_path = self.localstore.set_mix(&action, mix, &ss)?;
                     let rate = ciphertexts.len() as f32 / now_.elapsed().as_millis() as f32;
                     info!("IO Write ({:.1} ciphertexts/s)", 1000.0 * rate);
                     
-                    board.add_mix(&mix_path, cnt, self_index.unwrap());  
+                    board.add_mix(&mix_path, cnt, self_t)?;
                     info!(">> Mix generated {:?} <- {:?}", short(&mix_h), short(&ballots_h));
                 }
                 Act::CheckMix(cfg_h, cnt, trustee, mix_h, ballots_h, pk_h) => {
-                    let cfg = board.get_config(cfg_h).unwrap();
-                    info!(">> Action:: Verifying mix (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
+                    let cfg = board.get_config(cfg_h)?
+                        .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+                    let self_t = self_index
+                        .ok_or(TrusteeError::Msg("Could not find self index".to_string()))?;
+                    info!(">> Action:: Verifying mix (contest=[{}], self=[{}])..", cnt, self_t);
 
-                    let mix = board.get_mix(cnt, trustee, mix_h).unwrap();
-                    let ciphertexts = self.get_mix_src(board, cnt, trustee, ballots_h);
-                    let pk = board.get_pk(cnt, pk_h).unwrap();
+                    let mix = board.get_mix(cnt, trustee, mix_h)?
+                        .ok_or(TrusteeError::Msg("Could not find mix".to_string()))?;
+                    
+                    let ciphertexts = self.get_mix_src(board, cnt, trustee, ballots_h)
+                        .ok_or(TrusteeError::Msg("Could not find source ciphertexts".to_string()))?;
+                    let pk = board.get_pk(cnt, pk_h)?
+                        .ok_or(TrusteeError::Msg("Could not find pk".to_string()))?;
                     let group = &cfg.group;
                     
                     let hs = generators(ciphertexts.len() + 1, group, cnt, cfg.id.to_vec());
@@ -161,17 +203,27 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     info!("Check proof ({:.1} ciphertexts/s)", 1000.0 * rate);
             
                     let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_h, Some(trustee), cnt, &self.keypair);
-                    let mix_path = self.localstore.set_mix_stmt(&action, &ss);
-                    board.add_mix_stmt(&mix_path, cnt, self_index.unwrap(), trustee);
+                    let mix_path = self.localstore.set_mix_stmt(&action, &ss)?;
+                    board.add_mix_stmt(&mix_path, cnt, self_t, trustee)?;
                     
                     info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
                 }
                 Act::PartialDecrypt(cfg_h, cnt, mix_h, share_h) => {
-                    info!(">> Action: Computing partial decryptions (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
+                    let self_t = self_index
+                        .ok_or(TrusteeError::Msg("Could not find self index".to_string()))?;
+                    
+                    info!(">> Action: Computing partial decryptions (contest=[{}], self=[{}])..", cnt, self_t);
                     let now_ = std::time::Instant::now();
-                    let cfg = board.get_config(cfg_h).unwrap();
-                    let mix = board.get_mix(cnt, (cfg.trustees.len() - 1) as u32, mix_h).unwrap();
-                    let share = board.get_share(cnt, self_index.unwrap(), share_h).unwrap();
+                    
+                    let cfg = board.get_config(cfg_h)?
+                        .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+                    
+                    let mix = board.get_mix(cnt, (cfg.trustees.len() - 1) as u32, mix_h)?
+                        .ok_or(TrusteeError::Msg("Could not find mix".to_string()))?;
+                    
+                    let share = board.get_share(cnt, self_t, share_h)?
+                        .ok_or(TrusteeError::Msg("Could not find share".to_string()))?;
+                    
                     let encrypted_sk = share.encrypted_sk;
                     let sk: PrivateKey<E, G> = PrivateKey::from_encrypted(self.symmetric, encrypted_sk, &cfg.group);
                     let keymaker = Keymaker::from_sk(sk, &cfg.group);
@@ -184,63 +236,76 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     };
                     let pd_h = hashing::hash(&pd);
                     let ss = SignedStatement::pdecryptions(&cfg_h, &pd_h, cnt, &self.keypair);
-                    let pd_path = self.localstore.set_pdecryptions(&action, pd, &ss);
-                    board.add_decryption(&pd_path, cnt, self_index.unwrap());
+                    let pd_path = self.localstore.set_pdecryptions(&action, pd, &ss)?;
+                    board.add_decryption(&pd_path, cnt, self_t)?;
                     
                     info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
                 }
                 Act::CombineDecryptions(cfg_h, cnt, decryption_hs, mix_h, share_hs) => {
-                    let cfg = board.get_config(cfg_h).unwrap();
-                    info!(">> Action: Combining decryptions (contest=[{}], self=[{}])..", cnt, self_index.unwrap());
+                    let self_t = self_index
+                        .ok_or(TrusteeError::Msg("Could not find self index".to_string()))?;
+                    
+                    let cfg = board.get_config(cfg_h)?
+                        .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+                    info!(">> Action: Combining decryptions (contest=[{}], self=[{}])..", cnt, self_t);
                     let now_ = std::time::Instant::now();
                     let d_hs = clear_zeroes(&decryption_hs);
                     let s_hs = clear_zeroes(&share_hs);
-                    let pls = self.get_plaintexts(board, cnt, d_hs, mix_h, s_hs, &cfg).unwrap();
+                    let pls = self.get_plaintexts(board, cnt, d_hs, mix_h, s_hs, &cfg)
+                        .ok_or(TrusteeError::Msg("Could not build plaintexts".to_string()))?;
+                    
                     let rate = pls.len() as f32 / now_.elapsed().as_millis() as f32;
                     let plaintexts = Plaintexts {
                         plaintexts: pls
                     };
                     let p_h = hashing::hash(&plaintexts);
                     let ss = SignedStatement::plaintexts(&cfg_h, &p_h, cnt, &self.keypair);
-                    let p_path = self.localstore.set_plaintexts(&action, plaintexts, &ss);
-                    board.set_plaintexts(&p_path, cnt);
+                    let p_path = self.localstore.set_plaintexts(&action, plaintexts, &ss)?;
+                    board.set_plaintexts(&p_path, cnt)?;
                     
                     info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
                 }
                 Act::CheckPlaintexts(cfg_h, cnt, plaintexts_h, decryption_hs, mix_h, share_hs) => {
-                    let cfg = board.get_config(cfg_h).unwrap();
-                    info!(">> Action: Checking plaintexts (contest=[{}], self=[{}])", cnt, self_index.unwrap());
+                    let cfg = board.get_config(cfg_h)?
+                        .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+
+                    let self_t = self_index
+                        .ok_or(TrusteeError::Msg("Could not find self index".to_string()))?;
+                    
+                    info!(">> Action: Checking plaintexts (contest=[{}], self=[{}])", cnt, self_t);
                     let now_ = std::time::Instant::now();
                     let s_hs = clear_zeroes(&share_hs);
                     let d_hs = clear_zeroes(&decryption_hs);
-                    let pls = self.get_plaintexts(board, cnt, d_hs, mix_h, s_hs, &cfg).unwrap();
+                    let pls = self.get_plaintexts(board, cnt, d_hs, mix_h, s_hs, &cfg)
+                        .ok_or(TrusteeError::Msg("Could not build plaintexts".to_string()))?;
                     let rate = pls.len() as f32 / now_.elapsed().as_millis() as f32;
-                    let pls_board = board.get_plaintexts(cnt, plaintexts_h).unwrap();
+                    let pls_board = board.get_plaintexts(cnt, plaintexts_h)?
+                        .ok_or(TrusteeError::Msg("Could not find plaintexts".to_string()))?;
                     assert!(pls == pls_board.plaintexts);
             
                     let ss = SignedStatement::plaintexts(&cfg_h, &plaintexts_h, cnt, &self.keypair);
-                    let p_path = self.localstore.set_plaintexts_stmt(&action, &ss);
-                    board.set_plaintexts_stmt(&p_path, cnt, self_index.unwrap());
+                    let p_path = self.localstore.set_plaintexts_stmt(&action, &ss)?;
+                    board.set_plaintexts_stmt(&p_path, cnt, self_t)?;
                     info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
                 }
             }
         }
          
         info!(">>>> Trustee::run finished in [{}ms]", now.elapsed().as_millis());
-        ret as u32
+        Ok(ret as u32)
     }
     
     // ballots may come from the ballot box, or an earlier mix
     fn get_mix_src<B: BulletinBoard<E, G>>(&self, board: &B, contest: u32, 
-        mixing_trustee: u32, ballots_h: Hash) -> Vec<Ciphertext<E>> {
+        mixing_trustee: u32, ballots_h: Hash) -> Option<Vec<Ciphertext<E>>> {
 
         if mixing_trustee == 0 {
-            let ballots = board.get_ballots(contest, ballots_h).unwrap();
-            ballots.ciphertexts
+            let ballots = board.get_ballots(contest, ballots_h).ok()?;
+            Some(ballots?.ciphertexts)
         }
         else {
-            let mix = board.get_mix(contest, mixing_trustee - 1, ballots_h).unwrap();
-            mix.mixed_ballots
+            let mix = board.get_mix(contest, mixing_trustee - 1, ballots_h).ok()?;
+            Some(mix?.mixed_ballots)
         }
     }
 
@@ -253,13 +318,13 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         
         let mut decryptions: Vec<Vec<E>> = Vec::with_capacity(hs.len());
         let last_trustee = cfg.trustees.len() - 1;
-        
 
-        let mix = board.get_mix(cnt, last_trustee as u32, mix_h).unwrap();
-        let ciphertexts = mix.mixed_ballots;
+        let mix = board.get_mix(cnt, last_trustee as u32, mix_h).ok()?;
+        let ciphertexts = mix?.mixed_ballots;
         for (i, h) in hs.iter().enumerate() {
-            let next_d = board.get_decryption(cnt, i as u32, *h).unwrap();
-            let next_s = board.get_share(cnt, i as u32, share_hs[i]).unwrap();
+            let next_d = board.get_decryption(cnt, i as u32, *h).ok()??;
+            let next_s = board.get_share(cnt, i as u32, share_hs[i]).ok()??;
+            
             info!("Verifying decryption share..");
             let ok = Keymaker::verify_decryption_factors(&cfg.group, &next_s.share.value, &ciphertexts,
                 &next_d.pd_ballots, &next_d.proofs);
@@ -286,7 +351,8 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         
         let mut shares = Vec::with_capacity(hs.len());
         for (i, h) in hs.iter().enumerate() {
-            let next = board.get_share(cnt, i as u32, *h).unwrap();
+            let next = board.get_share(cnt, i as u32, *h).ok()??;
+            
             info!("Verifying share proof..");
             let ok = Keymaker::verify_share(group, &next.share, &next.proof);
             if ok {

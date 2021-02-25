@@ -256,7 +256,7 @@ impl AllFacts {
         self.config_ok.len() == 1
     }
     pub fn get_self_index(&self) -> Option<u32> {
-        if let InputFact::ConfigPresent(ConfigPresent(_, _, _, self_t)) = self.get_cp() {
+        if let InputFact::ConfigPresent(ConfigPresent(_, _, _, self_t)) = self.get_config_present() {
             Some(self_t)
         }
         else {
@@ -264,14 +264,14 @@ impl AllFacts {
         }
     }
     pub fn get_trustee_count(&self) -> Option<u32> {
-        if let InputFact::ConfigPresent(ConfigPresent(_, _, trustees, _)) = self.get_cp() {
+        if let InputFact::ConfigPresent(ConfigPresent(_, _, trustees, _)) = self.get_config_present() {
             Some(trustees)
         }
         else {
             None
         }
     }
-    fn get_cp(&self) -> InputFact {
+    fn get_config_present(&self) -> InputFact {
         self.input_facts[self.input_facts.len() - 1]
     }
 }

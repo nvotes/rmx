@@ -19,7 +19,7 @@ use crate::bulletinboard::basic::BasicBoard;
 use crate::bulletinboard::BBError;
 
 #[derive(Serialize, Deserialize)]
-struct GitBulletinBoard {
+pub struct GitBulletinBoard {
     pub ssh_key_path: String,
     pub url: String,
     pub fs_path: String,
@@ -257,10 +257,10 @@ impl GitBulletinBoard {
         repo.reset(&object, git2::ResetType::Hard, None)
     }
 
-    // clears the repository of any files, and pushes
-    // note that files in the working directory are not eliminated
+    // clears the repository index of any files, and pushes
+    // that files in the working directory are not eliminated
     // and would be considered untracked, so a sync_down will not delete them
-    fn __delete(&self) -> Result<(), Error> {
+    pub fn __clear(&self) -> Result<(), Error> {
         let repo = self.open_or_clone()?;
         let mut index = repo.index()?;
         index.clear()?;
@@ -321,6 +321,11 @@ fn add_and_commit(repo: &Repository, entries: Vec<GitAddEntry>, message: &str,
     let mut index = repo.index()?;
     for e in entries {
         println!("{:?} -> {:?}", e.tmp_file.path(), e.fs_path);
+        let parent = e.fs_path.parent().unwrap();
+        if !parent.exists() {
+            println!("create directory at {:?}", parent);
+            fs::create_dir_all(parent);
+        }
         fs::rename(e.tmp_file.path(), &e.fs_path).unwrap();
         index.add_path(&e.repo_path)?;
     }
@@ -375,7 +380,7 @@ fn is_hidden(entry: &DirEntry) -> bool {
          .unwrap_or(false)
 }
 
-fn read_config() -> GitBulletinBoard {
+pub fn test_config() -> GitBulletinBoard {
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     d.push("resources/test/git_bb.json");
     let cfg = fs::read_to_string(d).unwrap();
@@ -397,7 +402,7 @@ mod tests {
     #[serial]
     fn test_open_or_clone() {
         
-        let g = read_config();
+        let g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
         
@@ -408,7 +413,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_refresh() {
-        let g = read_config();
+        let g = test_config();
         g.open_or_clone().unwrap();
         
         let dir = Path::new(&g.fs_path);
@@ -420,7 +425,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_post() {
-        let mut g = read_config();
+        let mut g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
         let added = util::create_random_file("/tmp");
@@ -438,7 +443,7 @@ mod tests {
     #[test]
     #[serial]
     fn test_append_only() {
-        let mut g = read_config();
+        let mut g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
         
@@ -450,7 +455,7 @@ mod tests {
         g.post(vec![(name, &added)], "new file").unwrap();
         
         // create 2nd repo after creating file but before making modification
-        let mut g2 = read_config();
+        let mut g2 = test_config();
         g2.fs_path.push_str("_");
         fs::remove_dir_all(&g2.fs_path).ok();
         g2.open_or_clone().unwrap();
@@ -484,10 +489,10 @@ mod tests {
     #[test]
     #[serial]
     fn test_delete() {
-        let g = read_config();
+        let g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
-        g.__delete().unwrap();
+        g.__clear().unwrap();
         
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();

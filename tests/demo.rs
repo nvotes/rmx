@@ -20,9 +20,9 @@ use rmx::crypto::base::Element;
 use rmx::crypto::backend::rug_b::*;
 use rmx::crypto::backend::ristretto_b::*;
 use rmx::bulletinboard::*;
-// use rmx::bulletinboard::memory_bb::*;
 use rmx::bulletinboard::generic::*;
 use rmx::bulletinboard::basic::*;
+use rmx::bulletinboard::git;
 use rmx::protocol::logic::Driver;
 use rmx::protocol::trustee::Trustee;
 use rmx::protocol::trustee::TrusteeError;
@@ -44,6 +44,16 @@ fn demo_ristretto() {
     // setup_log();
     let group = RistrettoGroup;
     demo(group, MBasic::new()).unwrap();
+}
+
+#[ignore]
+#[test]
+fn demo_rug_git() {
+    // setup_log();
+    let group = RugGroup::default();
+    let bb = git::test_config();
+    bb.__clear().unwrap();
+    demo(group, bb).unwrap();
 }
 
 fn demo<
@@ -75,6 +85,7 @@ fn demo<
     trustee_pks.push(trustee2.keypair.public);
     
     let contests = 3;
+    let ballots = 1000;
     let cfg = gen_config(&group, contests, trustee_pks, bb_keypair.public);
     // let cfg_b = bincode::serialize(&cfg).unwrap();
     let cfg_b = cfg.ser();
@@ -116,7 +127,7 @@ fn demo<
         // let pk: PublicKey<E, G> = bincode::deserialize(pk_b).unwrap();
         let pk = PublicKey::<E, G>::deser(&pk_b).unwrap();
         
-        let (plaintexts, ciphertexts) = util::random_encrypt_ballots(100, &pk);
+        let (plaintexts, ciphertexts) = util::random_encrypt_ballots(ballots, &pk);
         all_plaintexts.push(plaintexts);
         let ballots = Ballots { ciphertexts };
         // let ballots_b = bincode::serialize(&ballots).unwrap();

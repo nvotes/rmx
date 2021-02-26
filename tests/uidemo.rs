@@ -10,6 +10,7 @@ use std::sync::{Arc, Mutex};
 
 use rand::rngs::OsRng;
 use ed25519_dalek::{Keypair, PublicKey as SPublicKey};
+use curve25519_dalek::ristretto::RistrettoPoint;
 use uuid::Uuid;
 use serde::de::DeserializeOwned;
 
@@ -64,44 +65,16 @@ impl<
     > Demo<E, G, B> 
     where <E as Element>::Plaintext: std::hash::Hash {
     
-    fn new(sink: cursive::CbSink, group: &G, mut basics: Vec<B>, trustees: u32, contests: u32, ballots: u32) -> Demo<E, G, B> {
-        let mut trustee_pks = Vec::new();
-        let mut prots = Vec::new();
-        let mut bbs = Vec::new();
-        let basics_len = basics.len();
-        print!("AAA..");
-        for i in 0..trustees {
-            let local = format!("/tmp/local{}", i);
-            let local_path = Path::new(&local);
-            fs::remove_dir_all(local_path).ok();
-            fs::create_dir(local_path).ok();
-            let trustee: Trustee<E, G> = Trustee::new(local.to_string());
-            trustee_pks.push(trustee.keypair.public);
-            let prot: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee);
-            prots.push(prot);
-            if basics_len > i as usize {
-                let bb = GenericBulletinBoard::<E, G, B>::new(basics.remove(0));
-                bbs.push(bb);
-            }
-        }
-
-        let mut csprng = OsRng;
-        let bb_keypair = Keypair::generate(&mut csprng);
-        // let mut bb = GenericBulletinBoard::<E, G, B>::new(basic);
-        let cfg = gen_config(group, contests, trustee_pks, bb_keypair.public);
-        // let cfg_b = bincode::serialize(&cfg).unwrap();
-        let cfg_b = cfg.ser();
-        let tmp_file = util::write_tmp(cfg_b).unwrap();
-        print!("Adding config..");
-        bbs[0].add_config(&ConfigPath(tmp_file.path().to_path_buf())).unwrap();
-        println!("Ok");
+    fn new(sink: cursive::CbSink, trustees: Vec<Driver<E, G, GenericBulletinBoard<E, G, B>>>, 
+        boards:  Vec<GenericBulletinBoard<E, G, B>>, bb_keypair: Keypair, 
+        ballots: u32, cfg: rmx::data::entity::Config<E, G>) -> Demo<E, G, B> {
 
         Demo {
             cb_sink: sink,
-            trustees: prots,
+            trustees: trustees,
             bb_keypair: bb_keypair,
             config: cfg,
-            boards: bbs,
+            boards: boards,
             // board: bb,
             all_plaintexts: vec![],
             ballots: ballots
@@ -231,19 +204,50 @@ fn uidemo() {
     let trustees: u32 = 3;
     let contests = 3;
     let ballots = 2000;
-    let mut basics = Vec::new();
-    let basic = MBasic::new();
-    basics.push(basic);
-    /* for i in 0..trustees {
-        let next = git_board(i);
-        fs::remove_dir_all(&next.fs_path).ok();    
-        basics.push(next);
+    let mut bbs = Vec::new();
+    let mut trustee_pks = Vec::new();
+    let mut drivers = Vec::new();
+
+    // let basic = MBasic::new();
+    // bbs.push(basic);
+    for i in 0..trustees {
+        println!("Prepare trustee {}", i);
+        let basic = git_board(i);
+        fs::remove_dir_all(&basic.fs_path).ok();
+        if i == 0 {
+            basic.clone().unwrap();
+            basic.__clear().unwrap();
+        }
+
+        let bb = GenericBulletinBoard::<RistrettoPoint, RistrettoGroup, GitBulletinBoard>::new(basic);
+        bbs.push(bb);
+
+        let local = format!("/tmp/local{}", i);
+        let local_path = Path::new(&local);
+        fs::remove_dir_all(local_path).ok();
+        fs::create_dir(local_path).ok();
+
+        let trustee: Trustee<RistrettoPoint, RistrettoGroup> = Trustee::new(local.to_string());
+        trustee_pks.push(trustee.keypair.public);
+        
+        let driver: Driver<RistrettoPoint, RistrettoGroup, GenericBulletinBoard<RistrettoPoint, RistrettoGroup, GitBulletinBoard>> 
+            = Driver::new(trustee);
+        drivers.push(driver);
     }
-    basics[0].clone().unwrap();
-    basics[0].__clear().unwrap();*/
+    
+    let mut csprng = OsRng;
+    let bb_keypair = Keypair::generate(&mut csprng);
+    
+    let cfg = gen_config(&group, contests, trustee_pks, bb_keypair.public);
+    let cfg_b = cfg.ser();
+    let tmp_file = util::write_tmp(cfg_b).unwrap();
+    print!("Adding config..");
+    bbs[0].add_config(&ConfigPath(tmp_file.path().to_path_buf())).unwrap();
+    println!("Ok");
 
     let mut siv = cursive::default();
-    let demo = Demo::new(siv.cb_sink().clone(), &group, basics, trustees, contests, ballots);
+    let demo = Demo::new(siv.cb_sink().clone(), drivers, bbs, bb_keypair, ballots, cfg);
+    
     CombinedLogger::init(
         vec![
             // TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed),
@@ -415,6 +419,7 @@ fn step<
     let mut demo = demo_arc.lock().unwrap();
     demo.status(String::from("Working..."));
     info!("set_panel=[facts]");
+    info!("Trustee [{}] process_facts..", t);
     let facts = demo.process_facts(t as usize);
     info!("set_panel=[{}]", t);
     demo.run(facts, t as usize).unwrap();

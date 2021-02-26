@@ -91,6 +91,7 @@ fn demo<
     let cfg_b = cfg.ser();
 
     let tmp_file = util::write_tmp(cfg_b)?;
+
     bb.add_config(&ConfigPath(tmp_file.path().to_path_buf()))?;
     
     let prot1: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee1);

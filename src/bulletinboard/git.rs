@@ -5,10 +5,9 @@ use git2::build::{CheckoutBuilder, RepoBuilder};
 use git2::*;
 use tempfile::NamedTempFile;
 use walkdir::{DirEntry, WalkDir};
-
 use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
-
+use log::info;
 
 use crate::util;
 use crate::crypto::hashing;
@@ -89,8 +88,20 @@ impl GitBulletinBoard {
                 .clone(&self.url, Path::new(&self.fs_path))
         }
     }
+
+    pub fn clone(&self) -> Result<Repository, Error> {    
+        let co = CheckoutBuilder::new();
+        let mut fo = FetchOptions::new();
+        let cb = remote_callbacks(&self.ssh_key_path);
+        fo.remote_callbacks(cb);    
+        RepoBuilder::new()
+            .fetch_options(fo)
+            .with_checkout(co)
+            .clone(&self.url, Path::new(&self.fs_path))
+    }
     
     fn list_entries(&self) -> Result<Vec<String>, BBError> {
+        self.refresh()?;
         let walker = WalkDir::new(&self.fs_path).min_depth(1).into_iter();
         let entries: Vec<DirEntry> = walker
             .filter_entry(|e| !is_hidden(e))
@@ -213,11 +224,11 @@ impl GitBulletinBoard {
         let analysis = repo.merge_analysis(&[&commit])?;
     
         if analysis.0.is_up_to_date() {
-            println!("Up to date");
+            info!("GIT: refresh: Up to date");
             Ok(())
         }
         else if analysis.0.is_fast_forward() {        
-            println!("Requires fast-forward");
+            info!("GIT: refresh: requires fast forward");
             if self.append_only {
                 let mut opts = DiffOptions::new();
                 let tree_old = repo.find_commit(local_commit.id()).unwrap().tree().unwrap();
@@ -320,11 +331,11 @@ fn add_and_commit(repo: &Repository, entries: Vec<GitAddEntry>, message: &str,
     
     let mut index = repo.index()?;
     for e in entries {
-        println!("{:?} -> {:?}", e.tmp_file.path(), e.fs_path);
+        info!("GIT: {:?} -> {:?}", e.tmp_file.path(), e.fs_path);
         let parent = e.fs_path.parent().unwrap();
         if !parent.exists() {
-            println!("create directory at {:?}", parent);
-            fs::create_dir_all(parent);
+            info!("GIT: create directory at {:?}", parent);
+            fs::create_dir_all(parent).unwrap();
         }
         fs::rename(e.tmp_file.path(), &e.fs_path).unwrap();
         index.add_path(&e.repo_path)?;

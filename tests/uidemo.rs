@@ -51,9 +51,10 @@ struct Demo<E: Element, G, B> {
     trustees: Vec<Driver<E, G, GenericBulletinBoard<E, G, B>>>,
     bb_keypair: Keypair,
     config: rmx::data::entity::Config<E, G>,
-    board: GenericBulletinBoard<E, G, B>,
+    // board: GenericBulletinBoard<E, G, B>,
     all_plaintexts: Vec<Vec<E::Plaintext>>,
-    ballots: u32
+    ballots: u32,
+    boards: Vec<GenericBulletinBoard<E, G, B>>
 }
 
 impl<
@@ -62,19 +63,13 @@ impl<
     B: BasicBoard
     > Demo<E, G, B> 
     where <E as Element>::Plaintext: std::hash::Hash {
-    fn new(sink: cursive::CbSink, group: &G, basic: B, trustees: u32, contests: u32, ballots: u32) -> Demo<E, G, B> {
-        let local1 = "/tmp/local";
-        let local2 = "/tmp/local2";
-        let local_path = Path::new(&local1);
-        fs::remove_dir_all(local_path).ok();
-        fs::create_dir(local_path).ok();
-        let local_path = Path::new(&local2);
-        fs::remove_dir_all(local_path).ok();
-        fs::create_dir(local_path).ok();
-        
+    
+    fn new(sink: cursive::CbSink, group: &G, mut basics: Vec<B>, trustees: u32, contests: u32, ballots: u32) -> Demo<E, G, B> {
         let mut trustee_pks = Vec::new();
         let mut prots = Vec::new();
-        
+        let mut bbs = Vec::new();
+        let basics_len = basics.len();
+        print!("AAA..");
         for i in 0..trustees {
             let local = format!("/tmp/local{}", i);
             let local_path = Path::new(&local);
@@ -84,23 +79,30 @@ impl<
             trustee_pks.push(trustee.keypair.public);
             let prot: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee);
             prots.push(prot);
-
+            if basics_len > i as usize {
+                let bb = GenericBulletinBoard::<E, G, B>::new(basics.remove(0));
+                bbs.push(bb);
+            }
         }
+
         let mut csprng = OsRng;
         let bb_keypair = Keypair::generate(&mut csprng);
-        let mut bb = GenericBulletinBoard::<E, G, B>::new(basic);
+        // let mut bb = GenericBulletinBoard::<E, G, B>::new(basic);
         let cfg = gen_config(group, contests, trustee_pks, bb_keypair.public);
         // let cfg_b = bincode::serialize(&cfg).unwrap();
         let cfg_b = cfg.ser();
         let tmp_file = util::write_tmp(cfg_b).unwrap();
-        bb.add_config(&ConfigPath(tmp_file.path().to_path_buf())).unwrap();
+        print!("Adding config..");
+        bbs[0].add_config(&ConfigPath(tmp_file.path().to_path_buf())).unwrap();
+        println!("Ok");
 
         Demo {
             cb_sink: sink,
             trustees: prots,
             bb_keypair: bb_keypair,
             config: cfg,
-            board: bb,
+            boards: bbs,
+            // board: bb,
             all_plaintexts: vec![],
             ballots: ballots
         }
@@ -108,8 +110,8 @@ impl<
     
     fn add_ballots(&mut self) {
         for i in 0..self.config.contests {
-            let pk_b = self.board.get_unsafe(GenericBulletinBoard::<E, G, B>::public_key(i, 0)).unwrap();
-            let ballots_b = self.board.get_unsafe(GenericBulletinBoard::<E, G, B>::ballots(i)).unwrap();
+            let pk_b = self.boards[0].get_unsafe(GenericBulletinBoard::<E, G, B>::public_key(i, 0)).unwrap();
+            let ballots_b = self.boards[0].get_unsafe(GenericBulletinBoard::<E, G, B>::ballots(i)).unwrap();
             if pk_b.is_some() && ballots_b.is_none() {
                 info!(">> Adding {} ballots..", self.ballots);
                 // let pk: PublicKey<E, G> = bincode::deserialize(pk_b.unwrap()).unwrap();
@@ -131,7 +133,7 @@ impl<
                 let f1 = util::write_tmp(ballots_b).unwrap();
                 let f2 = util::write_tmp(ss_b).unwrap();
                 
-                self.board.add_ballots(&BallotsPath(f1.path().to_path_buf(), f2.path().to_path_buf()), i).unwrap();
+                self.boards[0].add_ballots(&BallotsPath(f1.path().to_path_buf(), f2.path().to_path_buf()), i).unwrap();
                 info!(">> OK");
             }
             else {
@@ -141,7 +143,7 @@ impl<
     }
     fn check_plaintexts(&self) {
         for i in 0..self.config.contests {
-            if let Some(decrypted_b) = self.board.get_unsafe(GenericBulletinBoard::<E, G, B>::plaintexts(i, 0)).unwrap() {
+            if let Some(decrypted_b) = self.boards[0].get_unsafe(GenericBulletinBoard::<E, G, B>::plaintexts(i, 0)).unwrap() {
                 // let decrypted: Plaintexts<E> = bincode::deserialize(decrypted_b).unwrap();
                 let decrypted = Plaintexts::<E>::deser(&decrypted_b).unwrap();
                 let decoded: Vec<E::Plaintext> = decrypted.plaintexts.iter().map(|p| {
@@ -162,11 +164,25 @@ impl<
     }
     fn process_facts(&mut self, t: usize) -> AllFacts {
         let trustee = &self.trustees[t];
-        trustee.process_facts(&mut self.board)
+        // trustee.process_facts(&mut self.board)
+        if self.boards.len() > 1 {
+            trustee.process_facts(&mut self.boards[t])
+        }
+        else {
+            trustee.process_facts(&mut self.boards[0])
+        }
+        
     }
     fn run(&mut self, facts: AllFacts, t: usize) -> Result<u32, TrusteeError> {
         let trustee = &self.trustees[t];
-        trustee.run(facts, &mut self.board)
+        // trustee.run(facts, &mut self.board)
+        if self.boards.len() > 1 {
+            trustee.run(facts, &mut self.boards[t])
+        }
+        else {
+            trustee.run(facts, &mut self.boards[0])
+        }
+        
     }
     fn writer(&self) -> DemoLogSink {
         DemoLogSink {
@@ -209,14 +225,25 @@ impl<
 #[test]
 fn uidemo() {
     let mut n: u32 = 0;
-    let mut siv = cursive::default();
+    
     // let group = RugGroup::default();
     let group = RistrettoGroup;
     let trustees: u32 = 3;
     let contests = 3;
     let ballots = 2000;
+    let mut basics = Vec::new();
     let basic = MBasic::new();
-    let demo = Demo::new(siv.cb_sink().clone(), &group, basic, trustees, contests, ballots);
+    basics.push(basic);
+    /* for i in 0..trustees {
+        let next = git_board(i);
+        fs::remove_dir_all(&next.fs_path).ok();    
+        basics.push(next);
+    }
+    basics[0].clone().unwrap();
+    basics[0].__clear().unwrap();*/
+
+    let mut siv = cursive::default();
+    let demo = Demo::new(siv.cb_sink().clone(), &group, basics, trustees, contests, ballots);
     CombinedLogger::init(
         vec![
             // TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed),
@@ -246,6 +273,7 @@ fn uidemo() {
     
     let mut h_layout = LinearLayout::horizontal();
     let mut layout = LinearLayout::vertical();
+    
     for i in 0..trustees {
         let title = format!("Trustee {}", i);
         let text = "";    
@@ -327,7 +355,7 @@ fn uidemo() {
         let text = init_text.clone();
         let guard = Arc::clone(&demo_arc_artifacts);
         let demo = guard.lock().unwrap();
-        let mut artifacts = demo.board.list().unwrap();
+        let mut artifacts = demo.boards[0].list().unwrap();
         artifacts.sort();
         let artifacts = artifacts.join("\n");
         
@@ -337,7 +365,7 @@ fn uidemo() {
             view.get_inner_mut().append(artifacts);
         });
     });
-    
+
     siv.run();
 }
 
@@ -509,4 +537,14 @@ fn gen_config<E: Element, G: Group<E>>(group: &G, contests: u32, trustee_pks: Ve
     };
 
     cfg
+}
+
+use rmx::bulletinboard::git;
+use rmx::bulletinboard::git::GitBulletinBoard; 
+
+fn git_board(i: u32) -> GitBulletinBoard {
+    let mut board = git::test_config();
+    board.fs_path = std::format!("/tmp/repo{}", i);
+
+    board
 }

@@ -33,9 +33,7 @@ impl<E: Element, G: Group<E>> LocalStore<E, G> {
     pub fn set_config_stmt(&self, act: &Act, stmt: &SignedStatement) -> Result<ConfigStmtPath> {
         assert!(matches!(act, Act::CheckConfig(_)));
         assert!(matches!(stmt.statement.stype, StatementType::Config));
-        // let stmt_b = bincode::serialize(&stmt).unwrap();
         let stmt_b = stmt.ser();
-
         let stmt_p = self.set_work(act, vec![stmt_b])?.remove(0);
 
         Ok(ConfigStmtPath(stmt_p))
@@ -43,9 +41,7 @@ impl<E: Element, G: Group<E>> LocalStore<E, G> {
     pub fn set_share(&self, act: &Act, share: Keyshare<E, G>, stmt: &SignedStatement) -> Result<KeysharePath> {
         assert!(matches!(act, Act::PostShare(..)));
         assert!(matches!(stmt.statement.stype, StatementType::Keyshare));
-        // let share_b = bincode::serialize(&share).unwrap();
         let share_b = share.ser();
-        // let stmt_b = bincode::serialize(&stmt).unwrap();
         let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![share_b, stmt_b])?;
         let share_p = paths.remove(0);
@@ -56,9 +52,7 @@ impl<E: Element, G: Group<E>> LocalStore<E, G> {
     pub fn set_pk(&self, act: &Act, pk: PublicKey<E, G>, stmt: &SignedStatement) -> Result<PkPath> {
         assert!(matches!(act, Act::CombineShares(..)));
         assert!(matches!(stmt.statement.stype, StatementType::PublicKey));
-        // let pk_b = bincode::serialize(&pk).unwrap();
         let pk_b = pk.ser();
-        // let stmt_b = bincode::serialize(&stmt).unwrap();
         let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![pk_b, stmt_b])?;
         let pk_p = paths.remove(0);
@@ -69,7 +63,6 @@ impl<E: Element, G: Group<E>> LocalStore<E, G> {
     pub fn set_pk_stmt(&self, act: &Act, stmt: &SignedStatement) -> Result<PkStmtPath> {
         assert!(matches!(act, Act::CheckPk(..)));
         assert!(matches!(stmt.statement.stype, StatementType::PublicKey));
-        // let stmt_b = bincode::serialize(&stmt).unwrap();
         let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![stmt_b])?;
         let stmt_p = paths.remove(0);
@@ -79,9 +72,7 @@ impl<E: Element, G: Group<E>> LocalStore<E, G> {
     pub fn set_mix(&self, act: &Act, mix: Mix<E>, stmt: &SignedStatement) -> Result<MixPath> {
         assert!(matches!(act, Act::Mix(..)));
         assert!(matches!(stmt.statement.stype, StatementType::Mix));
-        // let mix_b = bincode::serialize(&mix).unwrap();
         let mix_b = mix.ser();
-        // let stmt_b = bincode::serialize(&stmt).unwrap();
         let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![mix_b, stmt_b])?;
         let pk_p = paths.remove(0);
@@ -92,7 +83,6 @@ impl<E: Element, G: Group<E>> LocalStore<E, G> {
     pub fn set_mix_stmt(&self, act: &Act, stmt: &SignedStatement) -> Result<MixStmtPath> {
         assert!(matches!(act, Act::CheckMix(..)));
         assert!(matches!(stmt.statement.stype, StatementType::Mix));
-        // let stmt_b = bincode::serialize(&stmt).unwrap();
         let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![stmt_b])?;
         let stmt_p = paths.remove(0);
@@ -103,9 +93,7 @@ impl<E: Element, G: Group<E>> LocalStore<E, G> {
     pub fn set_pdecryptions(&self, act: &Act, pdecryptions: PartialDecryption<E>, stmt: &SignedStatement) -> Result<PDecryptionsPath> {
         assert!(matches!(act, Act::PartialDecrypt(..)));
         assert!(matches!(stmt.statement.stype, StatementType::PDecryption));
-        // let pdecryptions_b = bincode::serialize(&pdecryptions).unwrap();
         let pdecryptions_b = pdecryptions.ser();
-        // let stmt_b = bincode::serialize(&stmt).unwrap();
         let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![pdecryptions_b, stmt_b])?;
         let pdecryptions_p = paths.remove(0);
@@ -117,9 +105,7 @@ impl<E: Element, G: Group<E>> LocalStore<E, G> {
     pub fn set_plaintexts(&self, act: &Act, plaintexts: Plaintexts<E>, stmt: &SignedStatement) -> Result<PlaintextsPath> {
         assert!(matches!(act, Act::CombineDecryptions(..)));
         assert!(matches!(stmt.statement.stype, StatementType::Plaintexts));
-        // let plaintexts_b = bincode::serialize(&plaintexts).unwrap();
         let plaintexts_b = plaintexts.ser();
-        // let stmt_b = bincode::serialize(&stmt).unwrap();
         let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![plaintexts_b, stmt_b])?;
         let plaintexts_p = paths.remove(0);
@@ -130,7 +116,6 @@ impl<E: Element, G: Group<E>> LocalStore<E, G> {
     pub fn set_plaintexts_stmt(&self, act: &Act, stmt: &SignedStatement) -> Result<PlaintextsStmtPath> {
         assert!(matches!(act, Act::CheckPlaintexts(..)));
         assert!(matches!(stmt.statement.stype, StatementType::Plaintexts));
-        // let stmt_b = bincode::serialize(&stmt).unwrap();
         let stmt_b = stmt.ser();
         let mut paths = self.set_work(act, vec![stmt_b])?;
         let stmt_p = paths.remove(0);
@@ -181,4 +166,3 @@ impl<E: Element, G: Group<E>> LocalStore<E, G> {
         ret
     }
 }
-

@@ -17,7 +17,6 @@ use crate::crypto::symmetric;
 use crate::crypto::hashing;
 use crate::crypto::hashing::*;
 use crate::bulletinboard::*;
-use crate::data::bytes::ByteError;
 use crate::bulletinboard::localstore::LocalStore;
 use crate::util::short;
 

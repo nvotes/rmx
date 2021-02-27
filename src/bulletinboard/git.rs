@@ -128,10 +128,7 @@ impl GitBulletinBoard {
         if target_file.exists() {
 
             let bytes: Vec<u8> = util::read_file_bytes(&target_file)?;
-
-            // let artifact = bincode::deserialize::<A>(&bytes)?;
-            let artifact = A::deser(&bytes).map_err(|e| std::format!("serialization error {}", e))?;
-
+            let artifact = A::deser(&bytes)?;
             let hashed = hashing::hash(&artifact);
             
             if hashed == hash {

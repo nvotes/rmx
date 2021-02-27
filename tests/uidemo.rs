@@ -87,20 +87,17 @@ impl<
             let ballots_b = self.boards[0].get_unsafe(GenericBulletinBoard::<E, G, B>::ballots(i)).unwrap();
             if pk_b.is_some() && ballots_b.is_none() {
                 info!(">> Adding {} ballots..", self.ballots);
-                // let pk: PublicKey<E, G> = bincode::deserialize(pk_b.unwrap()).unwrap();
                 let pk = PublicKey::<E, G>::deser(&pk_b.unwrap()).unwrap();
                 
                 let (plaintexts, ciphertexts) = util::random_encrypt_ballots(self.ballots as usize, &pk);
                 self.all_plaintexts.push(plaintexts);
                 
                 let ballots = Ballots { ciphertexts };
-                // let ballots_b = bincode::serialize(&ballots).unwrap();
                 let ballots_b = ballots.ser();
                 let ballots_h = hashing::hash(&ballots);
                 let cfg_h = hashing::hash(&self.config);
                 let ss = SignedStatement::ballots(&cfg_h, &ballots_h, i, &self.bb_keypair);
                 
-                // let ss_b = bincode::serialize(&ss).unwrap();
                 let ss_b = ss.ser();
                 
                 let f1 = util::write_tmp(ballots_b).unwrap();
@@ -117,7 +114,6 @@ impl<
     fn check_plaintexts(&self) {
         for i in 0..self.config.contests {
             if let Some(decrypted_b) = self.boards[0].get_unsafe(GenericBulletinBoard::<E, G, B>::plaintexts(i, 0)).unwrap() {
-                // let decrypted: Plaintexts<E> = bincode::deserialize(decrypted_b).unwrap();
                 let decrypted = Plaintexts::<E>::deser(&decrypted_b).unwrap();
                 let decoded: Vec<E::Plaintext> = decrypted.plaintexts.iter().map(|p| {
                     self.config.group.decode(&p)
@@ -211,10 +207,10 @@ fn uidemo() {
     // let basic = MBasic::new();
     // bbs.push(basic);
     for i in 0..trustees {
-        println!("Prepare trustee {}", i);
         let basic = git_board(i);
         fs::remove_dir_all(&basic.fs_path).ok();
         if i == 0 {
+            println!("Resetting remote repository..");
             basic.clone().unwrap();
             basic.__clear().unwrap();
         }
@@ -241,9 +237,8 @@ fn uidemo() {
     let cfg = gen_config(&group, contests, trustee_pks, bb_keypair.public);
     let cfg_b = cfg.ser();
     let tmp_file = util::write_tmp(cfg_b).unwrap();
-    print!("Adding config..");
+    println!("Adding config..");
     bbs[0].add_config(&ConfigPath(tmp_file.path().to_path_buf())).unwrap();
-    println!("Ok");
 
     let mut siv = cursive::default();
     let demo = Demo::new(siv.cb_sink().clone(), drivers, bbs, bb_keypair, ballots, cfg);

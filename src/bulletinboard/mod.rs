@@ -96,7 +96,6 @@ pub trait BulletinBoard<E: Element, G: Group<E>> {
     }
 }
 
-
 pub struct ConfigPath(pub PathBuf);
 pub struct ConfigStmtPath(pub PathBuf);
 pub struct KeysharePath(pub PathBuf, pub PathBuf);

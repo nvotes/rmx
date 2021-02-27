@@ -94,6 +94,7 @@ impl<
     fn list(&self) -> Result<Vec<String>, BBError> {
         self.basic.list()
     }
+
     fn add_config(&mut self, path: &ConfigPath) -> Result<(), BBError> {
         self.put(
             vec![(Self::CONFIG, &path.0)]
@@ -101,7 +102,7 @@ impl<
     }
     fn get_config_unsafe(&self) -> Result<Option<Config<E, G>>, BBError> {
         let bytes_option = self.basic.get_unsafe(Self::CONFIG)?;
-        // let ret: Config<E, G> = bincode::deserialize(bytes).unwrap();
+
         if let Some(bytes) = bytes_option {
             let ret = Config::<E, G>::deser(&bytes)?;
             Ok(Some(ret))
@@ -212,7 +213,7 @@ impl<
         for s in sts.iter() {
             let s_bytes = self.basic.get_unsafe(s)?.ok_or(BBError::Msg("Statement not found".to_string()))?;
             let (trustee, contest) = self.artifact_location(s);
-            // let stmt: SignedStatement = bincode::deserialize(&s_bytes).unwrap();
+
             let stmt = SignedStatement::deser(&s_bytes)?;
 
             let next = StatementVerifier {
@@ -269,7 +270,6 @@ mod tests {
         };
 
         let mut bb = GenericBulletinBoard::<Integer, RugGroup, MBasic>::new(MBasic::new());
-        // let cfg_b = bincode::serialize(&cfg).unwrap();
         let cfg_b = cfg.ser();
         
         let tmp_file = NamedTempFile::new().unwrap();

@@ -38,10 +38,8 @@ impl BasicBoard for MBasic {
         let key = target;
         if let Some(bytes) = self.data.get(&key) {
             let now_ = std::time::Instant::now();
-            // let artifact = bincode::deserialize::<A>(bytes)
-            //    .map_err(|e| std::format!("serde error {}", e))?;
-            let artifact = A::deser(bytes)
-                .map_err(|e| std::format!("serde error {}", e))?;
+    
+            let artifact = A::deser(bytes)?;
             info!(">> Deser {}, bytes {}", now_.elapsed().as_millis(), bytes.len());
             
             let now_ = std::time::Instant::now();

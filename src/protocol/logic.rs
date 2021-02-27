@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 use serde::de::DeserializeOwned;
 use crepe::crepe;
-use log::info;
+use log::*;
 
 use crate::bulletinboard::*;
 use crate::crypto::base::Element;
@@ -116,7 +116,6 @@ crepe! {
         PkSignedBy(config, contest, pk_hash, 0),
         !PkSignedBy(config, contest, pk_hash, self_t);
 
-    // mix 0
     Do(Act::Mix(config, contest, ballots_hash, pk_hash)) <- 
         PkOk(config, contest, pk_hash),
         ConfigPresent(config, _, _, 0),
@@ -124,7 +123,6 @@ crepe! {
         BallotsSigned(config, contest, ballots_hash),
         !MixSignedBy(config, contest, _, _, 0, 0);
 
-    // mix n
     Do(Act::Mix(config, contest, mix_ballots_hash, pk_hash)) <- 
         PkOk(config, contest, pk_hash),
         ConfigPresent(config, _, _, self_t),
@@ -312,7 +310,6 @@ impl<
         let now = std::time::Instant::now();
         let svs = board.get_statements();
         if svs.is_ok() {
-            // info!("SVerifiers: {}", svs.len());
             let mut facts: Vec<InputFact> = svs.unwrap().iter()
                 .map(|sv| sv.verify(board))
                 .filter(|f| f.is_some())
@@ -320,8 +317,9 @@ impl<
                 .collect();
 
             let cfg_ = board.get_config_unsafe();
-            if cfg_.is_err() {
-                // FIXME log
+            
+            if let Err(ref e) = cfg_ {
+                warn!("Error retrieving config: {}", e);
             }
             
             if let Ok(Some(cfg)) = cfg_ {
@@ -346,7 +344,7 @@ impl<
             facts
         }
         else {
-            // FIXME log
+            warn!("Error retrieving statements: {:?}", svs);
             vec![]
         }
     }

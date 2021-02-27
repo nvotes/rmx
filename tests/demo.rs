@@ -85,9 +85,8 @@ fn demo<
     trustee_pks.push(trustee2.keypair.public);
     
     let contests = 3;
-    let ballots = 1000;
+    let ballots = 200;
     let cfg = gen_config(&group, contests, trustee_pks, bb_keypair.public);
-    // let cfg_b = bincode::serialize(&cfg).unwrap();
     let cfg_b = cfg.ser();
 
     let tmp_file = util::write_tmp(cfg_b)?;
@@ -125,19 +124,16 @@ fn demo<
     println!("=================== ballots ===================");
     for i in 0..contests {
         let pk_b = bb.get_unsafe(GenericBulletinBoard::<E, G, B>::public_key(i, 0)).unwrap().unwrap();
-        // let pk: PublicKey<E, G> = bincode::deserialize(pk_b).unwrap();
         let pk = PublicKey::<E, G>::deser(&pk_b).unwrap();
         
         let (plaintexts, ciphertexts) = util::random_encrypt_ballots(ballots, &pk);
         all_plaintexts.push(plaintexts);
         let ballots = Ballots { ciphertexts };
-        // let ballots_b = bincode::serialize(&ballots).unwrap();
         let ballots_b = ballots.ser();
         let ballots_h = hashing::hash(&ballots);
         let cfg_h = hashing::hash(&cfg);
         let ss = SignedStatement::ballots(&cfg_h, &ballots_h, i, &bb_keypair);
         
-        // let ss_b = bincode::serialize(&ss).unwrap();
         let ss_b = ss.ser();
         
         let f1 = util::write_tmp(ballots_b).unwrap();
@@ -172,7 +168,6 @@ fn demo<
 
     for i in 0..contests {
         let decrypted_b = bb.get_unsafe(GenericBulletinBoard::<E, G, B>::plaintexts(i, 0)).unwrap().unwrap();
-        // let decrypted: Plaintexts<E> = bincode::deserialize(decrypted_b).unwrap();
         let decrypted = Plaintexts::<E>::deser(&decrypted_b).unwrap();
         let decoded: Vec<E::Plaintext> = decrypted.plaintexts.iter().map(|p| {
             group.decode(&p)

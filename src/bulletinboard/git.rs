@@ -64,9 +64,6 @@ impl BasicBoard for GitBulletinBoard {
         else {
             None
         }
-    }
-    fn clear(&mut self) {
-        self.data.clear();
     }*/
 }
 
@@ -78,26 +75,24 @@ impl GitBulletinBoard {
             Repository::open(&self.fs_path)
         }
         else {  
-            let co = CheckoutBuilder::new();
-            let mut fo = FetchOptions::new();
-            let cb = remote_callbacks(&self.ssh_key_path);
-            fo.remote_callbacks(cb);    
-            RepoBuilder::new()
-                .fetch_options(fo)
-                .with_checkout(co)
-                .clone(&self.url, Path::new(&self.fs_path))
+            self.clone()
         }
     }
 
     pub fn clone(&self) -> Result<Repository, Error> {    
+        info!("Git: clone..");
+        let now = std::time::Instant::now();
         let co = CheckoutBuilder::new();
         let mut fo = FetchOptions::new();
         let cb = remote_callbacks(&self.ssh_key_path);
         fo.remote_callbacks(cb);    
-        RepoBuilder::new()
+        let ret = RepoBuilder::new()
             .fetch_options(fo)
             .with_checkout(co)
-            .clone(&self.url, Path::new(&self.fs_path))
+            .clone(&self.url, Path::new(&self.fs_path));
+        info!("GIT clone: [{}ms]", now.elapsed().as_millis());
+        
+        ret
     }
     
     fn list_entries(&self) -> Result<Vec<String>, BBError> {
@@ -142,12 +137,92 @@ impl GitBulletinBoard {
             Ok(None)
         }
     }
+    
+    // refreshes the local copy with remote updates,
+    // preserving local commits, uncommitted changes are discarded.
+    // upstream changes only applied in fast forward mode, conflicts cause panic
+    fn refresh(&self) -> Result<(), Error> {
+        let repo = self.open_or_clone()?;
+        info!("GIT: refresh..");
+        let now = std::time::Instant::now();
+        let mut remote = repo.find_remote("origin").unwrap();
+        
+        let mut cb = remote_callbacks(&self.ssh_key_path);
+        cb.transfer_progress(|stats| {
+            if stats.received_objects() == stats.total_objects() {
+                info!(
+                    "Resolving deltas {}/{}\r",
+                    stats.indexed_deltas(),
+                    stats.total_deltas()
+                );
+            } else if stats.total_objects() > 0 {
+                info!(
+                    "Received {}/{} objects ({}) in {} bytes\r",
+                    stats.received_objects(),
+                    stats.total_objects(),
+                    stats.indexed_objects(),
+                    stats.received_bytes()
+                );
+            }
+            true
+        });
+
+        let mut fo = FetchOptions::new();
+        fo.remote_callbacks(cb);
+        fo.download_tags(git2::AutotagOption::All);
+        remote.fetch(&["master"], Some(&mut fo), None)?;
+    
+        let fetch_head = repo.find_reference("FETCH_HEAD")?;
+        let commit = repo.reference_to_annotated_commit(&fetch_head)?;
+        
+        let head = repo.head()?;
+        let local_commit = repo.reference_to_annotated_commit(&head)?;
+        let local_object = repo.find_object(local_commit.id(), None)?;
+        repo.reset(&local_object, git2::ResetType::Hard, None)?;
+        
+        let analysis = repo.merge_analysis(&[&commit])?;
+    
+        if analysis.0.is_up_to_date() {
+            info!("GIT: refresh [{}ms]", now.elapsed().as_millis());
+            Ok(())
+        }
+        else if analysis.0.is_fast_forward() {        
+            info!("GIT: refresh: requires fast forward");
+            if self.append_only {
+                let mut opts = DiffOptions::new();
+                let tree_old = repo.find_commit(local_commit.id()).unwrap().tree().unwrap();
+                let tree_new = repo.find_commit(commit.id()).unwrap().tree().unwrap();
+                
+                let diff = repo.diff_tree_to_tree(Some(&tree_old), Some(&tree_new), Some(&mut opts))?;
+                for d in diff.deltas() {
+                    if d.status() != Delta::Added {
+                        return Err(git2::Error::from_str(&format!("Found non-add git delta in append-only mode: {:?}", d)))
+                    }
+                }
+            }
+            
+            let refname = format!("refs/heads/master");
+            let mut r = repo.find_reference(&refname)?;
+            fast_forward(&repo, &mut r, &commit)?;
+            info!("GIT refresh ffwd: [{}ms]", now.elapsed().as_millis());
+            Ok(())
+        }
+        else {
+            // Err(git2::Error::from_str("Unexpected merge required"))
+            panic!("Unexpected merge required");
+        }
+        
+    }
 
     fn post(&mut self, files: Vec<(&Path, &Path)>, message: &str) -> Result<(), Error> {
+        let now = std::time::Instant::now();
         let repo = self.open_or_clone()?;
         // includes refresh before commit
         self.add_commit_many(&repo, files, message, self.append_only)?;
-        self.push(&repo)
+        info!("GIT: push..");
+        let ret = self.push(&repo);
+        info!("GIT push: [{}ms]", now.elapsed().as_millis());
+        ret
     }
 
     fn add_commit_many(&self, repo: &Repository, files: Vec<(&Path, &Path)>, 
@@ -196,58 +271,6 @@ impl GitBulletinBoard {
         repo.remote_add_push("origin", "refs/heads/master:refs/heads/master").unwrap();
         remote.connect_auth(Direction::Push, Some(remote_callbacks(&self.ssh_key_path)), None)?;
         remote.push(&["refs/heads/master:refs/heads/master"], Some(&mut options))
-    }
-
-    // refreshes the local copy with remote updates,
-    // preserving local commits, uncommitted changes are discarded.
-    // upstream changes only applied in fast forward mode, conflicts cause panic
-    fn refresh(&self) -> Result<(), Error> {
-        let repo = self.open_or_clone()?;
-        let mut remote = repo.find_remote("origin").unwrap();
-        let mut fo = FetchOptions::new();
-        let cb = remote_callbacks(&self.ssh_key_path);
-        fo.remote_callbacks(cb);
-        fo.download_tags(git2::AutotagOption::All);
-        remote.fetch(&["master"], Some(&mut fo), None)?;
-    
-        let fetch_head = repo.find_reference("FETCH_HEAD")?;
-        let commit = repo.reference_to_annotated_commit(&fetch_head)?;
-        
-        let head = repo.head()?;
-        let local_commit = repo.reference_to_annotated_commit(&head)?;
-        let local_object = repo.find_object(local_commit.id(), None)?;
-        repo.reset(&local_object, git2::ResetType::Hard, None)?;
-        
-        let analysis = repo.merge_analysis(&[&commit])?;
-    
-        if analysis.0.is_up_to_date() {
-            info!("GIT: refresh: Up to date");
-            Ok(())
-        }
-        else if analysis.0.is_fast_forward() {        
-            info!("GIT: refresh: requires fast forward");
-            if self.append_only {
-                let mut opts = DiffOptions::new();
-                let tree_old = repo.find_commit(local_commit.id()).unwrap().tree().unwrap();
-                let tree_new = repo.find_commit(commit.id()).unwrap().tree().unwrap();
-                
-                let diff = repo.diff_tree_to_tree(Some(&tree_old), Some(&tree_new), Some(&mut opts))?;
-                for d in diff.deltas() {
-                    if d.status() != Delta::Added {
-                        return Err(git2::Error::from_str(&format!("Found non-add git delta in append-only mode: {:?}", d)))
-                    }
-                }
-            }
-            
-            let refname = format!("refs/heads/master");
-            let mut r = repo.find_reference(&refname)?;
-            fast_forward(&repo, &mut r, &commit)?;
-            Ok(())
-        }
-        else {
-            // Err(git2::Error::from_str("Unexpected merge required"))
-            panic!("Unexpected merge required");
-        }
     }
 
     // syncs the working copy to match that of the remote
@@ -392,9 +415,9 @@ pub fn test_config() -> GitBulletinBoard {
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     d.push("resources/test/git_bb.json");
     let cfg = fs::read_to_string(d).unwrap();
-    let g: GitBulletinBoard = serde_json::from_str(&cfg).unwrap();
+    let board: GitBulletinBoard = serde_json::from_str(&cfg).unwrap();
 
-    g
+    board
 }
 
 #[cfg(test)]

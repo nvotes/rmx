@@ -247,7 +247,7 @@ mod tests {
 
         
     #[test]
-    fn test_membb_putget() {
+    fn test_mbasic_putget() {
         let mut csprng = OsRng;
         let id = Uuid::new_v4();
         let group = RugGroup::default();

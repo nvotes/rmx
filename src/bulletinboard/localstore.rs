@@ -4,6 +4,7 @@ use std::io::Result;
 
 use crate::util;
 use crate::data::entity::*;
+use crate::data::bytes::*;
 use crate::protocol::statement::*;
 use crate::protocol::facts::Act;
 use crate::crypto::hashing;
@@ -11,7 +12,7 @@ use crate::crypto::elgamal::PublicKey;
 use crate::crypto::base::Element;
 use crate::crypto::base::Group;
 use crate::bulletinboard::*;
-use crate::data::bytes::*;
+
 
 pub struct LocalStore<E, G> {
     pub fs_path: PathBuf,

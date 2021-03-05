@@ -7,7 +7,7 @@ use tempfile::NamedTempFile;
 use walkdir::{DirEntry, WalkDir};
 use serde::{Deserialize, Serialize};
 use serde::de::DeserializeOwned;
-use log::info;
+use log::{info,warn,error};
 
 use crate::util;
 use crate::crypto::hashing;
@@ -16,6 +16,8 @@ use crate::crypto::hashing::Hash;
 use crate::data::bytes::*;
 use crate::bulletinboard::basic::BasicBoard;
 use crate::bulletinboard::BBError;
+
+const MAX_ATTEMPTS: i32 = 5;
 
 #[derive(Serialize, Deserialize)]
 pub struct GitBulletinBoard {
@@ -34,7 +36,7 @@ impl BasicBoard for GitBulletinBoard {
         self.get_object(Path::new(&target), hash)
     }
     fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError> {
-        let ret = self.post(entries, "Test")?;
+        let ret = self.post(entries, "GitBulletinBoard: put")?;
 
         Ok(ret)
     }
@@ -72,15 +74,20 @@ impl GitBulletinBoard {
 
     fn open_or_clone(&self) -> Result<Repository, Error> {    
         if Path::new(&self.fs_path).exists() {
-            Repository::open(&self.fs_path)
+            self.open()
         }
         else {  
             self.clone()
         }
     }
 
+    pub fn open(&self) -> Result<Repository, Error> {    
+        info!("GIT {}: open..", self.fs_path);
+        Repository::open(&self.fs_path)
+    }
+
     pub fn clone(&self) -> Result<Repository, Error> {    
-        info!("Git: clone..");
+        info!("GIT {}: clone..", self.fs_path);
         let now = std::time::Instant::now();
         let co = CheckoutBuilder::new();
         let mut fo = FetchOptions::new();
@@ -96,7 +103,8 @@ impl GitBulletinBoard {
     }
     
     fn list_entries(&self) -> Result<Vec<String>, BBError> {
-        self.refresh()?;
+        let repo = self.open_or_clone()?;
+        self.refresh(&repo)?;
         let walker = WalkDir::new(&self.fs_path).min_depth(1).into_iter();
         let entries: Vec<DirEntry> = walker
             .filter_entry(|e| !is_hidden(e))
@@ -141,9 +149,8 @@ impl GitBulletinBoard {
     // refreshes the local copy with remote updates,
     // preserving local commits, uncommitted changes are discarded.
     // upstream changes only applied in fast forward mode, conflicts cause panic
-    fn refresh(&self) -> Result<(), Error> {
-        let repo = self.open_or_clone()?;
-        info!("GIT: refresh..");
+    fn refresh(&self, repo: &Repository) -> Result<bool, Error> {
+        info!("GIT {}: refresh..", self.fs_path);
         let now = std::time::Instant::now();
         let mut remote = repo.find_remote("origin").unwrap();
         
@@ -151,13 +158,13 @@ impl GitBulletinBoard {
         cb.transfer_progress(|stats| {
             if stats.received_objects() == stats.total_objects() {
                 info!(
-                    "Resolving deltas {}/{}\r",
+                    "GIT: Resolving deltas {}/{}\r",
                     stats.indexed_deltas(),
                     stats.total_deltas()
                 );
             } else if stats.total_objects() > 0 {
                 info!(
-                    "Received {}/{} objects ({}) in {} bytes\r",
+                    "GIT: Received {}/{} objects ({}) in {} bytes\r",
                     stats.received_objects(),
                     stats.total_objects(),
                     stats.indexed_objects(),
@@ -178,17 +185,18 @@ impl GitBulletinBoard {
         let head = repo.head()?;
         let local_commit = repo.reference_to_annotated_commit(&head)?;
         let local_object = repo.find_object(local_commit.id(), None)?;
-        repo.reset(&local_object, git2::ResetType::Hard, None)?;
         
+        repo.reset(&local_object, git2::ResetType::Hard, None)?;
         let analysis = repo.merge_analysis(&[&commit])?;
     
         if analysis.0.is_up_to_date() {
             info!("GIT: refresh [{}ms]", now.elapsed().as_millis());
-            Ok(())
+            Ok(true)
         }
         else if analysis.0.is_fast_forward() {        
             info!("GIT: refresh: requires fast forward");
             if self.append_only {
+                info!("GIT: append only");
                 let mut opts = DiffOptions::new();
                 let tree_old = repo.find_commit(local_commit.id()).unwrap().tree().unwrap();
                 let tree_new = repo.find_commit(commit.id()).unwrap().tree().unwrap();
@@ -196,20 +204,22 @@ impl GitBulletinBoard {
                 let diff = repo.diff_tree_to_tree(Some(&tree_old), Some(&tree_new), Some(&mut opts))?;
                 for d in diff.deltas() {
                     if d.status() != Delta::Added {
+                        info!("GIT: append only non-add git delta");
                         return Err(git2::Error::from_str(&format!("Found non-add git delta in append-only mode: {:?}", d)))
                     }
                 }
             }
-            
             let refname = format!("refs/heads/master");
             let mut r = repo.find_reference(&refname)?;
             fast_forward(&repo, &mut r, &commit)?;
             info!("GIT refresh ffwd: [{}ms]", now.elapsed().as_millis());
-            Ok(())
+            Ok(true)
         }
         else {
-            // Err(git2::Error::from_str("Unexpected merge required"))
-            panic!("Unexpected merge required");
+            warn!("GIT: refresh: merge required");
+            let head_commit = repo.reference_to_annotated_commit(&head)?;
+            merge(&repo, &head_commit, &commit, "merge", self.append_only)?;
+            Ok(true)
         }
         
     }
@@ -219,33 +229,37 @@ impl GitBulletinBoard {
         let repo = self.open_or_clone()?;
         // includes refresh before commit
         self.add_commit_many(&repo, files, message, self.append_only)?;
-        info!("GIT: push..");
+        info!("GIT {}: push..", self.fs_path);
         let ret = self.push(&repo);
+        match ret {
+            Err(ref git_error) => {
+                if git2::ErrorCode::Conflict == git_error.code() {
+                    
+                }
+            },
+            Ok(()) => ()
+        }
         info!("GIT push: [{}ms]", now.elapsed().as_millis());
         ret
     }
 
     fn add_commit_many(&self, repo: &Repository, files: Vec<(&Path, &Path)>, 
-        message: &str, append_only: bool) -> Result<(), Error> {
+        message: &str, append_only: bool) -> Result<bool, Error> {
         let mut entries = vec![];
         for (target, source) in files {
             let next = self.prepare_add(target, source);
             entries.push(next);
         }
         // refresh right before commiting
-        self.refresh()?;
+        self.refresh(&repo)?;
         // adding to repo index uses relative path
         add_and_commit(&repo, entries, message, append_only)
     }
     
     fn add_commit(&self, repo: &Repository, target: &Path, source: &Path, message: &str,
-        append_only: bool) -> Result<(), Error> {
+        append_only: bool) -> Result<bool, Error> {
         
-        let entry = self.prepare_add(target, source);
-        // refresh right before commiting
-        self.refresh()?;
-        // adding to repo index uses relative path
-        add_and_commit(&repo, vec![entry], message, append_only)
+        self.add_commit_many(repo, vec![(target, source)], message, append_only)
     }
 
     fn prepare_add(&self, target_path: &Path, source: &Path) -> GitAddEntry {
@@ -285,12 +299,11 @@ impl GitBulletinBoard {
         let fetch_head = repo.find_reference("FETCH_HEAD")?;
         let commit = repo.reference_to_annotated_commit(&fetch_head)?;
         let object = repo.find_object(commit.id(), None)?;
+
         repo.reset(&object, git2::ResetType::Hard, None)
     }
 
     // clears the repository index of any files, and pushes
-    // that files in the working directory are not eliminated
-    // and would be considered untracked, so a sync_down will not delete them
     pub fn __clear(&self) -> Result<(), Error> {
         let repo = self.open_or_clone()?;
         let mut index = repo.index()?;
@@ -311,6 +324,15 @@ impl GitBulletinBoard {
             &[&parent_commit])?;
         
         self.push(&repo)
+    }
+
+    // only used to simulate conflicts (divergent repository)
+    fn __add_commit(&self, repo: &Repository, target: &Path, source: &Path, message: &str,
+        append_only: bool) -> Result<bool, Error> {
+        
+        let entry = self.prepare_add(target, source);
+        // adding to repo index uses relative path
+        add_and_commit(&repo, vec![entry], message, append_only)
     }
 }
 
@@ -346,12 +368,67 @@ fn fast_forward(
     Ok(())
 }
 
+fn merge(
+    repo: &Repository,
+    local: &git2::AnnotatedCommit,
+    remote: &git2::AnnotatedCommit,
+    message: &str,
+    append_only: bool
+) -> Result<(), git2::Error> {
+    let local_tree = repo.find_commit(local.id())?.tree()?;
+    let remote_tree = repo.find_commit(remote.id())?.tree()?;
+    let ancestor = repo
+        .find_commit(repo.merge_base(local.id(), remote.id())?)?
+        .tree()?;
+    let mut idx = repo.merge_trees(&ancestor, &local_tree, &remote_tree, None)?;
+
+    if append_only {
+        let mut opts = DiffOptions::new();
+        let diff = repo.diff_tree_to_index(Some(&local_tree), Some(&idx), Some(&mut opts))?;
+        for d in diff.deltas() {
+            if d.status() != Delta::Added {
+                warn!("GIT: Found non-add git delta during merge in append-only mode");
+                return Err(git2::Error::from_str(&format!("Found non-add git delta during merge in append-only mode: {:?}", d)))
+            }
+        }
+    }
+
+    if idx.has_conflicts() {
+        error!("Merge conficts detected...");
+        return Err(git2::Error::from_str(&format!("Found conflicts during merge attempt")))
+    }
+    let result_tree = repo.find_tree(idx.write_tree_to(repo)?)?;
+    // now create the merge commit
+    info!("GIT: merge: {} into {}", remote.id(), local.id());
+    // let sig = repo.signature()?;
+    let signature = Signature::now("rmx", "rmx@foo.bar")?;
+    let local_commit = repo.find_commit(local.id())?;
+    let remote_commit = repo.find_commit(remote.id())?;
+
+    // Do our merge commit and set current branch head to that commit.
+    let _merge_commit = repo.commit(
+        Some("HEAD"),
+        &signature,
+        &signature,
+        &message,
+        &result_tree,
+        &[&local_commit, &remote_commit],
+    )?;
+    
+    let mut cb = git2::build::CheckoutBuilder::new();
+    cb.force();
+    // Set working tree to match head.
+    repo.checkout_head(Some(&mut cb))?;
+    
+    Ok(())
+}
+
 fn add_and_commit(repo: &Repository, entries: Vec<GitAddEntry>, message: &str, 
-    append_only: bool) -> Result<(), Error> {
+    append_only: bool) -> Result<bool, Error> {
     
     let mut index = repo.index()?;
     for e in entries {
-        info!("GIT: {:?} -> {:?}", e.tmp_file.path(), e.fs_path);
+        info!("GIT add: {:?} -> {:?}", e.tmp_file.path(), e.fs_path);
         let parent = e.fs_path.parent().unwrap();
         if !parent.exists() {
             info!("GIT: create directory at {:?}", parent);
@@ -364,13 +441,14 @@ fn add_and_commit(repo: &Repository, entries: Vec<GitAddEntry>, message: &str,
     let signature = Signature::now("rmx", "rmx@foo.bar")?;
     let parent_commit = find_last_commit(&repo)?;
     let tree = repo.find_tree(oid)?;
-    
+
     if append_only {
         let mut opts = DiffOptions::new();
         let diff = repo.diff_tree_to_index(Some(&parent_commit.tree()?), Some(&index), Some(&mut opts))?;
         for d in diff.deltas() {
             if d.status() != Delta::Added {
-                return Err(git2::Error::from_str(&format!("Found non-add git delta in append-only mode: {:?}", d)))     
+                warn!("GIT: Found non-add git delta during add in append-only mode");
+                return Err(git2::Error::from_str(&format!("Found non-add git delta during add in append-only mode: {:?}", d)))     
             }
         }
     }
@@ -382,7 +460,8 @@ fn add_and_commit(repo: &Repository, entries: Vec<GitAddEntry>, message: &str,
         message,
         &tree,
         &[&parent_commit])?;
-    Ok(())
+    
+    Ok(true)
 }
 
 fn remote_callbacks<'a>(ssh_path: &'a str) -> RemoteCallbacks<'a> {
@@ -425,6 +504,7 @@ mod tests {
     use serial_test::serial;
     use std::fs;
     use std::path::{Path};
+    use simplelog::*;
     
     use crate::bulletinboard::git::*;
     use crate::util;
@@ -445,12 +525,11 @@ mod tests {
     #[serial]
     fn test_refresh() {
         let g = test_config();
-        g.open_or_clone().unwrap();
         
         let dir = Path::new(&g.fs_path);
         assert!(dir.exists() && dir.is_dir());
 
-        g.refresh().unwrap();
+        g.list().unwrap();
     }
 
     #[test]
@@ -474,6 +553,12 @@ mod tests {
     #[test]
     #[serial]
     fn test_append_only() {
+        /*CombinedLogger::init(
+            vec![
+                TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed),
+            ]
+        ).unwrap();*/
+        
         let mut g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
@@ -508,18 +593,18 @@ mod tests {
         assert!(result.is_ok());
 
         g2.append_only = true;
-        result = g2.refresh();
+        let result = g2.list();
         // cannot modify downstream in append_only mode
         assert!(result.is_err());
 
         g2.append_only = false;
-        result = g2.refresh();
+        let result = g2.list();
         assert!(result.is_ok());
     }
 
     #[test]
     #[serial]
-    fn test_delete() {
+    fn test_clear() {
         let g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
@@ -529,5 +614,75 @@ mod tests {
         g.open_or_clone().unwrap();
         let files = g.list().unwrap();
         assert!(files.len() == 0);
+    }
+
+    #[test]
+    #[serial]
+    fn test_divergent() {    
+        /* CombinedLogger::init(
+            vec![
+                TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed),
+            ]
+        ).unwrap();*/
+        
+        let mut g = test_config();
+        fs::remove_dir_all(&g.fs_path).ok();
+        g.open_or_clone().unwrap();
+        
+        let mut g2 = test_config();
+        g2.fs_path.push_str("_");
+        fs::remove_dir_all(&g2.fs_path).ok();
+        g2.open_or_clone().unwrap();
+
+        // add new file
+        let added1 = util::create_random_file("/tmp");
+        let name1 = Path::new(
+            added1.file_name().unwrap().to_str().unwrap()
+        );
+        g.post(vec![(name1, &added1)], "new file").unwrap();
+            
+        // add new file before refresh to trigger a merge
+        let added = util::create_random_file("/tmp");
+        let name = Path::new(
+            added.file_name().unwrap().to_str().unwrap()
+        );
+        g2.__add_commit(&g2.open().unwrap(), name, &added, "add", true).unwrap();
+        // will merge
+        g2.list().unwrap();
+        
+        // modify a file in g1
+        util::modify_file(&added1.to_str().unwrap());
+        g.append_only = false;
+        g.post(vec![(name1, &added1)], "file modification").unwrap();
+        
+        // add a new file prior to refreshing to trigger a merge,
+        // this time with non-add changes
+        let added = util::create_random_file("/tmp");
+        let name = Path::new(
+            added.file_name().unwrap().to_str().unwrap()
+        );
+
+        g2.__add_commit(&g2.open().unwrap(), name, &added, "add", true).unwrap();
+        // since we are passing false to append only, the merge will work
+        g2.append_only = false;
+        g2.list().unwrap();
+        
+        // modify a file in g1
+        util::modify_file(&added1.to_str().unwrap());
+        g.append_only = false;
+        g.post(vec![(name1, &added1)], "file modification").unwrap();
+        
+        // add a new file prior to refreshing to trigger a merge,
+        // this time with non-add changes
+        let added = util::create_random_file("/tmp");
+        let name = Path::new(
+            added.file_name().unwrap().to_str().unwrap()
+        );
+        g2.__add_commit(&g2.open().unwrap(), name, &added, "add", true).unwrap();
+        g2.append_only = true;
+        let result = g2.list();
+        
+        // cannot modify downstream in append_only mode during merge
+        assert!(result.is_err());
     }
 }

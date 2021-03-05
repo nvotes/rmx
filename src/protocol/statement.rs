@@ -182,7 +182,8 @@ impl SignedStatement {
 pub struct StatementVerifier {
     pub statement: SignedStatement,
     pub trustee: i32,
-    pub contest: u32
+    pub contest: u32,
+    pub artifact_name: String
 }
 
 impl StatementVerifier {
@@ -198,6 +199,8 @@ impl StatementVerifier {
         } else {
             (config.ballotbox, 0)
         };
+
+        assert_eq!(statement.contest, self.contest);
         
         let statement_hash = hashing::hash(statement);
         let verified = pk.verify(&statement_hash, &self.statement.signature);
@@ -212,52 +215,56 @@ impl StatementVerifier {
             StatementType::Config => {
                 self.ret(
                     InputFact::config_signed_by(config_h, self_t),
-                    verified.is_ok()
+                    verified.is_ok() && (self.artifact_name == CONFIG)
                 )
             },
             StatementType::Keyshare => {
                 let share_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
                     InputFact::share_signed_by(config_h, self.contest, share_h, self_t),
-                    verified.is_ok()
+                    verified.is_ok() && (self.artifact_name == SHARE)
                 )
             },
             StatementType::PublicKey => {
                 let pk_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
                     InputFact::pk_signed_by(config_h, self.contest, pk_h, self_t),
-                    verified.is_ok()
+                    verified.is_ok() && (self.artifact_name == PUBLIC_KEY)
                 )
             },
             StatementType::Ballots => {
                 let ballots_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
                     InputFact::ballots_signed(config_h, self.contest, ballots_h),
-                    verified.is_ok()
+                    verified.is_ok() && (self.artifact_name == BALLOTS)
                 )
             },
             StatementType::Mix => {
                 let mix_h = util::to_u8_64(&statement.hashes[1]);
                 let ballots_h = util::to_u8_64(&statement.hashes[2]);
+                let expected_name = if mixer_t == self_t {
+                    MIX.to_string()
+                }
+                else {
+                    std::format!("{}.{}", MIX, mixer_t)
+                };
                 self.ret(
                     InputFact::mix_signed_by(config_h, self.contest, mix_h, ballots_h, mixer_t, self_t),
-                    verified.is_ok()
+                    verified.is_ok() && (self.artifact_name == expected_name)
                 )
-
             },
             StatementType::PDecryption => {
                 let pdecryptions_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
                     InputFact::decryption_signed_by(config_h, self.contest, pdecryptions_h, self_t),
-                    verified.is_ok()
+                    verified.is_ok() && (self.artifact_name == DECRYPTION)
                 )
-
             },
             StatementType::Plaintexts => {
                 let plaintexts_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
                     InputFact::plaintexts_signed_by(config_h, self.contest, plaintexts_h, self_t),
-                    verified.is_ok()
+                    verified.is_ok() && (self.artifact_name == PLAINTEXTS)
                 )
             }
         }

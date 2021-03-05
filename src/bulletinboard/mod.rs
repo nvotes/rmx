@@ -75,8 +75,10 @@ pub trait BulletinBoard<E: Element, G: Group<E>> {
         Ok(ret)
     }
 
-    fn artifact_location(&self, path: &str) -> (i32, u32) {
+    fn artifact_location(&self, path: &str) -> (String, i32, u32) {
         let p = Path::new(&path);
+        let name = p.file_stem().unwrap().to_str().unwrap().to_string();
+        
         let comp: Vec<&str> = p.components()
             .take(2)
             .map(|comp| comp.as_os_str().to_str().unwrap())
@@ -92,7 +94,7 @@ pub trait BulletinBoard<E: Element, G: Group<E>> {
         // root artifacts (eg config) have no contest
         let contest: u32 = comp[1].parse().unwrap_or(0);
     
-        (trustee, contest)
+        (name, trustee, contest)
     }
 }
 
@@ -107,3 +109,15 @@ pub struct MixStmtPath(pub PathBuf);
 pub struct PDecryptionsPath(pub PathBuf, pub PathBuf);
 pub struct PlaintextsPath(pub PathBuf, pub PathBuf);
 pub struct PlaintextsStmtPath(pub PathBuf);
+
+pub const CONFIG: &'static str = "config";
+pub const CONFIG_STMT: &'static str = "config.stmt";
+
+pub const SHARE: &'static str = "share";
+pub const PUBLIC_KEY: &'static str = "public_key";
+pub const BALLOTS: &'static str = "ballots";
+pub const MIX: &'static str = "mix";
+pub const DECRYPTION: &'static str = "decryption";
+pub const PLAINTEXTS: &'static str = "plaintexts";
+pub const PAUSE: &'static str = "pause";
+pub const ERROR: &'static str = "error";

@@ -114,3 +114,27 @@ mod tests {
         solve(&mut ctl);
     }
 }
+
+
+/*
+fn main() {
+    let bases = vec![2, 3, 5, 2];
+    let values = vec![1, 2, 4, 1];
+    
+    let mut res = 0;
+    for i in 0..bases.len() {
+        res = res * bases[i] + values[i];
+    }
+    println!("{} {}", res, (2 * 3 * 5 * 2));
+    
+    let mut v = vec![];
+    
+    for i in (0..bases.len()).rev() {
+        // print!(" {}", (res % bases[i]));
+        v.push(res % bases[i]);
+        res = res / bases[i];
+    }
+    v.reverse();
+    println!("{:?}", v);
+}
+*/

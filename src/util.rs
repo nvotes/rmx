@@ -71,7 +71,7 @@ pub fn create_random_file(dir: &str) -> PathBuf {
     let target = Path::new(dir).join(Path::new(&id));
     let mut output = File::create(target.clone()).unwrap();
     let now: DateTime<Utc> = Utc::now();
-    writeln!(output, "File created at {}", now).unwrap();
+    writeln!(output, "File {} created at {}", id, now).unwrap();
     target
 }
 

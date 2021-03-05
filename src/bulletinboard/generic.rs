@@ -50,35 +50,30 @@ impl<
         self.basic.get_unsafe(&target)
     }
 
-    const CONFIG: &'static str = "config";
-    const CONFIG_STMT: &'static str = "config.stmt";
-    const PAUSE: &'static str = "pause";
-    const ERROR: &'static str = "error";
+    fn config_stmt(auth: u32) -> String { format!("{}/{}.stmt", auth, CONFIG).to_string() }
 
-    fn config_stmt(auth: u32) -> String { format!("{}/config.stmt", auth).to_string() }
-
-    fn share(contest: u32, auth: u32) -> String { format!("{}/{}/share", auth, contest).to_string() }
-    fn share_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/share.stmt", auth, contest).to_string() }
+    fn share(contest: u32, auth: u32) -> String { format!("{}/{}/{}", auth, contest, SHARE).to_string() }
+    fn share_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/{}.stmt", auth, contest, SHARE).to_string() }
     
 
-    pub fn public_key(contest: u32, auth: u32) -> String { format!("{}/{}/public_key", auth, contest).to_string() }
-    fn public_key_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/public_key.stmt", auth, contest).to_string() }
+    pub fn public_key(contest: u32, auth: u32) -> String { format!("{}/{}/{}", auth, contest, PUBLIC_KEY).to_string() }
+    fn public_key_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/{}.stmt", auth, contest, PUBLIC_KEY).to_string() }
     
 
-    pub fn ballots(contest: u32) -> String { format!("ballotbox/{}/ballots", contest).to_string() }
-    fn ballots_stmt(contest: u32) -> String { format!("ballotbox/{}/ballots.stmt", contest).to_string() }
+    pub fn ballots(contest: u32) -> String { format!("ballotbox/{}/{}", contest, BALLOTS).to_string() }
+    fn ballots_stmt(contest: u32) -> String { format!("ballotbox/{}/{}.stmt", contest, BALLOTS).to_string() }
     
     
-    fn mix(contest: u32, auth: u32) -> String { format!("{}/{}/mix", auth, contest).to_string() }
-    fn mix_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/mix.stmt", auth, contest).to_string() }
-    fn mix_stmt_other(contest: u32, auth: u32, other_t: u32) -> String { format!("{}/{}/mix.{}.stmt", auth, contest, other_t).to_string() }
+    fn mix(contest: u32, auth: u32) -> String { format!("{}/{}/{}", auth, contest, MIX).to_string() }
+    fn mix_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/{}.stmt", auth, contest, MIX).to_string() }
+    fn mix_stmt_other(contest: u32, auth: u32, other_t: u32) -> String { format!("{}/{}/{}.{}.stmt", auth, contest, MIX, other_t).to_string() }
 
-    fn decryption(contest: u32, auth: u32) -> String { format!("{}/{}/decryption", auth, contest).to_string() }
-    fn decryption_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/decryption.stmt", auth, contest).to_string() }
+    fn decryption(contest: u32, auth: u32) -> String { format!("{}/{}/{}", auth, contest, DECRYPTION).to_string() }
+    fn decryption_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/{}.stmt", auth, contest, DECRYPTION).to_string() }
     
 
-    pub fn plaintexts(contest: u32, auth: u32) -> String { format!("{}/{}/plaintexts", auth, contest).to_string() }
-    fn plaintexts_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/plaintexts.stmt", auth, contest).to_string() }
+    pub fn plaintexts(contest: u32, auth: u32) -> String { format!("{}/{}/{}", auth, contest, PLAINTEXTS).to_string() }
+    fn plaintexts_stmt(contest: u32, auth: u32) -> String { format!("{}/{}/{}.stmt", auth, contest, PLAINTEXTS).to_string() }
     
     
     fn auth_error(auth: u32) -> String { format!("{}/error", auth).to_string() }
@@ -97,11 +92,11 @@ impl<
 
     fn add_config(&mut self, path: &ConfigPath) -> Result<(), BBError> {
         self.put(
-            vec![(Self::CONFIG, &path.0)]
+            vec![(CONFIG, &path.0)]
         )
     }
     fn get_config_unsafe(&self) -> Result<Option<Config<E, G>>, BBError> {
-        let bytes_option = self.basic.get_unsafe(Self::CONFIG)?;
+        let bytes_option = self.basic.get_unsafe(CONFIG)?;
 
         if let Some(bytes) = bytes_option {
             let ret = Config::<E, G>::deser(&bytes)?;
@@ -113,7 +108,7 @@ impl<
     }
     
     fn get_config(&self, hash: Hash) -> Result<Option<Config<E, G>>, BBError> {
-        self.get(Self::CONFIG.to_string(), hash)
+        self.get(CONFIG.to_string(), hash)
     }
     fn add_config_stmt(&mut self, path: &ConfigStmtPath, trustee: u32) -> Result<(), BBError> {
         self.put(
@@ -212,14 +207,15 @@ impl<
         
         for s in sts.iter() {
             let s_bytes = self.basic.get_unsafe(s)?.ok_or(BBError::Msg("Statement not found".to_string()))?;
-            let (trustee, contest) = self.artifact_location(s);
+            let (name, trustee, contest) = self.artifact_location(s);
 
             let stmt = SignedStatement::deser(&s_bytes)?;
 
             let next = StatementVerifier {
                 statement: stmt,
                 trustee: trustee,
-                contest: contest
+                contest: contest,
+                artifact_name: name
             };
             ret.push(next);
         }

@@ -143,9 +143,15 @@ pub fn cp_proof_challenge<E: Element>(g1: &E, g2: &E, public1: &E, public2: &E,
 }
 
 use crate::util;
+use crate::data::bytes::Ser;
 
 pub fn hash<T: HashBytes>(data: &T) -> [u8; 64] {
     let bytes = data.get_bytes();
+    hash_bytes(bytes)
+}
+
+pub fn hash_<T: Ser>(data: &T) -> [u8; 64] {
+    let bytes = data.ser();
     hash_bytes(bytes)
 }
 

@@ -1,7 +1,7 @@
 use generic_array::{typenum::U32, GenericArray};
 use rayon::prelude::*;
 
-use crate::data::entity::*;
+use crate::data::artifact::*;
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
 

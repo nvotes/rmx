@@ -2,12 +2,12 @@
 pub mod basic;
 pub mod generic;
 pub mod git;
-pub mod localstore;
+pub mod work_cache;
 
 use std::path::PathBuf;
 use std::path::Path;
 
-use crate::data::entity::*;
+use crate::data::artifact::*;
 use crate::crypto::hashing::Hash;
 use crate::crypto::elgamal::PublicKey;
 use crate::crypto::base::Element;

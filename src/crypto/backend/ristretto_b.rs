@@ -175,7 +175,7 @@ mod tests {
     use crate::crypto::backend::ristretto_b::*;
     use crate::crypto::shuffler::*;
     use crate::crypto::symmetric;
-    use crate::data::entity::*;
+    use crate::data::artifact::*;
     use crate::util;
 
     #[test]

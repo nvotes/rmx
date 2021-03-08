@@ -143,15 +143,16 @@ pub fn cp_proof_challenge<E: Element>(g1: &E, g2: &E, public1: &E, public2: &E,
 }
 
 use crate::util;
-use crate::data::bytes::Ser;
+use crate::data::bytes::ToByteTree;
 
 pub fn hash<T: HashBytes>(data: &T) -> [u8; 64] {
     let bytes = data.get_bytes();
     hash_bytes(bytes)
 }
 
-pub fn hash_<T: Ser>(data: &T) -> [u8; 64] {
-    let bytes = data.ser();
+pub fn hash_<T: ToByteTree>(data: &T) -> [u8; 64] {
+    let tree = data.to_byte_tree();
+    let bytes = tree.to_hashable_bytes();
     hash_bytes(bytes)
 }
 
@@ -352,7 +353,7 @@ impl HashBytes for SignedStatement {
     }
 }
 
-use crate::data::entity::Config;
+use crate::data::artifact::Config;
 
 impl<E: Element, G: Group<E>> HashBytes for Config<E, G> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -366,7 +367,7 @@ impl<E: Element, G: Group<E>> HashBytes for Config<E, G> {
     }
 }
 
-use crate::data::entity::Keyshare;
+use crate::data::artifact::Keyshare;
 
 impl<E: Element, G: Group<E>> HashBytes for Keyshare<E, G> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -377,7 +378,7 @@ impl<E: Element, G: Group<E>> HashBytes for Keyshare<E, G> {
     }
 }
 
-use crate::data::entity::EncryptedPrivateKey;
+use crate::data::artifact::EncryptedPrivateKey;
 
 impl HashBytes for EncryptedPrivateKey {
     fn get_bytes(&self) -> Vec<u8> {
@@ -388,7 +389,7 @@ impl HashBytes for EncryptedPrivateKey {
     }
 }
 
-use crate::data::entity::Ballots;
+use crate::data::artifact::Ballots;
 
 impl<E: Element> HashBytes for Ballots<E> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -396,7 +397,7 @@ impl<E: Element> HashBytes for Ballots<E> {
     }
 }
 
-use crate::data::entity::Mix;
+use crate::data::artifact::Mix;
 
 impl<E: Element> HashBytes for Mix<E> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -407,7 +408,7 @@ impl<E: Element> HashBytes for Mix<E> {
     }
 }
 
-use crate::data::entity::PartialDecryption;
+use crate::data::artifact::PartialDecryption;
 
 impl<E: Element> HashBytes for PartialDecryption<E> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -418,7 +419,7 @@ impl<E: Element> HashBytes for PartialDecryption<E> {
     }
 }
 
-use crate::data::entity::Plaintexts;
+use crate::data::artifact::Plaintexts;
 
 impl<E: Element> HashBytes for Plaintexts<E> {
     fn get_bytes(&self) -> Vec<u8> {

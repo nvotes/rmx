@@ -3,7 +3,7 @@ use std::marker::PhantomData;
 use std::io::Result;
 
 use crate::util;
-use crate::data::entity::*;
+use crate::data::artifact::*;
 use crate::data::bytes::*;
 use crate::protocol::statement::*;
 use crate::protocol::facts::Act;
@@ -14,18 +14,18 @@ use crate::crypto::base::Group;
 use crate::bulletinboard::*;
 
 
-pub struct LocalStore<E, G> {
+pub struct WorkCache<E, G> {
     pub fs_path: PathBuf,
     phantom_e: PhantomData<E>,
     phantom_g: PhantomData<G>
 }
 
-impl<E: Element, G: Group<E>> LocalStore<E, G> {
+impl<E: Element, G: Group<E>> WorkCache<E, G> {
     
-    pub fn new(fs_path: String) -> LocalStore<E, G> {
+    pub fn new(fs_path: String) -> WorkCache<E, G> {
         let target = Path::new(&fs_path);
         assert!(target.exists() && target.is_dir());
-        LocalStore {
+        WorkCache {
             fs_path: target.to_path_buf(),
             phantom_e: PhantomData,
             phantom_g: PhantomData

@@ -14,7 +14,7 @@ use crate::crypto::base::*;
 use crate::crypto::backend::rug_b::*;
 use crate::crypto::backend::ristretto_b::*;
 use crate::crypto::elgamal::*;
-use crate::data::entity::*;
+use crate::data::artifact::*;
 use crate::crypto::shuffler::{ShuffleProof, Responses, TValues};
 use crate::protocol::statement::*;
 use crate::util;
@@ -51,7 +51,7 @@ use ByteTree::*;
 // OPT: try to move instead of copy
 impl ByteTree {
     
-    fn to_hashable_bytes(&self) -> Vec<u8> {
+    pub(crate) fn to_hashable_bytes(&self) -> Vec<u8> {
         
         let ret = match self {
             Leaf(bytes) => {

@@ -12,7 +12,7 @@ use uuid::Uuid;
 use serde::de::DeserializeOwned;
 
 use rmx::protocol::statement::SignedStatement;
-use rmx::data::entity::*;
+use rmx::data::artifact::*;
 use rmx::crypto::elgamal::PublicKey;
 use rmx::crypto::hashing;
 use rmx::crypto::base::Group;
@@ -194,11 +194,11 @@ fn run<
 }
 
 fn gen_config<E: Element, G: Group<E>>(group: &G, contests: u32, trustee_pks: Vec<SPublicKey>,
-    ballotbox_pk: SPublicKey) -> rmx::data::entity::Config<E, G> {
+    ballotbox_pk: SPublicKey) -> rmx::data::artifact::Config<E, G> {
 
     let id = Uuid::new_v4();
 
-    let cfg = rmx::data::entity::Config {
+    let cfg = rmx::data::artifact::Config {
         id: id.as_bytes().clone(),
         group: group.clone(),
         contests: contests, 

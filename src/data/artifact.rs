@@ -60,7 +60,7 @@ mod tests {
     use ed25519_dalek::Keypair;
     
     use crate::crypto::backend::rug_b::*;
-    use crate::data::entity::*;
+    use crate::data::artifact::*;
     use crate::data::bytes::*;
 
     #[test]

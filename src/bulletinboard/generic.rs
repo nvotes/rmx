@@ -7,7 +7,7 @@ use curve25519_dalek::ristretto::RistrettoPoint;
 use log::info;
 
 use crate::bulletinboard::*;
-use crate::data::entity::*;
+use crate::data::artifact::*;
 use crate::data::bytes::*;
 use crate::crypto::hashing::{HashBytes, Hash};
 use crate::crypto::elgamal::PublicKey;
@@ -237,7 +237,7 @@ mod tests {
 
     use crate::crypto::hashing;
     use crate::crypto::backend::rug_b::*;
-    use crate::data::entity::Config;
+    use crate::data::artifact::Config;
     use crate::bulletinboard::generic::*;
     use crate::bulletinboard::basic::*;
 

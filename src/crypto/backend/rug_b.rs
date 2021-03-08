@@ -242,7 +242,7 @@ mod tests {
     use crate::crypto::keymaker::*;
     use crate::crypto::shuffler::*;
     use crate::crypto::symmetric;
-    use crate::data::entity::*;
+    use crate::data::artifact::*;
     use crate::data::bytes::*;
     use crate::util;
 

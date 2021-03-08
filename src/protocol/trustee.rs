@@ -5,7 +5,7 @@ use rand::rngs::OsRng;
 use ed25519_dalek::Keypair;
 use log::info;
 
-use crate::data::entity::*;
+use crate::data::artifact::*;
 use crate::protocol::statement::*;
 use crate::protocol::facts::*;
 use crate::crypto::elgamal::{PublicKey, Ciphertext, PrivateKey};
@@ -17,7 +17,7 @@ use crate::crypto::symmetric;
 use crate::crypto::hashing;
 use crate::crypto::hashing::*;
 use crate::bulletinboard::*;
-use crate::bulletinboard::localstore::LocalStore;
+use crate::bulletinboard::work_cache::WorkCache;
 use crate::util::short;
 
 quick_error! {
@@ -38,7 +38,7 @@ quick_error! {
 
 pub struct Trustee<E, G> {
     pub keypair: Keypair,
-    pub localstore: LocalStore<E, G>,
+    pub work_cache: WorkCache<E, G>,
     pub symmetric: GenericArray<u8, U32>
 }
 
@@ -46,13 +46,13 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
     
     pub fn new(local_store: String) -> Trustee<E, G> {
         let mut csprng = OsRng;
-        let localstore = LocalStore::new(local_store);
+        let work_cache = WorkCache::new(local_store);
         let keypair = Keypair::generate(&mut csprng);
         let symmetric = symmetric::gen_key();
 
         Trustee {
             keypair,
-            localstore,
+            work_cache,
             symmetric
         }
     }
@@ -72,7 +72,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     info!(">> Action: checking config..");
                     // FIXME validate the config somehow
                     let ss = SignedStatement::config(&cfg_h, &self.keypair);
-                    let stmt_path = self.localstore.set_config_stmt(&action, &ss)?;
+                    let stmt_path = self.work_cache.set_config_stmt(&action, &ss)?;
                     board.add_config_stmt(&stmt_path, self_t)?;
                     info!(">> OK");
                 }
@@ -86,7 +86,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     let share = self.gen_share(&cfg.group);
                     let share_h = hashing::hash(&share);
                     let ss = SignedStatement::keyshare(&cfg_h, &share_h, cnt, &self.keypair);
-                    let share_path = self.localstore.set_share(&action, share, &ss)?;
+                    let share_path = self.work_cache.set_share(&action, share, &ss)?;
                     
                     board.add_share(&share_path, cnt, self_t)?;
                     info!(">> OK");
@@ -104,7 +104,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     let pk_h = hashing::hash(&pk);
                     let ss = SignedStatement::public_key(&cfg_h, &pk_h, cnt, &self.keypair);
                     
-                    let pk_path = self.localstore.set_pk(&action, pk, &ss)?;
+                    let pk_path = self.work_cache.set_pk(&action, pk, &ss)?;
                     board.set_pk(&pk_path, cnt)?;
                     info!(">> OK");
                 }
@@ -122,7 +122,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     assert!(pk_h == pk_h_);
                     let ss = SignedStatement::public_key(&cfg_h, &pk_h, cnt, &self.keypair);
                     
-                    let pk_stmt_path = self.localstore.set_pk_stmt(&action, &ss)?;
+                    let pk_stmt_path = self.work_cache.set_pk_stmt(&action, &ss)?;
                     board.set_pk_stmt(&pk_stmt_path, cnt, self_t)?;
                     info!(">> OK");
                 }
@@ -163,7 +163,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_h, None, cnt, &self.keypair);
                     
                     let now_ = std::time::Instant::now();
-                    let mix_path = self.localstore.set_mix(&action, mix, &ss)?;
+                    let mix_path = self.work_cache.set_mix(&action, mix, &ss)?;
                     let rate = ciphertexts.len() as f32 / now_.elapsed().as_millis() as f32;
                     info!("IO Write ({:.1} ciphertexts/s)", 1000.0 * rate);
                     
@@ -202,7 +202,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     info!("Check proof ({:.1} ciphertexts/s)", 1000.0 * rate);
             
                     let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_h, Some(trustee), cnt, &self.keypair);
-                    let mix_path = self.localstore.set_mix_stmt(&action, &ss)?;
+                    let mix_path = self.work_cache.set_mix_stmt(&action, &ss)?;
                     board.add_mix_stmt(&mix_path, cnt, self_t, trustee)?;
                     
                     info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
@@ -235,7 +235,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     };
                     let pd_h = hashing::hash(&pd);
                     let ss = SignedStatement::pdecryptions(&cfg_h, &pd_h, cnt, &self.keypair);
-                    let pd_path = self.localstore.set_pdecryptions(&action, pd, &ss)?;
+                    let pd_path = self.work_cache.set_pdecryptions(&action, pd, &ss)?;
                     board.add_decryption(&pd_path, cnt, self_t)?;
                     
                     info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
@@ -259,7 +259,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     };
                     let p_h = hashing::hash(&plaintexts);
                     let ss = SignedStatement::plaintexts(&cfg_h, &p_h, cnt, &self.keypair);
-                    let p_path = self.localstore.set_plaintexts(&action, plaintexts, &ss)?;
+                    let p_path = self.work_cache.set_plaintexts(&action, plaintexts, &ss)?;
                     board.set_plaintexts(&p_path, cnt)?;
                     
                     info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
@@ -283,7 +283,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     assert!(pls == pls_board.plaintexts);
             
                     let ss = SignedStatement::plaintexts(&cfg_h, &plaintexts_h, cnt, &self.keypair);
-                    let p_path = self.localstore.set_plaintexts_stmt(&action, &ss)?;
+                    let p_path = self.work_cache.set_plaintexts_stmt(&action, &ss)?;
                     board.set_plaintexts_stmt(&p_path, cnt, self_t)?;
                     info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
                 }

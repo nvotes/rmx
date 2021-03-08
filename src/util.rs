@@ -19,7 +19,7 @@ use crate::crypto::base::Element;
 use crate::crypto::elgamal::*;
 use crate::crypto::backend::rug_b::RugGroup;
 use crate::crypto::backend::ristretto_b::RistrettoGroup;
-use crate::data::entity::*;
+use crate::data::artifact::*;
 
 pub fn read_file_bytes(path: &Path) -> io::Result<Vec<u8>> {
     fs::read(path)

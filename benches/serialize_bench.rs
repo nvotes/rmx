@@ -4,7 +4,7 @@ use rmx::crypto::elgamal::*;
 use rmx::crypto::backend::ristretto_b::*;
 use rmx::crypto::backend::rug_b::*;
 use rmx::crypto::shuffler::*;
-use rmx::data::entity::*;
+use rmx::data::artifact::*;
 use rmx::data::bytes::*;
 
 use curve25519_dalek::ristretto::RistrettoPoint;

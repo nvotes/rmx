@@ -15,7 +15,7 @@ use uuid::Uuid;
 use serde::de::DeserializeOwned;
 
 use rmx::protocol::statement::SignedStatement;
-use rmx::data::entity::*;
+use rmx::data::artifact::*;
 use rmx::crypto::elgamal::PublicKey;
 use rmx::crypto::hashing;
 use rmx::crypto::base::Group;
@@ -51,7 +51,7 @@ struct Demo<E: Element, G, B> {
     pub cb_sink: cursive::CbSink,
     trustees: Vec<Driver<E, G, GenericBulletinBoard<E, G, B>>>,
     bb_keypair: Keypair,
-    config: rmx::data::entity::Config<E, G>,
+    config: rmx::data::artifact::Config<E, G>,
     // board: GenericBulletinBoard<E, G, B>,
     all_plaintexts: Vec<Vec<E::Plaintext>>,
     ballots: u32,
@@ -67,7 +67,7 @@ impl<
     
     fn new(sink: cursive::CbSink, trustees: Vec<Driver<E, G, GenericBulletinBoard<E, G, B>>>, 
         boards:  Vec<GenericBulletinBoard<E, G, B>>, bb_keypair: Keypair, 
-        ballots: u32, cfg: rmx::data::entity::Config<E, G>) -> Demo<E, G, B> {
+        ballots: u32, cfg: rmx::data::artifact::Config<E, G>) -> Demo<E, G, B> {
 
         Demo {
             cb_sink: sink,
@@ -523,11 +523,11 @@ impl DemoLogSink {
 }
 
 fn gen_config<E: Element, G: Group<E>>(group: &G, contests: u32, trustee_pks: Vec<SPublicKey>,
-    ballotbox_pk: SPublicKey) -> rmx::data::entity::Config<E, G> {
+    ballotbox_pk: SPublicKey) -> rmx::data::artifact::Config<E, G> {
 
     let id = Uuid::new_v4();
 
-    let cfg = rmx::data::entity::Config {
+    let cfg = rmx::data::artifact::Config {
         id: id.as_bytes().clone(),
         group: group.clone(),
         contests: contests, 

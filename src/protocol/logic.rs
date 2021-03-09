@@ -373,9 +373,9 @@ impl<
     }
 
     pub fn step(&self, board: &mut B) -> Result<u32, TrusteeError> {
-        let output = self.process_facts(&board);
+        let facts = self.process_facts(&board);
 
-        self.trustee.run(output, board)
+        self.trustee.run(facts, board)
     }
 }
 

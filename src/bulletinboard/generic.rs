@@ -203,8 +203,7 @@ impl<
         
         let sts = self.get_stmts()?;
         let mut ret = Vec::new();
-        // println!("Statements {:?}", sts);
-        
+                
         for s in sts.iter() {
             let s_bytes = self.basic.get_unsafe(s)?.ok_or(BBError::Msg("Statement not found".to_string()))?;
             let (name, trustee, contest) = self.artifact_location(s);

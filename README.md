@@ -4,7 +4,7 @@ Braid is a verifiable re-encryption mixnet that can serve as the cryptographic c
 
 ## Status
 
-Prototype
+Prototype.
 
 ## Dependencies
 
@@ -32,3 +32,7 @@ Braid uses standard crytpographic techniques, most significantly
 * [A Commitment-Consistent Proof of a Shuffle](https://eprint.iacr.org/2011/168.pdf)
 
 * [Pseudo-Code Algorithms for Verifiable Re-Encryption Mix-Nets](https://www.ifca.ai/fc17/voting/papers/voting17_HLKD17.pdf)
+
+## Demo
+
+![Demo](https://github.com/ruescasd/rmx-mg/raw/main/demo.png)

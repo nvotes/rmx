@@ -40,12 +40,11 @@ impl BasicBoard for MBasic {
             let now_ = std::time::Instant::now();
     
             let artifact = A::deser(bytes)?;
-            info!(">> Deser {}, bytes {}", now_.elapsed().as_millis(), bytes.len());
+            // info!(">> Deser {}, bytes {}", now_.elapsed().as_millis(), bytes.len());
             
             let now_ = std::time::Instant::now();
             let hashed = hashing::hash(&artifact);
-            info!(">> Hash {}", now_.elapsed().as_millis());
-
+            // info!(">> Hash {}", now_.elapsed().as_millis());
             
             if hashed == hash {
                 Ok(Some(artifact))

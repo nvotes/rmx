@@ -52,7 +52,6 @@ struct Demo<E: Element, G, B> {
     trustees: Vec<Driver<E, G, GenericBulletinBoard<E, G, B>>>,
     bb_keypair: Keypair,
     config: rmx::data::artifact::Config<E, G>,
-    // board: GenericBulletinBoard<E, G, B>,
     all_plaintexts: Vec<Vec<E::Plaintext>>,
     ballots: u32,
     boards: Vec<GenericBulletinBoard<E, G, B>>
@@ -204,9 +203,14 @@ fn uidemo() {
     let mut trustee_pks = Vec::new();
     let mut drivers = Vec::new();
 
-    // let basic = MBasic::new();
-    // bbs.push(basic);
+    let basic = MBasic::new();
+    let board = GenericBulletinBoard::<RistrettoPoint, RistrettoGroup, MBasic>::new(basic);
+    bbs.push(board);
+
     for i in 0..trustees {
+        /* 
+        GIT
+        
         let basic = git_board(i);
         fs::remove_dir_all(&basic.fs_path).ok();
         if i == 0 {
@@ -216,7 +220,7 @@ fn uidemo() {
         }
 
         let bb = GenericBulletinBoard::<RistrettoPoint, RistrettoGroup, GitBulletinBoard>::new(basic);
-        bbs.push(bb);
+        bbs.push(bb);*/
 
         let local = format!("/tmp/local{}", i);
         let local_path = Path::new(&local);
@@ -226,7 +230,13 @@ fn uidemo() {
         let trustee: Trustee<RistrettoPoint, RistrettoGroup> = Trustee::new(local.to_string());
         trustee_pks.push(trustee.keypair.public);
         
+        /* 
+        GIT
+
         let driver: Driver<RistrettoPoint, RistrettoGroup, GenericBulletinBoard<RistrettoPoint, RistrettoGroup, GitBulletinBoard>> 
+            = Driver::new(trustee);
+        drivers.push(driver);*/
+        let driver: Driver<RistrettoPoint, RistrettoGroup, GenericBulletinBoard<RistrettoPoint, RistrettoGroup, MBasic>> 
             = Driver::new(trustee);
         drivers.push(driver);
     }

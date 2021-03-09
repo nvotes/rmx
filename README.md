@@ -35,4 +35,10 @@ Braid uses standard crytpographic techniques, most significantly
 
 ## Demo
 
+A demo can be run with
+
+    cargo test demo --release -- --ignored 
+
+By default the demo will run with 3 trustees and an in-memory bulletin board.
+
 ![Demo](https://github.com/ruescasd/rmx-mg/raw/main/demo.png)

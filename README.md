@@ -35,7 +35,7 @@ Braid uses standard crytpographic techniques, most significantly
 
 ## Demo
 
-A demo can be run with
+An interactive n-curses demo can be run with
 
     cargo test demo --release -- --ignored 
 

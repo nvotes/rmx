@@ -2,7 +2,7 @@
 
 Braid is a verifiable re-encryption mixnet that can serve as the cryptographic core of secure voting systems. 
 
-# Dependencies
+## Dependencies
 
 The mixnet supports pluggable [discrete log](https://en.wikipedia.org/wiki/Decisional_Diffie%E2%80%93Hellman_assumption) backends, there are currently two:
 
@@ -17,7 +17,7 @@ Other significant dependencies:
 * Message signatures are provided by [ed25519-dalek](https://github.com/dalek-cryptography/ed25519-dalek)
 * Symmetric encryption of private keys is provided by [RustCrypto](https://github.com/RustCrypto/block-ciphers)
 
-# Papers
+## Papers
 
 Braid uses standard crytpographic techniques, most significantly
 

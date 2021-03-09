@@ -11,11 +11,11 @@ The mixnet supports pluggable [discrete log](https://en.wikipedia.org/wiki/Decis
 
 Other significant dependencies:
 
-* [Git](https://en.wikipedia.org/wiki/Git) is used as the bulletin board, via [git2-rs](https://github.com/rust-lang/git2-rs)
-* Compute intensive portions are parallelized using [rayon](https://github.com/rayon-rs/rayon)
+* [Git](https://en.wikipedia.org/wiki/Git) is used as the bulletin board, via [git2-rs](https://github.com/rust-lang/git2-rs).
+* Compute intensive portions are parallelized using [rayon](https://github.com/rayon-rs/rayon).
 * The protocol is declaratively expressed in a [datalog](https://en.wikipedia.org/wiki/Datalog) variant using [crepe](https://github.com/ekzhang/crepe). We're also looking into [clingo](https://github.com/potassco/clingo-rs) with which it may be possible to prove certain properties of the protocol.
-* Message signatures are provided by [ed25519-dalek](https://github.com/dalek-cryptography/ed25519-dalek)
-* Symmetric encryption of private keys is provided by [RustCrypto](https://github.com/RustCrypto/block-ciphers)
+* Message signatures are provided by [ed25519-dalek](https://github.com/dalek-cryptography/ed25519-dalek).
+* Symmetric encryption of private keys is provided by [RustCrypto](https://github.com/RustCrypto/block-ciphers).
 
 ## Papers
 

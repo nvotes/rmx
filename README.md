@@ -4,7 +4,7 @@ Braid is a verifiable re-encryption mixnet that can serve as the cryptographic c
 
 ## Status
 
-Prototype.
+Prototype
 
 ## Dependencies
 

@@ -2,6 +2,10 @@
 
 Braid is a verifiable re-encryption mixnet that can serve as the cryptographic core of secure voting systems. 
 
+## Status
+
+Prototype.
+
 ## Dependencies
 
 The mixnet supports pluggable [discrete log](https://en.wikipedia.org/wiki/Decisional_Diffie%E2%80%93Hellman_assumption) backends, there are currently two:

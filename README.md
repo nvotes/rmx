@@ -1,10 +1,39 @@
-# braid
+# Braid
 
-Braid is a verifiable re-encryption mixnet that can serve as the cryptographic core of secure voting systems. 
+[![License](https://img.shields.io/github/license/nvotes/braid)](License)
+[![Build](https://github.com/nvotes/braid/workflows/build/badge.svg?branch=master)](https://github.com/nVotes/juvenal/actions?query=workflow%3Abuild)
+[![Coverage status](https://img.shields.io/codecov/c/github/nvotes/braid)](https://codecov.io/gh/nvotes/braid/)
+[![Community chat](https://img.shields.io/discord/651538033291690014)](https://discord.gg/dfdnFWJ)
+
+## nVotes verifiable re-encryption mixnet written in Rust
+
+![Demo](https://github.com/ruescasd/rmx-mg/raw/main/demo.png)
+
+Braid is a verifiable re-encryption mixnet written in Rust that can serve as the 
+cryptographic core of secure voting systems. 
+
+## Build
+
+This is a project written in [Rust] and uses `cargo`. After installing 
+stable Rust, to build Braid just execute:
+
+```bash
+cargo build
+```
+
+## Demo
+
+An interactive n-curses demo can be run with
+
+```bash
+cargo test demo --release -- --ignored 
+```
+
+By default the demo will run with 3 trustees and an in-memory bulletin board.
 
 ## Status
 
-Prototype.
+Prototype. Do not use in production.
 
 ## Dependencies
 
@@ -33,12 +62,5 @@ Braid uses standard crytpographic techniques, most significantly
 
 * [Pseudo-Code Algorithms for Verifiable Re-Encryption Mix-Nets](https://www.ifca.ai/fc17/voting/papers/voting17_HLKD17.pdf)
 
-## Demo
-
-An interactive n-curses demo can be run with
-
-    cargo test demo --release -- --ignored 
-
-By default the demo will run with 3 trustees and an in-memory bulletin board.
-
-![Demo](https://github.com/ruescasd/rmx-mg/raw/main/demo.png)
+[nVotes]: https://nvotes.com
+[Rust]: https://www.rust-lang.org/

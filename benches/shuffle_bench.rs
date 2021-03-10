@@ -5,7 +5,7 @@ use rmx::crypto::elgamal::*;
 use rmx::crypto::backend::ristretto_b::*;
 use rmx::crypto::backend::rug_b::*;
 use rmx::crypto::shuffler::*;
-use rmx::data::artifact::*;
+
 
 
 use criterion::{criterion_group, criterion_main, Criterion, SamplingMode, BenchmarkId};
@@ -35,7 +35,7 @@ pub fn shuffle_rug(n: usize) -> bool {
     let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
     // simulate computing the generators again
     let seed = vec![];
-    let hs = generators(es.len() + 1, &group, 0, seed);
+    let _hs = generators(es.len() + 1, &group, 0, seed);
     let ok = shuffler.check_proof(&proof, &es, &e_primes);
 
     assert_eq!(ok, true);
@@ -67,7 +67,7 @@ pub fn shuffle_ristretto(n: usize) -> bool {
     let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
     // simulate computing the generators again
     let seed = vec![];
-    let hs = generators(es.len() + 1, &group, 0, seed);
+    let _hs = generators(es.len() + 1, &group, 0, seed);
     let ok = shuffler.check_proof(&proof, &es, &e_primes);
 
     assert!(ok == true);

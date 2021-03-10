@@ -2,8 +2,8 @@ use std::marker::PhantomData;
 use std::path::Path;
 use serde::de::DeserializeOwned;
 
-use rug::Integer;
-use curve25519_dalek::ristretto::RistrettoPoint;
+
+
 use log::info;
 
 use crate::bulletinboard::*;
@@ -13,8 +13,8 @@ use crate::crypto::hashing::{HashBytes, Hash};
 use crate::crypto::elgamal::PublicKey;
 use crate::crypto::base::Element;
 use crate::crypto::base::Group;
-use crate::crypto::backend::rug_b::RugGroup;
-use crate::crypto::backend::ristretto_b::RistrettoGroup;
+
+
 use crate::bulletinboard::basic::BasicBoard;
 use crate::bulletinboard::BBError;
 use crate::protocol::statement::SignedStatement;

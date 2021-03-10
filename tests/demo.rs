@@ -20,7 +20,7 @@ use rmx::crypto::elgamal::PublicKey;
 use rmx::crypto::hashing;
 use rmx::crypto::base::Group;
 use rmx::crypto::base::Element;
-use rmx::crypto::backend::rug_b::*;
+
 use rmx::crypto::backend::ristretto_b::*;
 use rmx::bulletinboard::*;
 use rmx::bulletinboard::generic::*;

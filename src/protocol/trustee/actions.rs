@@ -7,7 +7,7 @@ use crate::crypto::base::Group;
 use crate::protocol::trustee::Trustee;
 use crate::protocol::trustee::TrusteeError;
 use crate::bulletinboard::BulletinBoard;
-use crate::bulletinboard::work_cache::WorkCache;
+
 use crate::protocol::facts::Act;
 use crate::crypto::hashing::Hash;
 use crate::crypto::hashing;

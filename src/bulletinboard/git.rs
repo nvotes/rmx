@@ -504,7 +504,7 @@ mod tests {
     use serial_test::serial;
     use std::fs;
     use std::path::{Path};
-    use simplelog::*;
+    
     
     use crate::bulletinboard::git::*;
     use crate::util;

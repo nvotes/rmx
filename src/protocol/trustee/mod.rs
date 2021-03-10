@@ -7,19 +7,19 @@ use ed25519_dalek::Keypair;
 use log::info;
 
 use crate::data::artifact::*;
-use crate::protocol::statement::*;
+
 use crate::protocol::facts::*;
 use crate::crypto::elgamal::{PublicKey, Ciphertext};
-use crate::crypto::shuffler::*;
+
 use crate::crypto::keymaker::Keymaker;
 use crate::crypto::base::Element;
 use crate::crypto::base::Group;
 use crate::crypto::symmetric;
-use crate::crypto::hashing;
+
 use crate::crypto::hashing::*;
 use crate::bulletinboard::*;
 use crate::bulletinboard::work_cache::WorkCache;
-use crate::util::short;
+
 
 quick_error! {
     #[derive(Debug)]

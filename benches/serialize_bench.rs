@@ -10,7 +10,7 @@ use rmx::data::bytes::*;
 use curve25519_dalek::ristretto::RistrettoPoint;
 // use rug::{Integer,integer::Order};
 
-use criterion::{criterion_group, criterion_main, Criterion, SamplingMode, BenchmarkId};
+use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
 
 pub fn shuffle_ristretto(n: usize) -> Mix<RistrettoPoint> {
     let group = RistrettoGroup;

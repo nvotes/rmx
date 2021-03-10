@@ -2,7 +2,7 @@ use serde::de::DeserializeOwned;
 use std::path::Path;
 use std::collections::HashMap;
 
-use log::info;
+
 
 use crate::data::bytes::*;
 use crate::bulletinboard::BBError;
@@ -37,12 +37,12 @@ impl BasicBoard for MBasic {
     fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError> {
         let key = target;
         if let Some(bytes) = self.data.get(&key) {
-            let now_ = std::time::Instant::now();
+            let _now_ = std::time::Instant::now();
     
             let artifact = A::deser(bytes)?;
             // info!(">> Deser {}, bytes {}", now_.elapsed().as_millis(), bytes.len());
             
-            let now_ = std::time::Instant::now();
+            let _now_ = std::time::Instant::now();
             let hashed = hashing::hash(&artifact);
             // info!(">> Hash {}", now_.elapsed().as_millis());
             

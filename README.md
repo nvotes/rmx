@@ -1,7 +1,7 @@
 # Braid
 
 [![License](https://img.shields.io/github/license/nvotes/braid)](License)
-[![Build](https://github.com/nvotes/braid/workflows/build/badge.svg?branch=master)](https://github.com/nVotes/juvenal/actions?query=workflow%3Abuild)
+[![Build](https://github.com/nvotes/braid/workflows/build/badge.svg?branch=master)](https://github.com/nvotes/braid/actions?query=workflow%3Abuild)
 [![Coverage status](https://img.shields.io/codecov/c/github/nvotes/braid)](https://codecov.io/gh/nvotes/braid/)
 [![Community chat](https://img.shields.io/discord/651538033291690014)](https://discord.gg/dfdnFWJ)
 

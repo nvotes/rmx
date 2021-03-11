@@ -7,7 +7,7 @@
 
 ## nVotes verifiable re-encryption mixnet written in Rust
 
-![Demo](https://github.com/nvotes/braid/raw/resources/demo.png)
+![Demo](https://raw.githubusercontent.com/nvotes/braid/master/resources/demo.png)
 
 Braid is a verifiable re-encryption mixnet written in Rust that can serve as the 
 cryptographic core of secure voting systems. 

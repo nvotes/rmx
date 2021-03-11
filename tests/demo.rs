@@ -152,7 +152,6 @@ where
     }
     fn process_facts(&mut self, t: usize) -> AllFacts {
         let trustee = &self.trustees[t];
-        // trustee.process_facts(&mut self.board)
         if self.boards.len() > 1 {
             trustee.process_facts(&mut self.boards[t])
         } else {
@@ -161,7 +160,6 @@ where
     }
     fn run(&mut self, facts: AllFacts, t: usize) -> Result<u32, TrusteeError> {
         let trustee = &self.trustees[t];
-        // trustee.run(facts, &mut self.board)
         if self.boards.len() > 1 {
             trustee.run(facts, &mut self.boards[t])
         } else {
@@ -207,7 +205,7 @@ where
 
 #[ignore]
 #[test]
-fn uidemo() {
+fn demo() {
     let mut n: u32 = 0;
 
     // let group = RugGroup::default();

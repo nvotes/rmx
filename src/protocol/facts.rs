@@ -1,11 +1,11 @@
-use std::fmt;
-use std::collections::HashSet;
 use log::info;
+use std::collections::HashSet;
+use std::fmt;
 
 use strum::Display;
 
-use crate::util::{short, shortm};
 use crate::protocol::logic::*;
+use crate::util::{short, shortm};
 
 #[derive(Copy, Clone, Display)]
 pub(super) enum InputFact {
@@ -16,78 +16,122 @@ pub(super) enum InputFact {
     BallotsSigned(BallotsSigned),
     MixSignedBy(MixSignedBy),
     DecryptionSignedBy(DecryptionSignedBy),
-    PlaintextsSignedBy(PlaintextsSignedBy)
+    PlaintextsSignedBy(PlaintextsSignedBy),
 }
 impl InputFact {
-    pub(super) fn config_present(c: ConfigHash, cn: ContestIndex, trustees: TrusteeIndex, 
-        self_index: TrusteeIndex) -> InputFact {
-        
+    pub(super) fn config_present(
+        c: ConfigHash,
+        cn: ContestIndex,
+        trustees: TrusteeIndex,
+        self_index: TrusteeIndex,
+    ) -> InputFact {
         InputFact::ConfigPresent(ConfigPresent(c, cn, trustees, self_index))
     }
     pub(super) fn config_signed_by(c: ConfigHash, trustee: TrusteeIndex) -> InputFact {
         InputFact::ConfigSignedBy(ConfigSignedBy(c, trustee))
     }
-    pub(super) fn share_signed_by(c: ConfigHash, contest: ContestIndex, share: ShareHash,
-        trustee: TrusteeIndex) -> InputFact {
-        
+    pub(super) fn share_signed_by(
+        c: ConfigHash,
+        contest: ContestIndex,
+        share: ShareHash,
+        trustee: TrusteeIndex,
+    ) -> InputFact {
         InputFact::PkShareSignedBy(PkShareSignedBy(c, contest, share, trustee))
     }
-    pub(super) fn pk_signed_by(c: ConfigHash, contest: ContestIndex, pk: PkHash, 
-        trustee: TrusteeIndex) -> InputFact {
-        
+    pub(super) fn pk_signed_by(
+        c: ConfigHash,
+        contest: ContestIndex,
+        pk: PkHash,
+        trustee: TrusteeIndex,
+    ) -> InputFact {
         InputFact::PkSignedBy(PkSignedBy(c, contest, pk, trustee))
     }
-    pub(super) fn ballots_signed(c: ConfigHash, contest: ContestIndex, 
-        ballots: BallotsHash) -> InputFact {
-        
+    pub(super) fn ballots_signed(
+        c: ConfigHash,
+        contest: ContestIndex,
+        ballots: BallotsHash,
+    ) -> InputFact {
         InputFact::BallotsSigned(BallotsSigned(c, contest, ballots))
     }
-    pub(super) fn mix_signed_by(c: ConfigHash, contest: ContestIndex, mix: MixHash, ballots: BallotsHash,
-        mixer_t: TrusteeIndex, signer_t: TrusteeIndex) -> InputFact {
-        
+    pub(super) fn mix_signed_by(
+        c: ConfigHash,
+        contest: ContestIndex,
+        mix: MixHash,
+        ballots: BallotsHash,
+        mixer_t: TrusteeIndex,
+        signer_t: TrusteeIndex,
+    ) -> InputFact {
         InputFact::MixSignedBy(MixSignedBy(c, contest, mix, ballots, mixer_t, signer_t))
     }
-    pub(super) fn decryption_signed_by(c: ConfigHash, contest: ContestIndex, decryption: DecryptionHash, 
-        trustee: TrusteeIndex) -> InputFact {
-        
+    pub(super) fn decryption_signed_by(
+        c: ConfigHash,
+        contest: ContestIndex,
+        decryption: DecryptionHash,
+        trustee: TrusteeIndex,
+    ) -> InputFact {
         InputFact::DecryptionSignedBy(DecryptionSignedBy(c, contest, decryption, trustee))
     }
-    pub(super) fn plaintexts_signed_by(c: ConfigHash, contest: ContestIndex, plaintexts: PlaintextsHash,
-        trustee: TrusteeIndex) -> InputFact {
-        
-        InputFact::PlaintextsSignedBy(
-            PlaintextsSignedBy(c, contest, plaintexts, trustee)
-        )
+    pub(super) fn plaintexts_signed_by(
+        c: ConfigHash,
+        contest: ContestIndex,
+        plaintexts: PlaintextsHash,
+        trustee: TrusteeIndex,
+    ) -> InputFact {
+        InputFact::PlaintextsSignedBy(PlaintextsSignedBy(c, contest, plaintexts, trustee))
     }
 }
 
 impl fmt::Debug for InputFact {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            InputFact::ConfigPresent(x) => write!(f, 
-                "ConfigPresent: [contests={} trustees={} self={}] {:?}", 
-                x.1, x.2, x.3, short(&x.0)),
-            InputFact::ConfigSignedBy(x) => write!(f, 
-                "ConfigSignedBy: [{}] cfg: {:?}", 
-                x.1, short(&x.0)),
-            InputFact::PkShareSignedBy(x) => write!(f, 
-                "PkShareSignedBy [cn={} tr={}] share: {:?}", 
-                x.1, x.3, short(&x.2)),
-            InputFact::PkSignedBy(x) => write!(f, 
-                "PkSignedBy [cn={} tr={}] for pk: {:?}", 
-                x.1, x.3, short(&x.2)),
-            
-            InputFact::BallotsSigned(x) => write!(f, 
-                "BallotsSigned [cn={}] [ballots={:?}]", x.1, short(&x.2)),
-            InputFact::MixSignedBy(x) => write!(f, 
-                "MixSignedBy [cn={}] {:?} <- {:?}, [mxr={}, signer={}]", 
-                x.1, short(&x.2), short(&x.3), x.4, x.5),
-            InputFact::DecryptionSignedBy(x) => write!(f, 
-                "DecryptionSignedBy [cn={}] [signer={}] {:?}", 
-                x.1, x.3, short(&x.0)),
-            InputFact::PlaintextsSignedBy(x) => write!(f, 
-                "PlaintextsSignedBy [cn={}] {:?}", 
-                x.1, short(&x.0))
+            InputFact::ConfigPresent(x) => write!(
+                f,
+                "ConfigPresent: [contests={} trustees={} self={}] {:?}",
+                x.1,
+                x.2,
+                x.3,
+                short(&x.0)
+            ),
+            InputFact::ConfigSignedBy(x) => {
+                write!(f, "ConfigSignedBy: [{}] cfg: {:?}", x.1, short(&x.0))
+            }
+            InputFact::PkShareSignedBy(x) => write!(
+                f,
+                "PkShareSignedBy [cn={} tr={}] share: {:?}",
+                x.1,
+                x.3,
+                short(&x.2)
+            ),
+            InputFact::PkSignedBy(x) => write!(
+                f,
+                "PkSignedBy [cn={} tr={}] for pk: {:?}",
+                x.1,
+                x.3,
+                short(&x.2)
+            ),
+
+            InputFact::BallotsSigned(x) => {
+                write!(f, "BallotsSigned [cn={}] [ballots={:?}]", x.1, short(&x.2))
+            }
+            InputFact::MixSignedBy(x) => write!(
+                f,
+                "MixSignedBy [cn={}] {:?} <- {:?}, [mxr={}, signer={}]",
+                x.1,
+                short(&x.2),
+                short(&x.3),
+                x.4,
+                x.5
+            ),
+            InputFact::DecryptionSignedBy(x) => write!(
+                f,
+                "DecryptionSignedBy [cn={}] [signer={}] {:?}",
+                x.1,
+                x.3,
+                short(&x.0)
+            ),
+            InputFact::PlaintextsSignedBy(x) => {
+                write!(f, "PlaintextsSignedBy [cn={}] {:?}", x.1, short(&x.0))
+            }
         }
     }
 }
@@ -99,10 +143,24 @@ pub enum Act {
     CombineShares(ConfigHash, ContestIndex, Hashes),
     CheckPk(ConfigHash, ContestIndex, PkHash, Hashes),
     Mix(ConfigHash, ContestIndex, BallotsHash, PkHash),
-    CheckMix(ConfigHash, ContestIndex, TrusteeIndex, MixHash, BallotsHash, PkHash),
+    CheckMix(
+        ConfigHash,
+        ContestIndex,
+        TrusteeIndex,
+        MixHash,
+        BallotsHash,
+        PkHash,
+    ),
     PartialDecrypt(ConfigHash, ContestIndex, BallotsHash, ShareHash),
     CombineDecryptions(ConfigHash, ContestIndex, Hashes, MixHash, Hashes),
-    CheckPlaintexts(ConfigHash, ContestIndex, PlaintextsHash, Hashes, MixHash, Hashes)
+    CheckPlaintexts(
+        ConfigHash,
+        ContestIndex,
+        PlaintextsHash,
+        Hashes,
+        MixHash,
+        Hashes,
+    ),
 }
 
 impl fmt::Debug for Act {
@@ -110,22 +168,55 @@ impl fmt::Debug for Act {
         match self {
             Act::CheckConfig(cfg) => write!(f, "CheckConfig {:?}", short(cfg)),
             Act::PostShare(cfg, cnt) => write!(f, "PostShare cn=[{}] cfg: {:?}", cnt, short(cfg)),
-            Act::CombineShares(_cfg, cnt, hs) => write!(f, "CombineShares cn=[{}] shares: {:?}", cnt, shortm(hs)),
-            Act::CheckPk(_cfg, cnt, h1, hs) => write!(f, "CheckPk cn=[{}], pk {:?} shares: {:?}", cnt, short(h1), shortm(hs)),
+            Act::CombineShares(_cfg, cnt, hs) => {
+                write!(f, "CombineShares cn=[{}] shares: {:?}", cnt, shortm(hs))
+            }
+            Act::CheckPk(_cfg, cnt, h1, hs) => write!(
+                f,
+                "CheckPk cn=[{}], pk {:?} shares: {:?}",
+                cnt,
+                short(h1),
+                shortm(hs)
+            ),
             Act::Mix(cfg, cnt, _bh, _pk_h) => write!(f, "Mix cn=[{}] cfg: {:?}", cnt, short(cfg)),
-            Act::CheckMix(_cfg, cnt, t, mh, _bh, _pk_h) => write!(f, "CheckMix cn=[{}] mix={:?} posted by tr=[{}]", cnt, short(mh), t),
-            Act::PartialDecrypt(cfg, cnt, _h1, _share_h) => write!(f, "PartialDecrypt cn=[{}] cfg: {:?}", cnt, short(cfg)),
-            Act::CombineDecryptions(cfg, cnt, _hs, _mix_h, _share_hs) => write!(f, "CombineDecryptions cn=[{}] cfg: {:?}", cnt, short(cfg)),
-            Act::CheckPlaintexts(cfg, cnt, _p_h, _d_hs, _mix_h, _share_hs) => write!(f, "CheckPlaintexts cn=[{}] cfg: {:?}", cnt, short(cfg))
+            Act::CheckMix(_cfg, cnt, t, mh, _bh, _pk_h) => write!(
+                f,
+                "CheckMix cn=[{}] mix={:?} posted by tr=[{}]",
+                cnt,
+                short(mh),
+                t
+            ),
+            Act::PartialDecrypt(cfg, cnt, _h1, _share_h) => {
+                write!(f, "PartialDecrypt cn=[{}] cfg: {:?}", cnt, short(cfg))
+            }
+            Act::CombineDecryptions(cfg, cnt, _hs, _mix_h, _share_hs) => {
+                write!(f, "CombineDecryptions cn=[{}] cfg: {:?}", cnt, short(cfg))
+            }
+            Act::CheckPlaintexts(cfg, cnt, _p_h, _d_hs, _mix_h, _share_hs) => {
+                write!(f, "CheckPlaintexts cn=[{}] cfg: {:?}", cnt, short(cfg))
+            }
         }
     }
 }
 
-type DatalogOutput = (HashSet<Do>, HashSet<ConfigOk>, HashSet<PkSharesAll>, HashSet<PkOk>, 
-    HashSet<PkSharesUpTo>, HashSet<ConfigSignedUpTo>, HashSet<Contest>,
-    HashSet<PkSignedUpTo>, HashSet<MixSignedUpTo>, HashSet<MixOk>, HashSet<ContestMixedUpTo>,
-    HashSet<ContestMixedOk>, HashSet<DecryptionsUpTo>, HashSet<DecryptionsAll>,
-    HashSet<PlaintextsSignedUpTo>, HashSet<PlaintextsOk>);
+type DatalogOutput = (
+    HashSet<Do>,
+    HashSet<ConfigOk>,
+    HashSet<PkSharesAll>,
+    HashSet<PkOk>,
+    HashSet<PkSharesUpTo>,
+    HashSet<ConfigSignedUpTo>,
+    HashSet<Contest>,
+    HashSet<PkSignedUpTo>,
+    HashSet<MixSignedUpTo>,
+    HashSet<MixOk>,
+    HashSet<ContestMixedUpTo>,
+    HashSet<ContestMixedOk>,
+    HashSet<DecryptionsUpTo>,
+    HashSet<DecryptionsAll>,
+    HashSet<PlaintextsSignedUpTo>,
+    HashSet<PlaintextsOk>,
+);
 
 pub struct AllFacts {
     pub(self) input_facts: Vec<InputFact>,
@@ -145,7 +236,7 @@ pub struct AllFacts {
     mixes_ok: HashSet<MixOk>,
     contest_mixed_ok: HashSet<ContestMixedOk>,
     decryptions_all: HashSet<DecryptionsAll>,
-    plaintexts_ok: HashSet<PlaintextsOk>
+    plaintexts_ok: HashSet<PlaintextsOk>,
 }
 
 impl AllFacts {
@@ -160,7 +251,7 @@ impl AllFacts {
         let mut partial_decrypt = vec![];
         let mut combine_decryptions = vec![];
         let mut check_plaintexts = vec![];
-        
+
         let actions = f.0;
         for a in actions {
             match a.0 {
@@ -172,8 +263,8 @@ impl AllFacts {
                 Act::Mix(..) => mix.push(a.0),
                 Act::PartialDecrypt(..) => partial_decrypt.push(a.0),
                 Act::CombineDecryptions(..) => combine_decryptions.push(a.0),
-                Act::CheckPlaintexts(..) => check_plaintexts.push(a.0)
-            }  
+                Act::CheckPlaintexts(..) => check_plaintexts.push(a.0),
+            }
             all_actions.push(a.0);
         }
 
@@ -203,7 +294,7 @@ impl AllFacts {
             mixes_ok,
             contest_mixed_ok,
             decryptions_all,
-            plaintexts_ok
+            plaintexts_ok,
         }
     }
 
@@ -222,25 +313,31 @@ impl AllFacts {
         }
         let next = &self.mixes_ok;
         for f in next {
-            info!("OFact: MixOk cn=[{}] {:?} <- {:?}", 
-            f.1, short(&f.2), short(&f.3));
+            info!(
+                "OFact: MixOk cn=[{}] {:?} <- {:?}",
+                f.1,
+                short(&f.2),
+                short(&f.3)
+            );
         }
         let next = &self.contest_mixed_ok;
         for f in next {
-            info!("OFact: ContestMixedOk cn=[{}] mix={:?} cfg {:?}", 
-            f.1, short(&f.2), short(&f.0));
+            info!(
+                "OFact: ContestMixedOk cn=[{}] mix={:?} cfg {:?}",
+                f.1,
+                short(&f.2),
+                short(&f.0)
+            );
         }
         let next = &self.decryptions_all;
         for f in next {
-            info!("OFact: DecryptionsAll cn=[{}] cfg {:?}", 
-            f.1, short(&f.0));
+            info!("OFact: DecryptionsAll cn=[{}] cfg {:?}", f.1, short(&f.0));
         }
         let next = &self.plaintexts_ok;
         for f in next {
-            info!("OFact: PlaintextsOk cn=[{}] cfg {:?}", 
-            f.1, short(&f.0));
+            info!("OFact: PlaintextsOk cn=[{}] cfg {:?}", f.1, short(&f.0));
         }
-        let next = &self.all_actions; 
+        let next = &self.all_actions;
         for f in next {
             info!("OFact: Action {:?}", f);
         }
@@ -256,28 +353,28 @@ impl AllFacts {
         self.config_ok.len() == 1
     }
     pub fn get_self_index(&self) -> Option<u32> {
-        if let Some(InputFact::ConfigPresent(ConfigPresent(_, _, _, self_t))) = self.get_config_present() {
+        if let Some(InputFact::ConfigPresent(ConfigPresent(_, _, _, self_t))) =
+            self.get_config_present()
+        {
             Some(self_t)
-        }
-        else {
+        } else {
             None
         }
     }
     pub fn get_trustee_count(&self) -> Option<u32> {
-        if let Some(InputFact::ConfigPresent(ConfigPresent(_, _, trustees, _))) = self.get_config_present() {
+        if let Some(InputFact::ConfigPresent(ConfigPresent(_, _, trustees, _))) =
+            self.get_config_present()
+        {
             Some(trustees)
-        }
-        else {
+        } else {
             None
         }
     }
     fn get_config_present(&self) -> Option<InputFact> {
         if self.input_facts.len() > 0 {
             Some(self.input_facts[self.input_facts.len() - 1])
-        }
-        else {
+        } else {
             None
         }
-        
     }
 }

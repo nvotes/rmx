@@ -1,36 +1,35 @@
 #![allow(dead_code)]
 
-use std::marker::PhantomData;
 use std::collections::HashSet;
-use std::iter::FromIterator;
 use std::fs;
+use std::iter::FromIterator;
+use std::marker::PhantomData;
 use std::path::Path;
 
-use rand::rngs::OsRng;
 use ed25519_dalek::{Keypair, PublicKey as SPublicKey};
-use uuid::Uuid;
+use rand::rngs::OsRng;
 use serde::de::DeserializeOwned;
+use uuid::Uuid;
 
-use rmx::protocol::statement::SignedStatement;
-use rmx::data::artifact::*;
+use rmx::bulletinboard::basic::*;
+use rmx::bulletinboard::generic::*;
+use rmx::bulletinboard::git;
+use rmx::bulletinboard::*;
+use rmx::crypto::backend::ristretto_b::*;
+use rmx::crypto::backend::rug_b::*;
+use rmx::crypto::base::Element;
+use rmx::crypto::base::Group;
 use rmx::crypto::elgamal::PublicKey;
 use rmx::crypto::hashing;
-use rmx::crypto::base::Group;
-use rmx::crypto::base::Element;
-use rmx::crypto::backend::rug_b::*;
-use rmx::crypto::backend::ristretto_b::*;
-use rmx::bulletinboard::*;
-use rmx::bulletinboard::generic::*;
-use rmx::bulletinboard::basic::*;
-use rmx::bulletinboard::git;
+use rmx::data::artifact::*;
+use rmx::data::bytes::*;
 use rmx::protocol::logic::Driver;
+use rmx::protocol::statement::SignedStatement;
 use rmx::protocol::trustee::Trustee;
 use rmx::protocol::trustee::TrusteeError;
-use rmx::data::bytes::*;
 use rmx::util;
 
 use simplelog::*;
-
 
 #[test]
 fn run_rug_mem() {
@@ -67,12 +66,16 @@ fn run_ristretto_git() {
 }
 
 fn run<
-    E: Element + DeserializeOwned + std::cmp::PartialEq, 
+    E: Element + DeserializeOwned + std::cmp::PartialEq,
     G: Group<E> + DeserializeOwned,
-    B: BasicBoard
-    > (group: G, basic: B) -> Result<(), TrusteeError>
-    where <E as Element>::Plaintext: std::hash::Hash {
-    
+    B: BasicBoard,
+>(
+    group: G,
+    basic: B,
+) -> Result<(), TrusteeError>
+where
+    <E as Element>::Plaintext: std::hash::Hash,
+{
     let local1 = "/tmp/local";
     let local2 = "/tmp/local2";
     let local_path = Path::new(&local1);
@@ -87,13 +90,13 @@ fn run<
     let trustee2: Trustee<E, G> = Trustee::new(local2.to_string());
     let mut csprng = OsRng;
     let bb_keypair = Keypair::generate(&mut csprng);
-    
+
     let mut bb = GenericBulletinBoard::<E, G, B>::new(basic);
-    
+
     let mut trustee_pks = Vec::new();
     trustee_pks.push(trustee1.keypair.public);
     trustee_pks.push(trustee2.keypair.public);
-    
+
     let contests = 3;
     let ballots = 200;
     let cfg = gen_config(&group, contests, trustee_pks, bb_keypair.public);
@@ -102,7 +105,7 @@ fn run<
     let tmp_file = util::write_tmp(cfg_b)?;
 
     bb.add_config(&ConfigPath(tmp_file.path().to_path_buf()))?;
-    
+
     let prot1: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee1);
     let prot2: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee2);
 
@@ -128,14 +131,17 @@ fn run<
 
     // combine decryptions
     prot1.step(&mut bb)?;
-    
+
     let mut all_plaintexts = Vec::with_capacity(contests as usize);
-    
+
     println!("=================== ballots ===================");
     for i in 0..contests {
-        let pk_b = bb.get_unsafe(GenericBulletinBoard::<E, G, B>::public_key(i, 0)).unwrap().unwrap();
+        let pk_b = bb
+            .get_unsafe(GenericBulletinBoard::<E, G, B>::public_key(i, 0))
+            .unwrap()
+            .unwrap();
         let pk = PublicKey::<E, G>::deser(&pk_b).unwrap();
-        
+
         let (plaintexts, ciphertexts) = util::random_encrypt_ballots(ballots, &pk);
         all_plaintexts.push(plaintexts);
         let ballots = Ballots { ciphertexts };
@@ -143,13 +149,16 @@ fn run<
         let ballots_h = hashing::hash(&ballots);
         let cfg_h = hashing::hash(&cfg);
         let ss = SignedStatement::ballots(&cfg_h, &ballots_h, i, &bb_keypair);
-        
+
         let ss_b = ss.ser();
-        
+
         let f1 = util::write_tmp(ballots_b).unwrap();
         let f2 = util::write_tmp(ss_b).unwrap();
         println!(">> Adding {} ballots", ballots.ciphertexts.len());
-        bb.add_ballots(&BallotsPath(f1.path().to_path_buf(), f2.path().to_path_buf()), i)?;
+        bb.add_ballots(
+            &BallotsPath(f1.path().to_path_buf(), f2.path().to_path_buf()),
+            i,
+        )?;
     }
     println!("===============================================");
 
@@ -177,14 +186,20 @@ fn run<
     prot1.step(&mut bb)?;
 
     for i in 0..contests {
-        let decrypted_b = bb.get_unsafe(GenericBulletinBoard::<E, G, B>::plaintexts(i, 0)).unwrap().unwrap();
+        let decrypted_b = bb
+            .get_unsafe(GenericBulletinBoard::<E, G, B>::plaintexts(i, 0))
+            .unwrap()
+            .unwrap();
         let decrypted = Plaintexts::<E>::deser(&decrypted_b).unwrap();
-        let decoded: Vec<E::Plaintext> = decrypted.plaintexts.iter().map(|p| {
-            group.decode(&p)
-        }).collect();
-        let p1: HashSet<&E::Plaintext> = HashSet::from_iter(all_plaintexts[i as usize].iter().clone());
+        let decoded: Vec<E::Plaintext> = decrypted
+            .plaintexts
+            .iter()
+            .map(|p| group.decode(&p))
+            .collect();
+        let p1: HashSet<&E::Plaintext> =
+            HashSet::from_iter(all_plaintexts[i as usize].iter().clone());
         let p2: HashSet<&E::Plaintext> = HashSet::from_iter(decoded.iter().clone());
-        
+
         print!("Checking plaintexts contest=[{}]...", i);
         assert!(p1 == p2);
         println!("Ok");
@@ -193,18 +208,21 @@ fn run<
     Ok(())
 }
 
-fn gen_config<E: Element, G: Group<E>>(group: &G, contests: u32, trustee_pks: Vec<SPublicKey>,
-    ballotbox_pk: SPublicKey) -> rmx::data::artifact::Config<E, G> {
-
+fn gen_config<E: Element, G: Group<E>>(
+    group: &G,
+    contests: u32,
+    trustee_pks: Vec<SPublicKey>,
+    ballotbox_pk: SPublicKey,
+) -> rmx::data::artifact::Config<E, G> {
     let id = Uuid::new_v4();
 
     let cfg = rmx::data::artifact::Config {
         id: id.as_bytes().clone(),
         group: group.clone(),
-        contests: contests, 
-        ballotbox: ballotbox_pk, 
+        contests: contests,
+        ballotbox: ballotbox_pk,
         trustees: trustee_pks,
-        phantom_e: PhantomData
+        phantom_e: PhantomData,
     };
 
     cfg
@@ -217,10 +235,11 @@ static INIT: Once = Once::new();
 /// Setup function that is only run once, even if called multiple times.
 fn setup_log() {
     INIT.call_once(|| {
-        CombinedLogger::init(
-            vec![
-                TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed)
-            ]
-        ).unwrap();
+        CombinedLogger::init(vec![TermLogger::new(
+            LevelFilter::Info,
+            simplelog::Config::default(),
+            TerminalMode::Mixed,
+        )])
+        .unwrap();
     });
 }

@@ -1,24 +1,24 @@
-use std::path::{Path, PathBuf};
-use std::fs::File;
-use std::io::Write;
-use std::fs::OpenOptions;
 use std::fs;
+use std::fs::File;
+use std::fs::OpenOptions;
 use std::io;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 
+use chrono::{DateTime, Utc};
+use curve25519_dalek::ristretto::RistrettoPoint;
 use rand::rngs::OsRng;
 use rand::RngCore;
-use curve25519_dalek::ristretto::{RistrettoPoint};
-use rug::Integer;
 use rayon::prelude::*;
-use chrono::{DateTime, Utc};
+use rug::Integer;
 use tempfile::NamedTempFile;
 use uuid::Uuid;
 
-use crate::crypto::base::Group;
-use crate::crypto::base::Element;
-use crate::crypto::elgamal::*;
-use crate::crypto::backend::rug_b::RugGroup;
 use crate::crypto::backend::ristretto_b::RistrettoGroup;
+use crate::crypto::backend::rug_b::RugGroup;
+use crate::crypto::base::Element;
+use crate::crypto::base::Group;
+use crate::crypto::elgamal::*;
 use crate::data::artifact::*;
 
 pub fn read_file_bytes(path: &Path) -> io::Result<Vec<u8>> {
@@ -76,99 +76,107 @@ pub fn create_random_file(dir: &str) -> PathBuf {
 }
 
 pub fn modify_file(file: &str) {
-    let mut file = OpenOptions::new()
-        .append(true)
-        .open(file)
-        .unwrap();
-    
+    let mut file = OpenOptions::new().append(true).open(file).unwrap();
+
     let now: DateTime<Utc> = Utc::now();
 
     writeln!(file, "New line at {}", now).unwrap();
 }
 
-pub fn random_ristretto_ballots<G: Group<RistrettoPoint>>(n: usize, group: &G) -> Ballots<RistrettoPoint> {
+pub fn random_ristretto_ballots<G: Group<RistrettoPoint>>(
+    n: usize,
+    group: &G,
+) -> Ballots<RistrettoPoint> {
+    let cs = (0..n)
+        .into_par_iter()
+        .map(|_| Ciphertext {
+            a: group.rnd(),
+            b: group.rnd(),
+        })
+        .collect();
 
-    let cs = (0..n).into_par_iter().map(|_| {
-            Ciphertext{
-                a: group.rnd(),
-                b: group.rnd()
-            }
-    }).collect();
-
-    Ballots {
-        ciphertexts: cs
-    }
+    Ballots { ciphertexts: cs }
 }
 
 pub fn random_rug_ballots<G: Group<Integer>>(n: usize, group: &G) -> Ballots<Integer> {
-    
-    let cs = (0..n).into_par_iter().map(|_| {
-            Ciphertext {
-                a: group.encode(&group.rnd_exp()),
-                b: group.encode(&group.rnd_exp())
-            }
-        
-    }).collect();
+    let cs = (0..n)
+        .into_par_iter()
+        .map(|_| Ciphertext {
+            a: group.encode(&group.rnd_exp()),
+            b: group.encode(&group.rnd_exp()),
+        })
+        .collect();
 
-    Ballots {
-        ciphertexts: cs
-    }
+    Ballots { ciphertexts: cs }
 }
 
-pub fn random_ristretto_encrypt_ballots(n: usize, pk: &PublicKey<RistrettoPoint, RistrettoGroup>) -> (Vec<[u8; 30]>, Vec<Ciphertext<RistrettoPoint>>) {
-    
-    let (plaintexts,cs) = (0..n).into_par_iter().map(|_| {
-        let mut csprng = OsRng;
-        let mut value = [0u8;30];
-        csprng.fill_bytes(&mut value);        
-        let encoded = pk.group.encode(&value);
-        let encrypted = pk.encrypt(&encoded);
-        (value, encrypted)
-        
-    }).unzip();
+pub fn random_ristretto_encrypt_ballots(
+    n: usize,
+    pk: &PublicKey<RistrettoPoint, RistrettoGroup>,
+) -> (Vec<[u8; 30]>, Vec<Ciphertext<RistrettoPoint>>) {
+    let (plaintexts, cs) = (0..n)
+        .into_par_iter()
+        .map(|_| {
+            let mut csprng = OsRng;
+            let mut value = [0u8; 30];
+            csprng.fill_bytes(&mut value);
+            let encoded = pk.group.encode(&value);
+            let encrypted = pk.encrypt(&encoded);
+            (value, encrypted)
+        })
+        .unzip();
 
-    
     (plaintexts, cs)
 }
 
-pub fn random_rug_encrypt_ballots(n: usize, pk: &PublicKey<Integer, RugGroup>) -> (Vec<Integer>, Vec<Ciphertext<Integer>>) {
-    
-    let (plaintexts,cs) = (0..n).into_par_iter().map(|_| {
+pub fn random_rug_encrypt_ballots(
+    n: usize,
+    pk: &PublicKey<Integer, RugGroup>,
+) -> (Vec<Integer>, Vec<Ciphertext<Integer>>) {
+    let (plaintexts, cs) = (0..n)
+        .into_par_iter()
+        .map(|_| {
             let value = pk.group.rnd_exp();
             let encoded = pk.group.encode(&value);
             let encrypted = pk.encrypt(&encoded);
             (value, encrypted)
-        
-    }).unzip();
+        })
+        .unzip();
 
-    
     (plaintexts, cs)
 }
 
-pub fn random_encrypt_ballots<E: Element, G: Group<E>>(n: usize, pk: &PublicKey<E, G>) -> (Vec<E::Plaintext>, Vec<Ciphertext<E>>) {
-    
-    let plaintexts: Vec<E::Plaintext> = (0..n).into_par_iter().map(|_| {
-        pk.group.rnd_plaintext()
-    }).collect();
+pub fn random_encrypt_ballots<E: Element, G: Group<E>>(
+    n: usize,
+    pk: &PublicKey<E, G>,
+) -> (Vec<E::Plaintext>, Vec<Ciphertext<E>>) {
+    let plaintexts: Vec<E::Plaintext> = (0..n)
+        .into_par_iter()
+        .map(|_| pk.group.rnd_plaintext())
+        .collect();
 
-    let cs: Vec<Ciphertext<E>> = plaintexts.par_iter().map(|p| {
+    let cs: Vec<Ciphertext<E>> = plaintexts
+        .par_iter()
+        .map(|p| {
             let encoded = pk.group.encode(&p);
             let encrypted = pk.encrypt(&encoded);
             // (value, encrypted)
             encrypted
-        
-    }).collect();
-    
+        })
+        .collect();
+
     (plaintexts, cs)
 }
-
 
 pub(crate) fn short(input: &[u8; 64]) -> Vec<u8> {
     input[0..3].to_vec()
 }
 pub(crate) fn shortm(input: &[[u8; 64]; crate::protocol::MAX_TRUSTEES]) -> Vec<Vec<u8>> {
-    input.iter().cloned().filter(|&a| a != [0u8; 64])
-        .map(|a| a[0..3].to_vec())        
+    input
+        .iter()
+        .cloned()
+        .filter(|&a| a != [0u8; 64])
+        .map(|a| a[0..3].to_vec())
         .collect()
 }
 

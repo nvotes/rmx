@@ -1,8 +1,9 @@
 #![allow(dead_code)]
-#[macro_use] extern crate quick_error;
+#[macro_use]
+extern crate quick_error;
 
-pub mod crypto;
 pub mod bulletinboard;
-pub mod protocol;
+pub mod crypto;
 pub mod data;
+pub mod protocol;
 pub mod util;

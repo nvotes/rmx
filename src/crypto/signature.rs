@@ -1,13 +1,11 @@
-
-
 #[cfg(test)]
 mod tests {
-    use rand::rngs::OsRng;
     use ed25519_dalek::Keypair;
     use ed25519_dalek::Signature;
-    use ed25519_dalek::{Signer, PublicKey, Verifier};
+    use ed25519_dalek::{PublicKey, Signer, Verifier};
+    use rand::rngs::OsRng;
 
-    use crate::data::bytes::{Ser, Deser};
+    use crate::data::bytes::{Deser, Ser};
 
     #[test]
     fn test_signature() {
@@ -37,11 +35,11 @@ mod tests {
         let message_b = message.to_vec().ser();
         let signature_b = signature.ser();
         let pk_b = public_key.ser();
-        
+
         let message_d = Vec::<u8>::deser(&message_b).unwrap();
         let pk_d = PublicKey::deser(&pk_b).unwrap();
         let signature_d = Signature::deser(&signature_b).unwrap();
-        
+
         assert!(pk_d.verify(&message_d, &signature_d).is_ok());
     }
 }

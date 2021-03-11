@@ -1,13 +1,11 @@
 use criterion::{criterion_group, criterion_main, Criterion};
+use rmx::crypto::backend::ristretto_b::*;
+use rmx::util;
+use sha2::{Digest, Sha512};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Read, Write},
 };
-use sha2::{Sha512, Digest};
-use rmx::util;
-use rmx::crypto::backend::ristretto_b::*;
-
-
 
 fn create_file() {
     // 1M = 62M
@@ -18,7 +16,7 @@ fn create_file() {
     // let es = util::random_rug_ballots(100000, &group).ciphertexts;
     let bytes = bincode::serialize(&es).unwrap();
     let mut file = File::create("/tmp/big_file2").unwrap();
-    
+
     file.write_all(&bytes).unwrap();
 }
 
@@ -41,9 +39,8 @@ fn hash_file() {
         reader.consume(length);
     }
 
-
     // read hash digest and consume hasher
-    let mut result = [0u8;64];
+    let mut result = [0u8; 64];
     let bytes = hasher.finalize();
     result.copy_from_slice(bytes.as_slice());
 }
@@ -59,7 +56,7 @@ fn hash_file_nobuf() {
     hasher.update(buffer);
 
     // read hash digest and consume hasher
-    let mut result = [0u8;64];
+    let mut result = [0u8; 64];
     let bytes = hasher.finalize();
     result.copy_from_slice(bytes.as_slice());
 }
@@ -67,8 +64,7 @@ fn hash_file_nobuf() {
 fn criterion_benchmark(c: &mut Criterion) {
     create_file();
     let mut group = c.benchmark_group("hash_file");
-    group
-        .sample_size(10);
+    group.sample_size(10);
     group.bench_function("hash_file", |b| b.iter(|| hash_file()));
     group.finish();
 }

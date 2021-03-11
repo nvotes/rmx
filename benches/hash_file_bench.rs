@@ -21,7 +21,7 @@ fn create_file() {
 }
 
 fn hash_file() {
-    const PATH: &'static str = "/tmp/big_file2";
+    const PATH: &str = "/tmp/big_file2";
     let file = File::open(PATH).unwrap();
     let mut reader = BufReader::with_capacity(4096 * 512, file);
     // create a Sha256 object
@@ -46,7 +46,7 @@ fn hash_file() {
 }
 
 fn hash_file_nobuf() {
-    const PATH: &'static str = "/tmp/big_file";
+    const PATH: &str = "/tmp/big_file";
     let mut file = File::open(PATH).unwrap();
     // create a Sha256 object
     let mut hasher = Sha512::new();
@@ -65,7 +65,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     create_file();
     let mut group = c.benchmark_group("hash_file");
     group.sample_size(10);
-    group.bench_function("hash_file", |b| b.iter(|| hash_file()));
+    group.bench_function("hash_file", |b| b.iter(hash_file));
     group.finish();
 }
 

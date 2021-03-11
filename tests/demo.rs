@@ -71,13 +71,13 @@ where
     ) -> Demo<E, G, B> {
         Demo {
             cb_sink: sink,
-            trustees: trustees,
-            bb_keypair: bb_keypair,
+            trustees,
+            bb_keypair,
             config: cfg,
-            boards: boards,
+            boards,
             // board: bb,
             all_plaintexts: vec![],
-            ballots: ballots,
+            ballots,
         }
     }
 
@@ -179,7 +179,7 @@ where
         self.cb_sink
             .send(Box::new(move |s: &mut cursive::Cursive| {
                 s.call_on_name("status", |view: &mut TextView| {
-                    let styled = if status == "Ready".to_string() {
+                    let styled = if status == *"Ready" {
                         StyledString::styled(status, Color::Light(BaseColor::Green))
                     } else {
                         StyledString::styled(status, Color::Light(BaseColor::Yellow))
@@ -541,8 +541,8 @@ impl std::io::Write for DemoLogSink {
 
         let string = String::from(std::str::from_utf8(&buf).unwrap());
         self.buffer.push_str(&string);
-        if self.buffer.contains("\n") {
-            let split: Vec<&str> = self.buffer.split("\n").collect();
+        if self.buffer.contains('\n') {
+            let split: Vec<&str> = self.buffer.split('\n').collect();
             let items = split.len();
             let head = &split[0..items - 1];
 
@@ -600,9 +600,9 @@ fn gen_config<E: Element, G: Group<E>>(
     let id = Uuid::new_v4();
 
     let cfg = braid::data::artifact::Config {
-        id: id.as_bytes().clone(),
+        id: *id.as_bytes(),
         group: group.clone(),
-        contests: contests,
+        contests,
         ballotbox: ballotbox_pk,
         trustees: trustee_pks,
         phantom_e: PhantomData,

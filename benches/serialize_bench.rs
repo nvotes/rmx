@@ -37,7 +37,7 @@ pub fn shuffle_ristretto(n: usize) -> Mix<RistrettoPoint> {
     let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
     Mix {
         mixed_ballots: e_primes,
-        proof: proof,
+        proof,
     }
 }
 
@@ -66,7 +66,7 @@ pub fn shuffle_rug(n: usize) -> Mix<Integer> {
     let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
     Mix {
         mixed_ballots: e_primes,
-        proof: proof,
+        proof,
     }
 }
 

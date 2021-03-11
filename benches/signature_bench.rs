@@ -19,7 +19,7 @@ fn signature() {
 
 fn criterion_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("signature");
-    group.bench_function("signature", |b| b.iter(|| signature()));
+    group.bench_function("signature", |b| b.iter(signature));
     group.finish();
 }
 

@@ -217,9 +217,9 @@ fn gen_config<E: Element, G: Group<E>>(
     let id = Uuid::new_v4();
 
     let cfg = braid::data::artifact::Config {
-        id: id.as_bytes().clone(),
+        id: *id.as_bytes(),
         group: group.clone(),
-        contests: contests,
+        contests,
         ballotbox: ballotbox_pk,
         trustees: trustee_pks,
         phantom_e: PhantomData,

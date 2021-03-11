@@ -68,7 +68,7 @@ pub fn shuffle_ristretto(n: usize) -> bool {
     let _hs = generators(es.len() + 1, &group, 0, seed);
     let ok = shuffler.check_proof(&proof, &es, &e_primes);
 
-    assert!(ok == true);
+    assert!(ok);
 
     ok
 }

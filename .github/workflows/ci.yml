@@ -102,8 +102,8 @@ jobs:
       
   # check dependencies
   # based on https://github.com/EmbarkStudios/cargo-deny-action
-  coverage:
-    name: Coverage
+  dependencies:
+    name: Dependencies
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1

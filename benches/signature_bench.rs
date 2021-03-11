@@ -1,9 +1,9 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 
-use rand::rngs::OsRng;
 use ed25519_dalek::Keypair;
 use ed25519_dalek::Signature;
-use ed25519_dalek::{Signer, PublicKey, Verifier};
+use ed25519_dalek::{PublicKey, Signer, Verifier};
+use rand::rngs::OsRng;
 
 fn signature() {
     let mut csprng = OsRng;

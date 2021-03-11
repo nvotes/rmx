@@ -1,10 +1,59 @@
-# braid
+# Braid
 
-Braid is a verifiable re-encryption mixnet that can serve as the cryptographic core of secure voting systems. 
+[![License](https://img.shields.io/github/license/nvotes/braid)](License)
+[![Build](https://github.com/nvotes/braid/workflows/CI/badge.svg)](https://github.com/nvotes/braid/actions?workflow=CI)
+[![Coverage status](https://img.shields.io/codecov/c/github/nvotes/braid)](https://codecov.io/gh/nvotes/braid/)
+[![Community chat](https://img.shields.io/discord/651538033291690014)](https://discord.gg/dfdnFWJ)
+
+## nVotes verifiable re-encryption mixnet written in Rust
+
+![Demo](https://github.com/ruescasd/rmx-mg/raw/main/demo.png)
+
+Braid is a verifiable re-encryption mixnet written in Rust that can serve as the 
+cryptographic core of secure voting systems. 
+
+## Build
+
+This is a project written in [Rust] and uses `cargo`. After installing 
+stable Rust, to build Braid just execute:
+
+```bash
+cargo build
+```
+
+# Continuous Integration
+
+There are multiple checks executed through the usage of Github Actions to verify
+the health of the code when pushed:
+1. **Compiler warning/errors**: checked using `cargo check` and 
+`cargo check ---tests`. Use `cargo fix` and `cargo fix --tests` to fix the 
+issues that appear.
+2. **Unit tests**: check that all unit tests pass using `cargo test`.
+3. **Code style**: check that the code style follows standard Rust format, using
+`cargo fmt -- --check`. Fix it using `cargo fmt`.
+4. **Code linting**: Lint that checks for common Rust mistakes using 
+`cargo clippy`. You can try to fix automatically most of those mistakes using
+`cargo clippy --fix -Z unstable-options`.
+5. **Code coverage**: Detects code coverage with [grcov] and pushes the 
+information (in master branch) to [codecov].
+6. **Dependencies scan**: Audit dependencies for security vulnerabilities in the
+[RustSec Advisory Database], unmaintained dependencies, incompatible licenses 
+and banned packages using [cargo-deny]. Use `cargo deny fix` or 
+`cargo deny --allow-incompatible` to try to solve the detected issues.
+
+## Demo
+
+An interactive n-curses demo can be run with
+
+```bash
+cargo test demo --release -- --ignored 
+```
+
+By default the demo will run with 3 trustees and an in-memory bulletin board.
 
 ## Status
 
-Prototype.
+Prototype. Do not use in production.
 
 ## Dependencies
 
@@ -33,12 +82,9 @@ Braid uses standard crytpographic techniques, most significantly
 
 * [Pseudo-Code Algorithms for Verifiable Re-Encryption Mix-Nets](https://www.ifca.ai/fc17/voting/papers/voting17_HLKD17.pdf)
 
-## Demo
-
-An interactive n-curses demo can be run with
-
-    cargo test demo --release -- --ignored 
-
-By default the demo will run with 3 trustees and an in-memory bulletin board.
-
-![Demo](https://github.com/ruescasd/rmx-mg/raw/main/demo.png)
+[nVotes]: https://nvotes.com
+[Rust]: https://www.rust-lang.org/
+[grcov]: https://crates.io/crates/grcov
+[codecov]: http://codecov.com/
+[RustSec Advisory Database]: https://github.com/RustSec/advisory-db/
+[cargo-deny]: https://crates.io/crates/cargo-deny

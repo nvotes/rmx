@@ -2,16 +2,16 @@ use std::marker::{Send, Sync};
 
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
-use sha2::{Sha512, Sha256, Digest};
-use rug::{Integer,integer::Order};
+use rug::{integer::Order, Integer};
+use sha2::{Digest, Sha256, Sha512};
 
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
-use crate::crypto::shuffler::{YChallengeInput, TValues};
+use crate::crypto::shuffler::{TValues, YChallengeInput};
 
 pub type Hash = [u8; 64];
 
-trait ConcatWithLength  {
+trait ConcatWithLength {
     fn extendl(&mut self, add: &Vec<u8>);
 }
 
@@ -58,8 +58,7 @@ impl HashTo<Integer> for RugHasher {
         hasher.update(bytes);
         let hashed = hasher.finalize();
 
-        let (_, rem) = Integer::from_digits(&hashed, Order::Lsf)
-            .div_rem(self.0.clone());
+        let (_, rem) = Integer::from_digits(&hashed, Order::Lsf).div_rem(self.0.clone());
 
         rem
     }
@@ -68,38 +67,42 @@ impl HashTo<Integer> for RugHasher {
 // https://stackoverflow.com/questions/39675949/is-there-a-trait-supplying-iter
 fn concat_bytes_iter<'a, H: 'a + HashBytes, I: IntoIterator<Item = &'a H>>(cs: I) -> Vec<u8> {
     cs.into_iter()
-    .map(|x| x.get_bytes())
-    .fold(vec![], |mut a, b| {
-        let length = b.len() as u64;
-        a.extend(&length.to_le_bytes());
-        a.extend(b);
-        a
-    })
+        .map(|x| x.get_bytes())
+        .fold(vec![], |mut a, b| {
+            let length = b.len() as u64;
+            a.extend(&length.to_le_bytes());
+            a.extend(b);
+            a
+        })
 }
 
 fn concat_bytes<T: HashBytes>(cs: &Vec<T>) -> Vec<u8> {
     concat_bytes_iter(cs)
 }
 
-pub fn shuffle_proof_us<E: Element>(es: &Vec<Ciphertext<E>>, e_primes: &Vec<Ciphertext<E>>, 
-    cs: &Vec<E>, exp_hasher: &dyn HashTo<E::Exp>, n: usize) -> Vec<E::Exp> {
-    
+pub fn shuffle_proof_us<E: Element>(
+    es: &Vec<Ciphertext<E>>,
+    e_primes: &Vec<Ciphertext<E>>,
+    cs: &Vec<E>,
+    exp_hasher: &dyn HashTo<E::Exp>,
+    n: usize,
+) -> Vec<E::Exp> {
     let mut prefix_vector = concat_bytes(es);
     prefix_vector.extend(concat_bytes(e_primes));
     prefix_vector.extend(concat_bytes(cs));
-    
-    // optimization: instead of calculating u = H(prefix || i), 
+
+    // optimization: instead of calculating u = H(prefix || i),
     // we do u = H(H(prefix) || i)
     // that way we avoid allocating prefix-size bytes n times
     let mut hasher = Sha512::new();
     hasher.update(prefix_vector);
     let prefix_hash = hasher.finalize().to_vec();
     let mut ret = Vec::with_capacity(n);
-    
+
     for i in 0..n {
         let mut next = prefix_hash.clone();
         next.extendl(&i.to_le_bytes().to_vec());
-        
+
         let u: E::Exp = exp_hasher.hash_to(&next);
         ret.push(u);
     }
@@ -107,15 +110,17 @@ pub fn shuffle_proof_us<E: Element>(es: &Vec<Ciphertext<E>>, e_primes: &Vec<Ciph
     ret
 }
 
-pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(y: &YChallengeInput<E, G>, 
-    t: &TValues<E>, exp_hasher: &dyn HashTo<E::Exp>) -> E::Exp {
-
+pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(
+    y: &YChallengeInput<E, G>,
+    t: &TValues<E>,
+    exp_hasher: &dyn HashTo<E::Exp>,
+) -> E::Exp {
     let mut bytes = concat_bytes(&y.es);
     bytes.extend(concat_bytes(&y.e_primes));
     bytes.extend(concat_bytes(&y.cs));
     bytes.extend(concat_bytes(&y.c_hats));
     bytes.extend(y.pk.value.get_bytes());
-    
+
     bytes.extend(t.t1.get_bytes());
     bytes.extend(t.t2.get_bytes());
     bytes.extend(t.t3.get_bytes());
@@ -126,24 +131,35 @@ pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(y: &YChallengeInput<E, G
     exp_hasher.hash_to(&bytes)
 }
 
-pub fn schnorr_proof_challenge<E: Element>(g: &E, public: &E, 
-    commitment: &E, exp_hasher: &dyn HashTo<E::Exp>) -> E::Exp {
+pub fn schnorr_proof_challenge<E: Element>(
+    g: &E,
+    public: &E,
+    commitment: &E,
+    exp_hasher: &dyn HashTo<E::Exp>,
+) -> E::Exp {
     let values = [g, public, commitment].to_vec();
 
     let bytes = concat_bytes_iter(values);
     exp_hasher.hash_to(&bytes)
 }
 
-pub fn cp_proof_challenge<E: Element>(g1: &E, g2: &E, public1: &E, public2: &E, 
-    commitment1: &E, commitment2: &E, exp_hasher: &dyn HashTo<E::Exp>) -> E::Exp {
+pub fn cp_proof_challenge<E: Element>(
+    g1: &E,
+    g2: &E,
+    public1: &E,
+    public2: &E,
+    commitment1: &E,
+    commitment2: &E,
+    exp_hasher: &dyn HashTo<E::Exp>,
+) -> E::Exp {
     let values = [g1, g2, public1, public2, commitment1, commitment2].to_vec();
-    
+
     let bytes = concat_bytes_iter(values);
     exp_hasher.hash_to(&bytes)
 }
 
-use crate::util;
 use crate::data::bytes::ToByteTree;
+use crate::util;
 
 pub fn hash<T: HashBytes>(data: &T) -> [u8; 64] {
     let bytes = data.get_bytes();
@@ -212,7 +228,7 @@ impl HashBytes for Option<RugGroup> {
     fn get_bytes(&self) -> Vec<u8> {
         match self {
             Some(g) => g.get_bytes(),
-            None => vec![]
+            None => vec![],
         }
     }
 }
@@ -225,8 +241,8 @@ impl HashBytes for RistrettoGroup {
     }
 }
 
-use crate::crypto::base::Schnorr;
 use crate::crypto::base::ChaumPedersen;
+use crate::crypto::base::Schnorr;
 
 impl<E: Element> HashBytes for Schnorr<E> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -249,8 +265,8 @@ impl<E: Element> HashBytes for ChaumPedersen<E> {
     }
 }
 
-use crate::crypto::shuffler::ShuffleProof;
 use crate::crypto::shuffler::Responses;
+use crate::crypto::shuffler::ShuffleProof;
 
 impl<E: Element> HashBytes for TValues<E> {
     fn get_bytes(&self) -> Vec<u8> {
@@ -327,15 +343,15 @@ impl HashBytes for Signature {
     }
 }
 
-use crate::protocol::statement::Statement;
 use crate::protocol::statement::SignedStatement;
+use crate::protocol::statement::Statement;
 
 impl HashBytes for Statement {
     fn get_bytes(&self) -> Vec<u8> {
         let discriminant = self.stype as u8;
         let mut bytes: Vec<u8> = vec![discriminant];
         bytes.extend(&self.contest.to_le_bytes());
-        
+
         for b in self.hashes.iter() {
             bytes.extend(b);
         }
@@ -348,7 +364,7 @@ impl HashBytes for SignedStatement {
     fn get_bytes(&self) -> Vec<u8> {
         let mut bytes: Vec<u8> = self.statement.get_bytes();
         bytes.extendl(&self.signature.get_bytes());
-        
+
         bytes
     }
 }
@@ -442,20 +458,20 @@ impl HashBytes for Act {
                 let mut v = vec![1u8];
                 v.extendl(&h.to_vec());
                 v
-            },
+            }
             Act::PostShare(h, i) => {
                 let mut v = vec![2u8];
                 v.extendl(&h.to_vec());
                 v.extendl(&i.to_le_bytes().to_vec());
                 v
-            },
+            }
             Act::CombineShares(h, i, s) => {
                 let mut v = vec![3u8];
                 v.extendl(&h.to_vec());
                 v.extendl(&i.to_le_bytes().to_vec());
                 v.extendl(&concat_bytes_iter(s));
                 v
-            },
+            }
             Act::CheckPk(h, i, pk, s) => {
                 let mut v = vec![4u8];
                 v.extendl(&h.to_vec());
@@ -463,7 +479,7 @@ impl HashBytes for Act {
                 v.extendl(&pk.to_vec());
                 v.extendl(&concat_bytes_iter(s));
                 v
-            },
+            }
             Act::Mix(h, i, bs, pk_h) => {
                 let mut v = vec![5u8];
                 v.extendl(&h.to_vec());
@@ -514,19 +530,15 @@ impl HashBytes for Act {
 }
 
 #[cfg(test)]
-mod tests {  
+mod tests {
     // use hex_literal::hex;
-    use sha2::{Sha512, Digest};
-    use rand::RngCore;  
     use rand::rngs::OsRng;
-    use rug::{
-        Integer,
-        integer::Order
-    };
-    
+    use rand::RngCore;
+    use rug::{integer::Order, Integer};
+    use sha2::{Digest, Sha512};
+
     #[test]
     fn test_sha512() {
-        
         // create a Sha256 object
         let mut hasher = Sha512::new();
 
@@ -534,14 +546,13 @@ mod tests {
         hasher.update(b"hello world");
 
         // read hash digest and consume hasher
-        let mut result = [0u8;64];
+        let mut result = [0u8; 64];
         let bytes = hasher.finalize();
         result.copy_from_slice(bytes.as_slice());
     }
 
     #[test]
     fn test_rug_endian() {
-        
         let mut csprng = OsRng;
         let value = csprng.next_u64();
         let i = Integer::from(value);
@@ -551,5 +562,4 @@ mod tests {
 
         assert_eq!(b1, b2);
     }
-
 }

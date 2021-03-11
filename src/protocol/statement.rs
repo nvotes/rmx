@@ -1,34 +1,34 @@
 use std::convert::TryInto;
 
 use ed25519_dalek::PublicKey as SPublicKey;
-use ed25519_dalek::Verifier;
 use ed25519_dalek::Signature;
+use ed25519_dalek::Verifier;
 use ed25519_dalek::{Keypair, Signer};
-use serde::{Deserialize, Serialize};
 use num_enum::TryFromPrimitive;
+use serde::{Deserialize, Serialize};
 
-use crate::util;
-use crate::protocol::facts::InputFact;
-use crate::protocol::logic::ContestIndex;
-use crate::protocol::logic::TrusteeIndex;
+use crate::bulletinboard::*;
 use crate::crypto::base::Element;
 use crate::crypto::base::Group;
 use crate::crypto::hashing;
-use crate::bulletinboard::*;
+use crate::protocol::facts::InputFact;
+use crate::protocol::logic::ContestIndex;
+use crate::protocol::logic::TrusteeIndex;
+use crate::util;
 
 // a 512 bit hash as a Vector (rather than as a [u8; 64])
 type VHash = Vec<u8>;
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct Statement {
-    pub stype: StatementType, 
+    pub stype: StatementType,
     pub contest: ContestIndex,
-    // special case for mixes where we need to keep track of 
+    // special case for mixes where we need to keep track of
     // target trustee (the trustee producing the mix
     // which the local trustee is signing)
     pub trustee_aux: Option<TrusteeIndex>,
     // hashes in Vector<u8> form (as opposed to [u8;64])
-    pub hashes: Vec<VHash>
+    pub hashes: Vec<VHash>,
 }
 
 impl Statement {
@@ -37,7 +37,7 @@ impl Statement {
             stype: StatementType::Config,
             contest: 0,
             trustee_aux: None,
-            hashes: vec![config]
+            hashes: vec![config],
         }
     }
     pub fn keyshare(config: VHash, share: VHash, contest: u32) -> Statement {
@@ -45,7 +45,7 @@ impl Statement {
             stype: StatementType::Keyshare,
             contest: contest,
             trustee_aux: None,
-            hashes: vec![config, share]
+            hashes: vec![config, share],
         }
     }
     pub fn public_key(config: VHash, public_key: VHash, contest: u32) -> Statement {
@@ -53,31 +53,41 @@ impl Statement {
             stype: StatementType::PublicKey,
             contest: contest,
             trustee_aux: None,
-            hashes: vec![config, public_key]
+            hashes: vec![config, public_key],
         }
     }
-    pub fn ballots(config: VHash, ballots: VHash, contest: u32, ) -> Statement {
+    pub fn ballots(config: VHash, ballots: VHash, contest: u32) -> Statement {
         Statement {
             stype: StatementType::Ballots,
             contest: contest,
             trustee_aux: None,
-            hashes: vec![config, ballots]
+            hashes: vec![config, ballots],
         }
     }
-    pub fn mix(config: VHash, mix: VHash, ballots: VHash, mixing_trustee: Option<u32>, contest: u32) -> Statement {
+    pub fn mix(
+        config: VHash,
+        mix: VHash,
+        ballots: VHash,
+        mixing_trustee: Option<u32>,
+        contest: u32,
+    ) -> Statement {
         Statement {
             stype: StatementType::Mix,
             contest: contest,
             trustee_aux: mixing_trustee,
-            hashes: vec![config, mix, ballots]
+            hashes: vec![config, mix, ballots],
         }
     }
-    pub fn partial_decryption(config: VHash, partial_decryptions: VHash, contest: u32) -> Statement {
+    pub fn partial_decryption(
+        config: VHash,
+        partial_decryptions: VHash,
+        contest: u32,
+    ) -> Statement {
         Statement {
             stype: StatementType::PDecryption,
             contest: contest,
             trustee_aux: None,
-            hashes: vec![config, partial_decryptions]
+            hashes: vec![config, partial_decryptions],
         }
     }
     pub fn plaintexts(config: VHash, plaintexts: VHash, contest: u32) -> Statement {
@@ -85,7 +95,7 @@ impl Statement {
             stype: StatementType::Plaintexts,
             contest: contest,
             trustee_aux: None,
-            hashes: vec![config, plaintexts]
+            hashes: vec![config, plaintexts],
         }
     }
 }
@@ -99,13 +109,13 @@ pub enum StatementType {
     Ballots,
     Mix,
     PDecryption,
-    Plaintexts
+    Plaintexts,
 }
 
 #[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
 pub struct SignedStatement {
-    pub statement: Statement, 
-    pub signature: Signature
+    pub statement: Statement,
+    pub signature: Signature,
 }
 
 impl SignedStatement {
@@ -115,65 +125,100 @@ impl SignedStatement {
         let signature = pk.sign(&stmt_h);
         SignedStatement {
             statement,
-            signature
+            signature,
         }
     }
-    pub fn keyshare(cfg_h: &hashing::Hash, share_h: &hashing::Hash, contest: u32, pk: &Keypair) -> SignedStatement {
+    pub fn keyshare(
+        cfg_h: &hashing::Hash,
+        share_h: &hashing::Hash,
+        contest: u32,
+        pk: &Keypair,
+    ) -> SignedStatement {
         let statement = Statement::keyshare(cfg_h.to_vec(), share_h.to_vec(), contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
             statement,
-            signature
+            signature,
         }
     }
-    pub fn public_key(cfg_h: &hashing::Hash, pk_h: &hashing::Hash, contest: u32, pk: &Keypair) -> SignedStatement {
+    pub fn public_key(
+        cfg_h: &hashing::Hash,
+        pk_h: &hashing::Hash,
+        contest: u32,
+        pk: &Keypair,
+    ) -> SignedStatement {
         let statement = Statement::public_key(cfg_h.to_vec(), pk_h.to_vec(), contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
             statement,
-            signature
+            signature,
         }
     }
-    pub fn ballots(cfg_h: &hashing::Hash, ballots_h: &hashing::Hash, contest: u32, pk: &Keypair) -> SignedStatement {
+    pub fn ballots(
+        cfg_h: &hashing::Hash,
+        ballots_h: &hashing::Hash,
+        contest: u32,
+        pk: &Keypair,
+    ) -> SignedStatement {
         let statement = Statement::ballots(cfg_h.to_vec(), ballots_h.to_vec(), contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
             statement,
-            signature
+            signature,
         }
     }
-    pub fn mix(cfg_h: &hashing::Hash, mix_h: &hashing::Hash, ballots_h: &hashing::Hash, 
-        mixing_trustee: Option<TrusteeIndex>, contest: u32, pk: &Keypair) -> SignedStatement {
-        
-        let statement = Statement::mix(cfg_h.to_vec(), mix_h.to_vec(), 
-            ballots_h.to_vec(), mixing_trustee, contest);
+    pub fn mix(
+        cfg_h: &hashing::Hash,
+        mix_h: &hashing::Hash,
+        ballots_h: &hashing::Hash,
+        mixing_trustee: Option<TrusteeIndex>,
+        contest: u32,
+        pk: &Keypair,
+    ) -> SignedStatement {
+        let statement = Statement::mix(
+            cfg_h.to_vec(),
+            mix_h.to_vec(),
+            ballots_h.to_vec(),
+            mixing_trustee,
+            contest,
+        );
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
             statement,
-            signature
+            signature,
         }
     }
-    
-    pub fn pdecryptions(cfg_h: &hashing::Hash, pd_h: &hashing::Hash, contest: u32, pk: &Keypair) -> SignedStatement {
+
+    pub fn pdecryptions(
+        cfg_h: &hashing::Hash,
+        pd_h: &hashing::Hash,
+        contest: u32,
+        pk: &Keypair,
+    ) -> SignedStatement {
         let statement = Statement::partial_decryption(cfg_h.to_vec(), pd_h.to_vec(), contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
             statement,
-            signature
+            signature,
         }
     }
-    pub fn plaintexts(cfg_h: &hashing::Hash, plaintext_h: &hashing::Hash, contest: u32, pk: &Keypair) -> SignedStatement {
+    pub fn plaintexts(
+        cfg_h: &hashing::Hash,
+        plaintext_h: &hashing::Hash,
+        contest: u32,
+        pk: &Keypair,
+    ) -> SignedStatement {
         let statement = Statement::plaintexts(cfg_h.to_vec(), plaintext_h.to_vec(), contest);
         let stmt_h = hashing::hash(&statement);
         let signature = pk.sign(&stmt_h);
         SignedStatement {
             statement,
-            signature
+            signature,
         }
     }
 }
@@ -183,88 +228,96 @@ pub struct StatementVerifier {
     pub statement: SignedStatement,
     pub trustee: i32,
     pub contest: u32,
-    pub artifact_name: String
+    pub artifact_name: String,
 }
 
 impl StatementVerifier {
-    
-    pub(super) fn verify<E: Element, G: Group<E>, B: BulletinBoard<E, G>>(&self, board: &B) -> Option<InputFact> {
+    pub(super) fn verify<E: Element, G: Group<E>, B: BulletinBoard<E, G>>(
+        &self,
+        board: &B,
+    ) -> Option<InputFact> {
         let statement = &self.statement.statement;
         let config_opt = board.get_config_unsafe().ok()?;
         let config = config_opt?;
-        
-        let (pk, self_t): (SPublicKey, u32) =
-        if self.trustee >= 0 {
-            (config.trustees[self.trustee as usize], self.trustee.try_into().unwrap())
+
+        let (pk, self_t): (SPublicKey, u32) = if self.trustee >= 0 {
+            (
+                config.trustees[self.trustee as usize],
+                self.trustee.try_into().unwrap(),
+            )
         } else {
             (config.ballotbox, 0)
         };
 
         assert_eq!(statement.contest, self.contest);
-        
+
         let statement_hash = hashing::hash(statement);
         let verified = pk.verify(&statement_hash, &self.statement.signature);
         let config_h = util::to_u8_64(&statement.hashes[0]);
-        // info!("* Verify returns: [{}] on [{:?}] from trustee [{}] for contest [{}]", verified.is_ok(), 
+        // info!("* Verify returns: [{}] on [{:?}] from trustee [{}] for contest [{}]", verified.is_ok(),
         //    &self.statement.statement.stype, &self.trustee, &self.contest
         //);
-        
+
         let mixer_t = statement.trustee_aux.unwrap_or(self_t);
 
         match statement.stype {
-            StatementType::Config => {
-                self.ret(
-                    InputFact::config_signed_by(config_h, self_t),
-                    verified.is_ok() && (self.artifact_name == CONFIG)
-                )
-            },
+            StatementType::Config => self.ret(
+                InputFact::config_signed_by(config_h, self_t),
+                verified.is_ok() && (self.artifact_name == CONFIG),
+            ),
             StatementType::Keyshare => {
                 let share_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
                     InputFact::share_signed_by(config_h, self.contest, share_h, self_t),
-                    verified.is_ok() && (self.artifact_name == SHARE)
+                    verified.is_ok() && (self.artifact_name == SHARE),
                 )
-            },
+            }
             StatementType::PublicKey => {
                 let pk_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
                     InputFact::pk_signed_by(config_h, self.contest, pk_h, self_t),
-                    verified.is_ok() && (self.artifact_name == PUBLIC_KEY)
+                    verified.is_ok() && (self.artifact_name == PUBLIC_KEY),
                 )
-            },
+            }
             StatementType::Ballots => {
                 let ballots_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
                     InputFact::ballots_signed(config_h, self.contest, ballots_h),
-                    verified.is_ok() && (self.artifact_name == BALLOTS)
+                    verified.is_ok() && (self.artifact_name == BALLOTS),
                 )
-            },
+            }
             StatementType::Mix => {
                 let mix_h = util::to_u8_64(&statement.hashes[1]);
                 let ballots_h = util::to_u8_64(&statement.hashes[2]);
                 let expected_name = if mixer_t == self_t {
                     MIX.to_string()
-                }
-                else {
+                } else {
                     std::format!("{}.{}", MIX, mixer_t)
                 };
                 self.ret(
-                    InputFact::mix_signed_by(config_h, self.contest, mix_h, ballots_h, mixer_t, self_t),
-                    verified.is_ok() && (self.artifact_name == expected_name)
+                    InputFact::mix_signed_by(
+                        config_h,
+                        self.contest,
+                        mix_h,
+                        ballots_h,
+                        mixer_t,
+                        self_t,
+                    ),
+                    verified.is_ok() && (self.artifact_name == expected_name),
                 )
-            },
+            }
             StatementType::PDecryption => {
                 let pdecryptions_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
                     InputFact::decryption_signed_by(config_h, self.contest, pdecryptions_h, self_t),
-                    verified.is_ok() && (self.artifact_name == DECRYPTION)
+                    verified.is_ok() && (self.artifact_name == DECRYPTION),
                 )
-            },
+            }
             StatementType::Plaintexts => {
                 let plaintexts_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
                     InputFact::plaintexts_signed_by(config_h, self.contest, plaintexts_h, self_t),
-                    verified.is_ok() && (self.artifact_name == PLAINTEXTS)
+                    verified.is_ok() && (self.artifact_name == PLAINTEXTS),
                 )
             }
         }

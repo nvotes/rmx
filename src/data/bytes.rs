@@ -1,21 +1,20 @@
-use std::marker::PhantomData;
-use std::convert::TryInto;
 use std::convert::TryFrom;
+use std::convert::TryInto;
+use std::marker::PhantomData;
 
-use curve25519_dalek::ristretto::{RistrettoPoint,CompressedRistretto};
+use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
-use ed25519_dalek::Signature;
 use ed25519_dalek::PublicKey as SPublicKey;
-use rug::{Integer,integer::Order};
+use ed25519_dalek::Signature;
+use rug::{integer::Order, Integer};
 use serde_bytes::ByteBuf;
 
-
-use crate::crypto::base::*;
-use crate::crypto::backend::rug_b::*;
 use crate::crypto::backend::ristretto_b::*;
+use crate::crypto::backend::rug_b::*;
+use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
+use crate::crypto::shuffler::{Responses, ShuffleProof, TValues};
 use crate::data::artifact::*;
-use crate::crypto::shuffler::{ShuffleProof, Responses, TValues};
 use crate::protocol::statement::*;
 use crate::util;
 
@@ -45,14 +44,12 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub enum ByteTree {
     Leaf(ByteBuf),
-    Tree(Vec<ByteTree>)
+    Tree(Vec<ByteTree>),
 }
 use ByteTree::*;
 // OPT: try to move instead of copy
 impl ByteTree {
-    
     pub(crate) fn to_hashable_bytes(&self) -> Vec<u8> {
-        
         let ret = match self {
             Leaf(bytes) => {
                 let mut next: Vec<u8> = vec![];
@@ -63,7 +60,7 @@ impl ByteTree {
 
                 next
             }
-                
+
             Tree(trees) => {
                 let mut next: Vec<u8> = vec![];
                 let length = trees.len() as u64;
@@ -82,8 +79,7 @@ impl ByteTree {
     fn leaf(&self) -> Result<&Vec<u8>, ByteError> {
         if let Leaf(bytes) = self {
             Ok(bytes)
-        }
-        else {
+        } else {
             Err(ByteError::Msg(String::from("ByteTree: unexpected Tree")))
         }
     }
@@ -92,22 +88,22 @@ impl ByteTree {
         if let Tree(trees) = self {
             if trees.len() == length {
                 Ok(trees)
-            }
-            else {
+            } else {
                 Err(ByteError::Msg(String::from("ByteTree: size mismatch")))
             }
-        }
-        else {
+        } else {
             Err(ByteError::Msg(String::from("ByteTree: unexpected Leaf")))
         }
     }
 }
- 
+
 pub trait ToByteTree {
     fn to_byte_tree(&self) -> ByteTree;
 }
 pub trait FromByteTree {
-    fn from_byte_tree(tree: &ByteTree) -> Result<Self, ByteError> where Self: Sized;
+    fn from_byte_tree(tree: &ByteTree) -> Result<Self, ByteError>
+    where
+        Self: Sized;
 }
 
 pub trait Ser {
@@ -115,7 +111,9 @@ pub trait Ser {
 }
 
 pub trait Deser {
-    fn deser(bytes: &Vec<u8>) -> Result<Self, ByteError> where Self: Sized;
+    fn deser(bytes: &Vec<u8>) -> Result<Self, ByteError>
+    where
+        Self: Sized;
 }
 
 pub trait BTree: ToByteTree + FromByteTree {}
@@ -137,9 +135,7 @@ impl<T: FromByteTree> Deser for T {
 
 impl<T: ToByteTree> ToByteTree for Vec<T> {
     fn to_byte_tree(&self) -> ByteTree {
-        let tree = self.iter().map(|e| {
-            e.to_byte_tree()
-        }).collect();
+        let tree = self.iter().map(|e| e.to_byte_tree()).collect();
         ByteTree::Tree(tree)
     }
 }
@@ -147,14 +143,17 @@ impl<T: ToByteTree> ToByteTree for Vec<T> {
 impl<T: FromByteTree> FromByteTree for Vec<T> {
     fn from_byte_tree(tree: &ByteTree) -> Result<Vec<T>, ByteError> {
         if let Tree(trees) = tree {
-            let elements = trees.iter().map(|b| {
-                T::from_byte_tree(b)
-            }).collect::<Result<Vec<T>, ByteError>>();
+            let elements = trees
+                .iter()
+                .map(|b| T::from_byte_tree(b))
+                .collect::<Result<Vec<T>, ByteError>>();
 
             elements
         } else {
-            Err(ByteError::Msg(String::from("ByteTree: unexpected Leaf constructing Vec<T: FromByteTree>")))
-        }   
+            Err(ByteError::Msg(String::from(
+                "ByteTree: unexpected Leaf constructing Vec<T: FromByteTree>",
+            )))
+        }
     }
 }
 
@@ -168,9 +167,10 @@ impl FromByteTree for Vec<u8> {
     fn from_byte_tree(tree: &ByteTree) -> Result<Vec<u8>, ByteError> {
         if let Leaf(bytes) = tree {
             Ok(bytes.to_vec())
-        }
-        else {
-            Err(ByteError::Msg(String::from("ByteTree: unexpected Tree constructing Vec<u8>")))
+        } else {
+            Err(ByteError::Msg(String::from(
+                "ByteTree: unexpected Tree constructing Vec<u8>",
+            )))
         }
     }
 }
@@ -185,9 +185,8 @@ impl FromByteTree for Scalar {
     fn from_byte_tree(tree: &ByteTree) -> Result<Scalar, ByteError> {
         let bytes = tree.leaf()?;
         let b32 = util::to_u8_32(&bytes);
-        Scalar::from_canonical_bytes(b32).ok_or(
-            ByteError::Msg(String::from("Failed constructing scalar"))
-        )
+        Scalar::from_canonical_bytes(b32)
+            .ok_or(ByteError::Msg(String::from("Failed constructing scalar")))
     }
 }
 
@@ -201,16 +200,18 @@ impl FromByteTree for RistrettoPoint {
     fn from_byte_tree(tree: &ByteTree) -> Result<RistrettoPoint, ByteError> {
         let bytes = tree.leaf()?;
         let b32 = util::to_u8_32(&bytes);
-        CompressedRistretto(b32).decompress().ok_or(
-            ByteError::Msg(String::from("Failed constructing ristretto point"))
-        )
+        CompressedRistretto(b32)
+            .decompress()
+            .ok_or(ByteError::Msg(String::from(
+                "Failed constructing ristretto point",
+            )))
     }
 }
 
 impl ToByteTree for Signature {
     fn to_byte_tree(&self) -> ByteTree {
         Leaf(ByteBuf::from(self.to_bytes().to_vec()))
-    } 
+    }
 }
 
 impl FromByteTree for Signature {
@@ -220,7 +221,6 @@ impl FromByteTree for Signature {
         Ok(Signature::new(b64))
     }
 }
-
 
 impl ToByteTree for Integer {
     fn to_byte_tree(&self) -> ByteTree {
@@ -246,7 +246,7 @@ impl FromByteTree for SPublicKey {
     fn from_byte_tree(tree: &ByteTree) -> Result<SPublicKey, ByteError> {
         let bytes = tree.leaf()?;
         let signature = SPublicKey::from_bytes(&bytes)?;
-        
+
         Ok(signature)
     }
 }
@@ -274,7 +274,7 @@ impl FromByteTree for RugGroup {
             generator,
             modulus,
             modulus_exp,
-            co_factor
+            co_factor,
         };
 
         Ok(group)
@@ -308,21 +308,20 @@ impl FromByteTree for EncryptedPrivateKey {
         let trees = tree.tree(2)?;
         let bytes = trees[0].leaf()?.to_vec();
         let iv = trees[1].leaf()?.to_vec();
-        let ret = EncryptedPrivateKey {
-            bytes, iv
-        };
+        let ret = EncryptedPrivateKey { bytes, iv };
 
         Ok(ret)
     }
 }
-
 
 impl<E: ToByteTree, G: ToByteTree> ToByteTree for Config<E, G> {
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(5);
         trees.push(ByteTree::Leaf(ByteBuf::from(self.id.to_vec())));
         trees.push(self.group.to_byte_tree());
-        trees.push(ByteTree::Leaf(ByteBuf::from(self.contests.to_le_bytes().to_vec())));
+        trees.push(ByteTree::Leaf(ByteBuf::from(
+            self.contests.to_le_bytes().to_vec(),
+        )));
         trees.push(self.ballotbox.to_byte_tree());
         trees.push(self.trustees.to_byte_tree());
         ByteTree::Tree(trees)
@@ -340,7 +339,12 @@ impl<E, G: FromByteTree> FromByteTree for Config<E, G> {
         let ballotbox = SPublicKey::from_byte_tree(&trees[3])?;
         let trustees = Vec::<SPublicKey>::from_byte_tree(&trees[4])?;
         let ret = Config {
-            id, group, contests, ballotbox, trustees, phantom_e: PhantomData
+            id,
+            group,
+            contests,
+            ballotbox,
+            trustees,
+            phantom_e: PhantomData,
         };
         Ok(ret)
     }
@@ -360,16 +364,16 @@ impl<E: FromByteTree, G: FromByteTree> FromByteTree for PublicKey<E, G> {
         let trees = tree.tree(2)?;
         let value = E::from_byte_tree(&trees[0])?;
         let group = G::from_byte_tree(&trees[1])?;
-        let ret = PublicKey {
-            value, group
-        };
+        let ret = PublicKey { value, group };
 
         Ok(ret)
     }
 }
 
-impl<E: Element + ToByteTree, G: ToByteTree> ToByteTree for PrivateKey<E, G> 
-    where E::Exp: ToByteTree {
+impl<E: Element + ToByteTree, G: ToByteTree> ToByteTree for PrivateKey<E, G>
+where
+    E::Exp: ToByteTree,
+{
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
         trees.push(self.value.to_byte_tree());
@@ -380,22 +384,28 @@ impl<E: Element + ToByteTree, G: ToByteTree> ToByteTree for PrivateKey<E, G>
 }
 
 impl<E: Element + FromByteTree, G: FromByteTree> FromByteTree for PrivateKey<E, G>
-    where E::Exp: FromByteTree {
+where
+    E::Exp: FromByteTree,
+{
     fn from_byte_tree(tree: &ByteTree) -> Result<PrivateKey<E, G>, ByteError> {
         let trees = tree.tree(3)?;
         let value = E::Exp::from_byte_tree(&trees[0])?;
         let public_value = E::from_byte_tree(&trees[1])?;
         let group = G::from_byte_tree(&trees[2])?;
         let ret = PrivateKey {
-            value, public_value, group
+            value,
+            public_value,
+            group,
         };
 
         Ok(ret)
     }
 }
 
-impl<E: Element + ToByteTree> ToByteTree for Schnorr<E> 
-    where E::Exp: ToByteTree {
+impl<E: Element + ToByteTree> ToByteTree for Schnorr<E>
+where
+    E::Exp: ToByteTree,
+{
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
         trees.push(self.commitment.to_byte_tree());
@@ -406,7 +416,9 @@ impl<E: Element + ToByteTree> ToByteTree for Schnorr<E>
 }
 
 impl<E: Element + FromByteTree> FromByteTree for Schnorr<E>
-    where E::Exp: FromByteTree {
+where
+    E::Exp: FromByteTree,
+{
     fn from_byte_tree(tree: &ByteTree) -> Result<Schnorr<E>, ByteError> {
         let trees = tree.tree(3)?;
 
@@ -414,15 +426,19 @@ impl<E: Element + FromByteTree> FromByteTree for Schnorr<E>
         let challenge = E::Exp::from_byte_tree(&trees[1])?;
         let response = E::Exp::from_byte_tree(&trees[2])?;
         let ret = Schnorr {
-            commitment, challenge, response
+            commitment,
+            challenge,
+            response,
         };
 
         Ok(ret)
     }
 }
 
-impl<E: Element + ToByteTree> ToByteTree for ChaumPedersen<E> 
-    where E::Exp: ToByteTree {
+impl<E: Element + ToByteTree> ToByteTree for ChaumPedersen<E>
+where
+    E::Exp: ToByteTree,
+{
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
         trees.push(self.commitment1.to_byte_tree());
@@ -434,7 +450,9 @@ impl<E: Element + ToByteTree> ToByteTree for ChaumPedersen<E>
 }
 
 impl<E: Element + FromByteTree> FromByteTree for ChaumPedersen<E>
-    where E::Exp: FromByteTree {
+where
+    E::Exp: FromByteTree,
+{
     fn from_byte_tree(tree: &ByteTree) -> Result<ChaumPedersen<E>, ByteError> {
         let trees = tree.tree(4)?;
 
@@ -443,7 +461,10 @@ impl<E: Element + FromByteTree> FromByteTree for ChaumPedersen<E>
         let challenge = E::Exp::from_byte_tree(&trees[2])?;
         let response = E::Exp::from_byte_tree(&trees[3])?;
         let ret = ChaumPedersen {
-            commitment1, commitment2, challenge, response
+            commitment1,
+            commitment2,
+            challenge,
+            response,
         };
 
         Ok(ret)
@@ -451,7 +472,9 @@ impl<E: Element + FromByteTree> FromByteTree for ChaumPedersen<E>
 }
 
 impl<E: Element + ToByteTree, G: ToByteTree> ToByteTree for Keyshare<E, G>
-    where E::Exp: ToByteTree {
+where
+    E::Exp: ToByteTree,
+{
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
         trees.push(self.share.to_byte_tree());
@@ -462,15 +485,19 @@ impl<E: Element + ToByteTree, G: ToByteTree> ToByteTree for Keyshare<E, G>
 }
 
 impl<E: Element + FromByteTree, G: FromByteTree> FromByteTree for Keyshare<E, G>
-    where E::Exp: FromByteTree {
+where
+    E::Exp: FromByteTree,
+{
     fn from_byte_tree(tree: &ByteTree) -> Result<Keyshare<E, G>, ByteError> {
         let trees = tree.tree(3)?;
         let share = PublicKey::<E, G>::from_byte_tree(&trees[0])?;
         let proof = Schnorr::<E>::from_byte_tree(&trees[1])?;
         let encrypted_sk = EncryptedPrivateKey::from_byte_tree(&trees[2])?;
-        
+
         let ret = Keyshare {
-            share, proof, encrypted_sk
+            share,
+            proof,
+            encrypted_sk,
         };
 
         Ok(ret)
@@ -484,15 +511,13 @@ impl<E: ToByteTree> ToByteTree for Ballots<E> {
         ByteTree::Tree(trees)
     }
 }
- 
+
 impl<E: FromByteTree> FromByteTree for Ballots<E> {
     fn from_byte_tree(tree: &ByteTree) -> Result<Ballots<E>, ByteError> {
         let trees = tree.tree(1)?;
         let ciphertexts = Vec::<Ciphertext<E>>::from_byte_tree(&trees[0])?;
-        
-        let ret = Ballots {
-            ciphertexts
-        };
+
+        let ret = Ballots { ciphertexts };
 
         Ok(ret)
     }
@@ -505,22 +530,22 @@ impl<E: ToByteTree> ToByteTree for Plaintexts<E> {
         ByteTree::Tree(trees)
     }
 }
- 
+
 impl<E: FromByteTree> FromByteTree for Plaintexts<E> {
     fn from_byte_tree(tree: &ByteTree) -> Result<Plaintexts<E>, ByteError> {
         let trees = tree.tree(1)?;
         let plaintexts = Vec::<E>::from_byte_tree(&trees[0])?;
-        
-        let ret = Plaintexts {
-            plaintexts
-        };
+
+        let ret = Plaintexts { plaintexts };
 
         Ok(ret)
     }
 }
 
 impl<E: Element + ToByteTree> ToByteTree for Mix<E>
-    where E::Exp: ToByteTree {
+where
+    E::Exp: ToByteTree,
+{
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
         trees.push(self.mixed_ballots.to_byte_tree());
@@ -530,14 +555,17 @@ impl<E: Element + ToByteTree> ToByteTree for Mix<E>
 }
 
 impl<E: Element + FromByteTree> FromByteTree for Mix<E>
-    where E::Exp: FromByteTree {
+where
+    E::Exp: FromByteTree,
+{
     fn from_byte_tree(tree: &ByteTree) -> Result<Mix<E>, ByteError> {
         let trees = tree.tree(2)?;
         let mixed_ballots = Vec::<Ciphertext<E>>::from_byte_tree(&trees[0])?;
         let proof = ShuffleProof::<E>::from_byte_tree(&trees[1])?;
-        
+
         let ret = Mix {
-            mixed_ballots, proof    
+            mixed_ballots,
+            proof,
         };
 
         Ok(ret)
@@ -545,7 +573,9 @@ impl<E: Element + FromByteTree> FromByteTree for Mix<E>
 }
 
 impl<E: Element + ToByteTree> ToByteTree for ShuffleProof<E>
-    where E::Exp: ToByteTree {
+where
+    E::Exp: ToByteTree,
+{
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
         trees.push(self.t.to_byte_tree());
@@ -558,7 +588,9 @@ impl<E: Element + ToByteTree> ToByteTree for ShuffleProof<E>
 }
 
 impl<E: Element + FromByteTree> FromByteTree for ShuffleProof<E>
-    where E::Exp: FromByteTree {
+where
+    E::Exp: FromByteTree,
+{
     fn from_byte_tree(tree: &ByteTree) -> Result<ShuffleProof<E>, ByteError> {
         let trees = tree.tree(4)?;
         let t = TValues::<E>::from_byte_tree(&trees[0])?;
@@ -566,16 +598,16 @@ impl<E: Element + FromByteTree> FromByteTree for ShuffleProof<E>
         let cs = Vec::<E>::from_byte_tree(&trees[2])?;
         let c_hats = Vec::<E>::from_byte_tree(&trees[3])?;
 
-        let ret = ShuffleProof {
-            t, s, cs, c_hats
-        };
+        let ret = ShuffleProof { t, s, cs, c_hats };
 
         Ok(ret)
     }
 }
 
 impl<E: Element + ToByteTree> ToByteTree for TValues<E>
-    where E::Exp: ToByteTree {
+where
+    E::Exp: ToByteTree,
+{
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(6);
         trees.push(self.t1.to_byte_tree());
@@ -589,7 +621,9 @@ impl<E: Element + ToByteTree> ToByteTree for TValues<E>
 }
 
 impl<E: Element + FromByteTree> FromByteTree for TValues<E>
-    where E::Exp: FromByteTree {
+where
+    E::Exp: FromByteTree,
+{
     fn from_byte_tree(tree: &ByteTree) -> Result<TValues<E>, ByteError> {
         let trees = tree.tree(6)?;
         let t1 = E::from_byte_tree(&trees[0])?;
@@ -598,18 +632,24 @@ impl<E: Element + FromByteTree> FromByteTree for TValues<E>
         let t4_1 = E::from_byte_tree(&trees[3])?;
         let t4_2 = E::from_byte_tree(&trees[4])?;
         let t_hats = Vec::<E>::from_byte_tree(&trees[5])?;
-        
+
         let ret = TValues {
-            t1, t2, t3, t4_1, t4_2, t_hats
+            t1,
+            t2,
+            t3,
+            t4_1,
+            t4_2,
+            t_hats,
         };
 
         Ok(ret)
-        
     }
 }
 
 impl<E: Element + ToByteTree> ToByteTree for Responses<E>
-    where E::Exp: ToByteTree {
+where
+    E::Exp: ToByteTree,
+{
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(6);
         trees.push(self.s1.to_byte_tree());
@@ -623,7 +663,9 @@ impl<E: Element + ToByteTree> ToByteTree for Responses<E>
 }
 
 impl<E: Element + FromByteTree> FromByteTree for Responses<E>
-    where E::Exp: FromByteTree {
+where
+    E::Exp: FromByteTree,
+{
     fn from_byte_tree(tree: &ByteTree) -> Result<Responses<E>, ByteError> {
         let trees = tree.tree(6)?;
         let s1 = <E::Exp>::from_byte_tree(&trees[0])?;
@@ -632,18 +674,24 @@ impl<E: Element + FromByteTree> FromByteTree for Responses<E>
         let s4 = <E::Exp>::from_byte_tree(&trees[3])?;
         let s_hats = Vec::<E::Exp>::from_byte_tree(&trees[4])?;
         let s_primes = Vec::<E::Exp>::from_byte_tree(&trees[5])?;
-        
+
         let ret = Responses {
-            s1, s2, s3, s4, s_hats, s_primes
+            s1,
+            s2,
+            s3,
+            s4,
+            s_hats,
+            s_primes,
         };
 
         Ok(ret)
     }
 }
 
-
 impl<E: Element + ToByteTree> ToByteTree for PartialDecryption<E>
-    where E::Exp: ToByteTree {
+where
+    E::Exp: ToByteTree,
+{
     fn to_byte_tree(&self) -> ByteTree {
         let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
         trees.push(self.pd_ballots.to_byte_tree());
@@ -653,15 +701,15 @@ impl<E: Element + ToByteTree> ToByteTree for PartialDecryption<E>
 }
 
 impl<E: Element + FromByteTree> FromByteTree for PartialDecryption<E>
-    where E::Exp: FromByteTree {
+where
+    E::Exp: FromByteTree,
+{
     fn from_byte_tree(tree: &ByteTree) -> Result<PartialDecryption<E>, ByteError> {
         let trees = tree.tree(2)?;
         let pd_ballots = Vec::<E>::from_byte_tree(&trees[0])?;
         let proofs = Vec::<ChaumPedersen<E>>::from_byte_tree(&trees[1])?;
-        
-        let ret = PartialDecryption {
-            pd_ballots, proofs
-        };
+
+        let ret = PartialDecryption { pd_ballots, proofs };
 
         Ok(ret)
     }
@@ -681,10 +729,7 @@ impl<E: FromByteTree> FromByteTree for Ciphertext<E> {
         let trees = tree.tree(2)?;
         let a = E::from_byte_tree(&trees[0])?;
         let b = E::from_byte_tree(&trees[1])?;
-        Ok(Ciphertext {
-            a,
-            b
-        })
+        Ok(Ciphertext { a, b })
     }
 }
 
@@ -695,8 +740,7 @@ impl ToByteTree for Statement {
         trees.push(Leaf(ByteBuf::from(self.contest.to_le_bytes().to_vec())));
         let trustee_aux = if let Some(t) = self.trustee_aux {
             t.to_le_bytes().to_vec()
-        }
-        else {
+        } else {
             vec![]
         };
         trees.push(Leaf(ByteBuf::from(trustee_aux)));
@@ -716,13 +760,17 @@ impl FromByteTree for Statement {
         let trustee_aux_ = trees[2].leaf()?;
         let trustee_aux = if trustee_aux_.len() == 0 {
             None
-        }
-        else {
-            Some(u32::from_le_bytes(trustee_aux_.as_slice().try_into().unwrap()))
+        } else {
+            Some(u32::from_le_bytes(
+                trustee_aux_.as_slice().try_into().unwrap(),
+            ))
         };
         let hashes = Vec::<Vec<u8>>::from_byte_tree(&trees[3])?;
         let ret = Statement {
-            stype, contest, trustee_aux, hashes
+            stype,
+            contest,
+            trustee_aux,
+            hashes,
         };
 
         Ok(ret)
@@ -744,29 +792,25 @@ impl FromByteTree for SignedStatement {
         let statement = Statement::from_byte_tree(&trees[0])?;
         let signature = Signature::from_byte_tree(&trees[1])?;
         let ret = SignedStatement {
-            statement, signature
+            statement,
+            signature,
         };
-        
+
         Ok(ret)
     }
 }
 
-
-
-
-
 #[cfg(test)]
-mod tests {  
-    use crate::data::bytes::*;
-    use crate::crypto::symmetric;
+mod tests {
     use crate::crypto::keymaker::*;
     use crate::crypto::shuffler::*;
+    use crate::crypto::symmetric;
+    use crate::data::bytes::*;
 
-
-    use uuid::Uuid;
-    use rug::Integer;
-    use rand::rngs::OsRng;
     use ed25519_dalek::Keypair;
+    use rand::rngs::OsRng;
+    use rug::Integer;
+    use uuid::Uuid;
 
     #[test]
     fn test_ciphertext_bytes() {
@@ -784,10 +828,10 @@ mod tests {
         let group = RugGroup::default();
         let id = Uuid::new_v4();
         let contests = 2;
-        let ballotbox_pk = Keypair::generate(&mut csprng).public; 
+        let ballotbox_pk = Keypair::generate(&mut csprng).public;
         let trustees = 3;
         let mut trustee_pks = Vec::with_capacity(trustees);
-        
+
         for _ in 0..trustees {
             let keypair = Keypair::generate(&mut csprng);
             trustee_pks.push(keypair.public);
@@ -795,10 +839,10 @@ mod tests {
         let cfg: Config<Integer, RugGroup> = Config {
             id: id.as_bytes().clone(),
             group: group,
-            contests: contests, 
-            ballotbox: ballotbox_pk, 
+            contests: contests,
+            ballotbox: ballotbox_pk,
             trustees: trustee_pks,
-            phantom_e: PhantomData
+            phantom_e: PhantomData,
         };
 
         let bytes = cfg.ser();
@@ -812,7 +856,7 @@ mod tests {
         let group = RugGroup::default();
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
-        
+
         let bytes = sk.ser();
         let back = PrivateKey::<Integer, RugGroup>::deser(&bytes).unwrap();
 
@@ -833,11 +877,11 @@ mod tests {
         let schnorr = group.schnorr_prove(&secret, &public, &g);
         let verified = group.schnorr_verify(&public, &g, &schnorr);
         assert!(verified == true);
-        
+
         let bytes = schnorr.ser();
         let back = Schnorr::<Integer>::deser(&bytes).unwrap();
         assert!(schnorr == back);
-        
+
         let verified = group.schnorr_verify(&public, &g, &back);
         assert!(verified == true);
     }
@@ -853,42 +897,42 @@ mod tests {
         let proof = group.cp_prove(&secret, &public1, &public2, &g1, &g2);
         let verified = group.cp_verify(&public1, &public2, &g1, &g2, &proof);
         assert!(verified == true);
-        
+
         let bytes = proof.ser();
         let back = ChaumPedersen::<Integer>::deser(&bytes).unwrap();
         assert!(proof == back);
-        
+
         let verified = group.cp_verify(&public1, &public2, &g1, &g2, &back);
         assert!(verified == true);
     }
-    
+
     #[test]
     fn test_epk_bytes() {
         let group = RugGroup::default();
-        
+
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
 
         let plaintext = group.rnd_exp();
-        
+
         let encoded = group.encode(&plaintext);
         let c = pk.encrypt(&encoded);
-        
+
         let sym_key = symmetric::gen_key();
         let enc_sk = sk.to_encrypted(sym_key);
         let enc_sk_b = enc_sk.ser();
         let back = EncryptedPrivateKey::deser(&enc_sk_b).unwrap();
         assert!(enc_sk == back);
-        
+
         let sk_d = PrivateKey::from_encrypted(sym_key, back, &group);
         let d = group.decode(&sk_d.decrypt(&c));
         assert_eq!(d, plaintext);
     }
-    
+
     #[test]
     fn test_share_bytes() {
         let group = RugGroup::default();
-        
+
         let km = Keymaker::gen(&group);
         let (pk, proof) = km.share();
 
@@ -898,7 +942,7 @@ mod tests {
         let share = Keyshare {
             share: pk,
             proof: proof,
-            encrypted_sk: esk
+            encrypted_sk: esk,
         };
 
         let bytes = share.ser();
@@ -923,13 +967,13 @@ mod tests {
     fn test_mix_bytes() {
         let group = RugGroup::default();
         let exp_hasher = &*group.exp_hasher();
-            
+
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
         let n = 100;
-    
+
         let mut es: Vec<Ciphertext<Integer>> = Vec::with_capacity(10);
-        
+
         for _ in 0..n {
             let plaintext: Integer = group.encode(&group.rnd_exp());
             let c = pk.encrypt(&plaintext);
@@ -940,8 +984,8 @@ mod tests {
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
-            hasher: exp_hasher
-        };   
+            hasher: exp_hasher,
+        };
 
         let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
         let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
@@ -950,25 +994,24 @@ mod tests {
 
         let mix = Mix {
             mixed_ballots: e_primes,
-            proof: proof
+            proof: proof,
         };
         let bytes = mix.ser();
         let back = Mix::<Integer>::deser(&bytes).unwrap();
 
         assert!(mix.mixed_ballots == back.mixed_ballots);
         let ok = shuffler.check_proof(&back.proof, &es, &back.mixed_ballots);
-        assert!(ok == true);        
-    }    
+        assert!(ok == true);
+    }
 
     #[test]
     fn test_plaintexts_bytes() {
         let group = RugGroup::default();
-        let plaintexts: Vec<Integer> = (0..100).into_iter().map(|_| {
-            group.encode(&group.rnd_exp())
-        }).collect();
-        let ps = Plaintexts {
-            plaintexts
-        };
+        let plaintexts: Vec<Integer> = (0..100)
+            .into_iter()
+            .map(|_| group.encode(&group.rnd_exp()))
+            .collect();
+        let ps = Plaintexts { plaintexts };
         let bytes = ps.ser();
         let back = Plaintexts::<Integer>::deser(&bytes).unwrap();
 
@@ -981,7 +1024,7 @@ mod tests {
         fn rnd32() -> Vec<u8> {
             rand::thread_rng().gen::<[u8; 32]>().to_vec()
         }
-        
+
         let mut csprng = OsRng;
         let pk = Keypair::generate(&mut csprng);
         let stmt = Statement::mix(rnd32(), rnd32(), rnd32(), Some(2), 0);
@@ -997,58 +1040,114 @@ mod tests {
 
         assert!(s_stmt == back);
     }
-    
+
     #[test]
     fn test_size() {
         let n = 1000;
         let n_f = 1000 as f32;
         let group1 = RistrettoGroup;
         let exps1: Vec<Scalar> = (0..n).into_iter().map(|_| group1.rnd_exp()).collect();
-        
+
         let mut bytes = bincode::serialize(&exps1).unwrap();
-        println!("{} ristretto exps: {}, {}", n, bytes.len(), (bytes.len() as f32 / n_f));
+        println!(
+            "{} ristretto exps: {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
         let elements1: Vec<RistrettoPoint> = (0..n).into_iter().map(|_| group1.rnd()).collect();
         bytes = bincode::serialize(&elements1).unwrap();
-        println!("{} ristretto elements: {}, {}", n, bytes.len(), (bytes.len() as f32 / n_f));
+        println!(
+            "{} ristretto elements: {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
         let es1 = util::random_ristretto_ballots(n, &group1).ciphertexts;
         bytes = bincode::serialize(&es1).unwrap();
-        println!("{} ristretto ciphertexts in Ballots: {}, {}", n, bytes.len(), (bytes.len() as f32 / n_f));
+        println!(
+            "{} ristretto ciphertexts in Ballots: {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
         // 100k = 100M
         let group2 = RugGroup::default();
         let exps2: Vec<Integer> = (0..n).into_iter().map(|_| group2.rnd_exp()).collect();
         bytes = bincode::serialize(&exps2).unwrap();
-        println!("{} rug exps: {}, {}", n, bytes.len(), (bytes.len() as f32 / n_f));
+        println!(
+            "{} rug exps: {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
         let elements2: Vec<Integer> = (0..n).into_iter().map(|_| group2.rnd()).collect();
         bytes = bincode::serialize(&elements2).unwrap();
-        println!("{} rug elements: {}, {}", n, bytes.len(), (bytes.len() as f32 / n_f));
+        println!(
+            "{} rug elements: {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
         let es2 = util::random_rug_ballots(1000, &group2).ciphertexts;
         bytes = bincode::serialize(&es2).unwrap();
-        println!("{} rug ciphertexts in Ballots: {}, {}", n, bytes.len(), (bytes.len() as f32/ n_f));
-    
+        println!(
+            "{} rug ciphertexts in Ballots: {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
+
         println!("---------------------");
-    
+
         let mut bytes = bincode::serialize(&exps1).unwrap();
-        println!("{} ristretto exps (BT): {}, {}", n, bytes.len(), (bytes.len() as f32 / n_f));
+        println!(
+            "{} ristretto exps (BT): {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
         let elements1: Vec<RistrettoPoint> = (0..n).into_iter().map(|_| group1.rnd()).collect();
         bytes = elements1.ser();
-        println!("{} ristretto elements (BT): {}, {}", n, bytes.len(), (bytes.len() as f32 / n_f));
+        println!(
+            "{} ristretto elements (BT): {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
         let es1 = util::random_ristretto_ballots(n, &group1).ciphertexts;
         bytes = es1.ser();
-        println!("{} ristretto ciphertexts in Ballots (BT): {}, {}", n, bytes.len(), (bytes.len() as f32 / n_f));
+        println!(
+            "{} ristretto ciphertexts in Ballots (BT): {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
         // 100k = 100M
         let group2 = RugGroup::default();
         let exps2: Vec<Integer> = (0..n).into_iter().map(|_| group2.rnd_exp()).collect();
         bytes = exps2.ser();
-        println!("{} rug exps (BT): {}, {}", n, bytes.len(), (bytes.len() as f32 / n_f));
+        println!(
+            "{} rug exps (BT): {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
         let elements2: Vec<Integer> = (0..n).into_iter().map(|_| group2.rnd()).collect();
         bytes = elements2.ser();
-        println!("{} rug elements (BT): {}, {}", n, bytes.len(), (bytes.len() as f32 / n_f));
+        println!(
+            "{} rug elements (BT): {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
         let es2 = util::random_rug_ballots(1000, &group2).ciphertexts;
         bytes = es2.ser();
-        println!("{} rug ciphertexts in Ballots (BT): {}, {}", n, bytes.len(), (bytes.len() as f32/ n_f));
+        println!(
+            "{} rug ciphertexts in Ballots (BT): {}, {}",
+            n,
+            bytes.len(),
+            (bytes.len() as f32 / n_f)
+        );
     }
 }
-
-
-
-

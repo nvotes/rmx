@@ -1,16 +1,16 @@
-use rug::Integer;
-use rmx::crypto::base::*;
-use rmx::crypto::elgamal::*;
 use rmx::crypto::backend::ristretto_b::*;
 use rmx::crypto::backend::rug_b::*;
+use rmx::crypto::base::*;
+use rmx::crypto::elgamal::*;
 use rmx::crypto::shuffler::*;
 use rmx::data::artifact::*;
 use rmx::data::bytes::*;
+use rug::Integer;
 
 use curve25519_dalek::ristretto::RistrettoPoint;
 // use rug::{Integer,integer::Order};
 
-use criterion::{criterion_group, criterion_main, Criterion, SamplingMode, BenchmarkId};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 pub fn shuffle_ristretto(n: usize) -> Mix<RistrettoPoint> {
     let group = RistrettoGroup;
@@ -31,23 +31,23 @@ pub fn shuffle_ristretto(n: usize) -> Mix<RistrettoPoint> {
     let shuffler = Shuffler {
         pk: &pk,
         generators: &hs,
-        hasher: exp_hasher
+        hasher: exp_hasher,
     };
     let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
     let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
     Mix {
         mixed_ballots: e_primes,
-        proof: proof
+        proof: proof,
     }
 }
 
 pub fn shuffle_rug(n: usize) -> Mix<Integer> {
     let group = RugGroup::default();
     let exp_hasher = &*group.exp_hasher();
-        
+
     let sk = group.gen_key();
     let pk = PublicKey::from(&sk.public_value, &group);
-    
+
     let mut es: Vec<Ciphertext<Integer>> = Vec::with_capacity(n);
 
     for _ in 0..n {
@@ -60,13 +60,13 @@ pub fn shuffle_rug(n: usize) -> Mix<Integer> {
     let shuffler = Shuffler {
         pk: &pk,
         generators: &hs,
-        hasher: exp_hasher
+        hasher: exp_hasher,
     };
     let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
     let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
     Mix {
         mixed_ballots: e_primes,
-        proof: proof
+        proof: proof,
     }
 }
 
@@ -103,12 +103,11 @@ fn deser_mix_ristretto_bt(bytes: &Vec<u8>) {
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
-    
     let mut group = c.benchmark_group("serialize_bench");
     /*
     for size in [1000, 5000, 10000].iter() {
         let mix = shuffle_ristretto(*size);
-    
+
         group.bench_with_input(BenchmarkId::new("ser_mix_ristretto", size), size, |b, &_size| {
             b.iter(|| ser_mix_ristretto(&mix));
         });
@@ -116,7 +115,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     for size in [1000, 5000, 10000].iter() {
         let mix = shuffle_ristretto(*size);
         let bytes = ser_mix_ristretto(&mix);
-    
+
         group.bench_with_input(BenchmarkId::new("deser_mix_ristretto", size), size, |b, &_size| {
             b.iter(|| deser_mix_ristretto(&bytes));
         });
@@ -124,23 +123,31 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     for size in [1000, 5000, 10000].iter() {
         let mix = shuffle_ristretto(*size);
-    
-        group.bench_with_input(BenchmarkId::new("ser_mix_ristretto_bt", size), size, |b, &_size| {
-            b.iter(|| ser_mix_ristretto_bt(&mix));
-        });
+
+        group.bench_with_input(
+            BenchmarkId::new("ser_mix_ristretto_bt", size),
+            size,
+            |b, &_size| {
+                b.iter(|| ser_mix_ristretto_bt(&mix));
+            },
+        );
     }
     for size in [1000, 5000, 10000].iter() {
         let mix = shuffle_ristretto(*size);
         let bytes = ser_mix_ristretto_bt(&mix);
-    
-        group.bench_with_input(BenchmarkId::new("deser_mix_ristretto_bt", size), size, |b, &_size| {
-            b.iter(|| deser_mix_ristretto_bt(&bytes));
-        });
+
+        group.bench_with_input(
+            BenchmarkId::new("deser_mix_ristretto_bt", size),
+            size,
+            |b, &_size| {
+                b.iter(|| deser_mix_ristretto_bt(&bytes));
+            },
+        );
     }
-/*
+    /*
     for size in [100, 500, 1000].iter() {
         let mix = shuffle_rug(*size);
-    
+
         group.bench_with_input(BenchmarkId::new("ser_mix_rug", size), size, |b, &_size| {
             b.iter(|| ser_mix_rug(&mix));
         });
@@ -148,7 +155,7 @@ fn criterion_benchmark(c: &mut Criterion) {
     for size in [100, 500, 1000].iter() {
         let mix = shuffle_rug(*size);
         let bytes = ser_mix_rug(&mix);
-    
+
         group.bench_with_input(BenchmarkId::new("deser_mix_rug", size), size, |b, &_size| {
             b.iter(|| deser_mix_rug(&bytes));
         });
@@ -156,18 +163,26 @@ fn criterion_benchmark(c: &mut Criterion) {
     */
     for size in [100, 500, 1000].iter() {
         let mix = shuffle_rug(*size);
-    
-        group.bench_with_input(BenchmarkId::new("ser_mix_rug_bt", size), size, |b, &_size| {
-            b.iter(|| ser_mix_rug_bt(&mix));
-        });
+
+        group.bench_with_input(
+            BenchmarkId::new("ser_mix_rug_bt", size),
+            size,
+            |b, &_size| {
+                b.iter(|| ser_mix_rug_bt(&mix));
+            },
+        );
     }
     for size in [100, 500, 1000].iter() {
         let mix = shuffle_rug(*size);
         let bytes = ser_mix_rug_bt(&mix);
-    
-        group.bench_with_input(BenchmarkId::new("deser_mix_rug_bt", size), size, |b, &_size| {
-            b.iter(|| deser_mix_rug_bt(&bytes));
-        });
+
+        group.bench_with_input(
+            BenchmarkId::new("deser_mix_rug_bt", size),
+            size,
+            |b, &_size| {
+                b.iter(|| deser_mix_rug_bt(&bytes));
+            },
+        );
     }
 
     group.finish();

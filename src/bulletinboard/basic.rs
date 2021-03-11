@@ -1,31 +1,32 @@
 use serde::de::DeserializeOwned;
-use std::path::Path;
 use std::collections::HashMap;
+use std::path::Path;
 
-use log::info;
-
-use crate::data::bytes::*;
 use crate::bulletinboard::BBError;
 use crate::crypto::hashing;
-use crate::crypto::hashing::{HashBytes, Hash};
+use crate::crypto::hashing::{Hash, HashBytes};
+use crate::data::bytes::*;
 use crate::util;
-
 
 pub trait BasicBoard {
     fn list(&self) -> Result<Vec<String>, BBError>;
-    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError>;
+    fn get<A: HashBytes + DeserializeOwned + Deser>(
+        &self,
+        target: String,
+        hash: Hash,
+    ) -> Result<Option<A>, BBError>;
     fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError>;
     fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError>;
 }
 
 pub struct MBasic {
-    data: HashMap<String, Vec<u8>>
+    data: HashMap<String, Vec<u8>>,
 }
 
 impl MBasic {
     pub fn new() -> MBasic {
         MBasic {
-            data: HashMap::new()
+            data: HashMap::new(),
         }
     }
 }
@@ -34,37 +35,43 @@ impl BasicBoard for MBasic {
     fn list(&self) -> Result<Vec<String>, BBError> {
         Ok(self.data.iter().map(|(a, _)| a.clone()).collect())
     }
-    fn get<A: HashBytes + DeserializeOwned + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError> {
+    fn get<A: HashBytes + DeserializeOwned + Deser>(
+        &self,
+        target: String,
+        hash: Hash,
+    ) -> Result<Option<A>, BBError> {
         let key = target;
         if let Some(bytes) = self.data.get(&key) {
-            let now_ = std::time::Instant::now();
-    
+            let _now_ = std::time::Instant::now();
+
             let artifact = A::deser(bytes)?;
             // info!(">> Deser {}, bytes {}", now_.elapsed().as_millis(), bytes.len());
-            
-            let now_ = std::time::Instant::now();
+
+            let _now_ = std::time::Instant::now();
             let hashed = hashing::hash(&artifact);
             // info!(">> Hash {}", now_.elapsed().as_millis());
-            
+
             if hashed == hash {
                 Ok(Some(artifact))
-            }
-            else {
+            } else {
                 Err(BBError::Msg("Hash mismatch".to_string()))
             }
-        }
-        else {
+        } else {
             Ok(None)
         }
     }
     fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError> {
         for (name, data) in entries {
             let bytes = util::read_file_bytes(data)?;
-            let key = name.to_str()
+            let key = name
+                .to_str()
                 .ok_or(BBError::Msg("Invalid path string when putting".to_string()))?
                 .to_string();
             if self.data.contains_key(&key) {
-                panic!("Attempted to overwrite bulletin board value for key '{}'", key);
+                panic!(
+                    "Attempted to overwrite bulletin board value for key '{}'",
+                    key
+                );
             }
             self.data.insert(key, bytes);
         }

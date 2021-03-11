@@ -105,7 +105,7 @@ impl Group<RistrettoPoint> for RistrettoGroup {
         Scalar::default()
     }
 
-    // see https://github.com/ruescasd/rmx-mg/issues/4
+    // see https://github.com/ruescasd/braid-mg/issues/4
     fn encode(&self, data: &[u8; 30]) -> RistrettoPoint {
         let mut bytes = [0u8; 32];
         bytes[1..1 + data.len()].copy_from_slice(data);

@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use rmx::crypto::backend::ristretto_b::*;
-use rmx::util;
+use braid::crypto::backend::ristretto_b::*;
+use braid::util;
 use sha2::{Digest, Sha512};
 use std::{
     fs::File,

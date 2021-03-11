@@ -14,23 +14,23 @@ use rand::rngs::OsRng;
 use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
-use rmx::crypto::base::Element;
-use rmx::crypto::base::Group;
-use rmx::crypto::elgamal::PublicKey;
-use rmx::crypto::hashing;
-use rmx::data::artifact::*;
-use rmx::protocol::statement::SignedStatement;
+use braid::crypto::base::Element;
+use braid::crypto::base::Group;
+use braid::crypto::elgamal::PublicKey;
+use braid::crypto::hashing;
+use braid::data::artifact::*;
+use braid::protocol::statement::SignedStatement;
 
-use rmx::bulletinboard::basic::*;
-use rmx::bulletinboard::generic::*;
-use rmx::bulletinboard::*;
-use rmx::crypto::backend::ristretto_b::*;
-use rmx::data::bytes::*;
-use rmx::protocol::facts::AllFacts;
-use rmx::protocol::logic::Driver;
-use rmx::protocol::trustee::Trustee;
-use rmx::protocol::trustee::TrusteeError;
-use rmx::util;
+use braid::bulletinboard::basic::*;
+use braid::bulletinboard::generic::*;
+use braid::bulletinboard::*;
+use braid::crypto::backend::ristretto_b::*;
+use braid::data::bytes::*;
+use braid::protocol::facts::AllFacts;
+use braid::protocol::logic::Driver;
+use braid::protocol::trustee::Trustee;
+use braid::protocol::trustee::TrusteeError;
+use braid::util;
 
 use cursive::align::HAlign;
 use cursive::theme::BaseColor;
@@ -51,7 +51,7 @@ struct Demo<E: Element, G, B> {
     pub cb_sink: cursive::CbSink,
     trustees: Vec<Driver<E, G, GenericBulletinBoard<E, G, B>>>,
     bb_keypair: Keypair,
-    config: rmx::data::artifact::Config<E, G>,
+    config: braid::data::artifact::Config<E, G>,
     all_plaintexts: Vec<Vec<E::Plaintext>>,
     ballots: u32,
     boards: Vec<GenericBulletinBoard<E, G, B>>,
@@ -67,7 +67,7 @@ where
         boards: Vec<GenericBulletinBoard<E, G, B>>,
         bb_keypair: Keypair,
         ballots: u32,
-        cfg: rmx::data::artifact::Config<E, G>,
+        cfg: braid::data::artifact::Config<E, G>,
     ) -> Demo<E, G, B> {
         Demo {
             cb_sink: sink,
@@ -596,10 +596,10 @@ fn gen_config<E: Element, G: Group<E>>(
     contests: u32,
     trustee_pks: Vec<SPublicKey>,
     ballotbox_pk: SPublicKey,
-) -> rmx::data::artifact::Config<E, G> {
+) -> braid::data::artifact::Config<E, G> {
     let id = Uuid::new_v4();
 
-    let cfg = rmx::data::artifact::Config {
+    let cfg = braid::data::artifact::Config {
         id: id.as_bytes().clone(),
         group: group.clone(),
         contests: contests,
@@ -611,8 +611,8 @@ fn gen_config<E: Element, G: Group<E>>(
     cfg
 }
 
-use rmx::bulletinboard::git;
-use rmx::bulletinboard::git::GitBulletinBoard;
+use braid::bulletinboard::git;
+use braid::bulletinboard::git::GitBulletinBoard;
 
 fn git_board(i: u32) -> GitBulletinBoard {
     let mut board = git::test_config();

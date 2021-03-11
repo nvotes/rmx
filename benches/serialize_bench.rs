@@ -1,10 +1,10 @@
-use rmx::crypto::backend::ristretto_b::*;
-use rmx::crypto::backend::rug_b::*;
-use rmx::crypto::base::*;
-use rmx::crypto::elgamal::*;
-use rmx::crypto::shuffler::*;
-use rmx::data::artifact::*;
-use rmx::data::bytes::*;
+use braid::crypto::backend::ristretto_b::*;
+use braid::crypto::backend::rug_b::*;
+use braid::crypto::base::*;
+use braid::crypto::elgamal::*;
+use braid::crypto::shuffler::*;
+use braid::data::artifact::*;
+use braid::data::bytes::*;
 use rug::Integer;
 
 use curve25519_dalek::ristretto::RistrettoPoint;

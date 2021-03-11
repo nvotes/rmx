@@ -324,7 +324,7 @@ impl GitBulletinBoard {
         index.clear()?;
 
         let oid = index.write_tree()?;
-        let signature = Signature::now("rmx", "rmx@foo.bar")?;
+        let signature = Signature::now("braid", "braid@foo.bar")?;
         let parent_commit = find_last_commit(&repo)?;
         let tree = repo.find_tree(oid)?;
 
@@ -424,7 +424,7 @@ fn merge(
     // now create the merge commit
     info!("GIT: merge: {} into {}", remote.id(), local.id());
     // let sig = repo.signature()?;
-    let signature = Signature::now("rmx", "rmx@foo.bar")?;
+    let signature = Signature::now("braid", "braid@foo.bar")?;
     let local_commit = repo.find_commit(local.id())?;
     let remote_commit = repo.find_commit(remote.id())?;
 
@@ -464,7 +464,7 @@ fn add_and_commit(
         index.add_path(&e.repo_path)?;
     }
     let oid = index.write_tree()?;
-    let signature = Signature::now("rmx", "rmx@foo.bar")?;
+    let signature = Signature::now("braid", "braid@foo.bar")?;
     let parent_commit = find_last_commit(&repo)?;
     let tree = repo.find_tree(oid)?;
 

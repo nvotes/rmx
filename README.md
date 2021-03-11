@@ -1,7 +1,7 @@
 # Braid
 
 [![License](https://img.shields.io/github/license/nvotes/braid)](License)
-[![Build](https://github.com/nvotes/braid/workflows/build/badge.svg?branch=master)](https://github.com/nvotes/braid/actions?query=workflow%3Abuild)
+[![Build](https://github.com/nvotes/braid/workflows/CI/badge.svg)](https://github.com/nvotes/braid/actions?workflow=CI)
 [![Coverage status](https://img.shields.io/codecov/c/github/nvotes/braid)](https://codecov.io/gh/nvotes/braid/)
 [![Community chat](https://img.shields.io/discord/651538033291690014)](https://discord.gg/dfdnFWJ)
 
@@ -20,6 +20,26 @@ stable Rust, to build Braid just execute:
 ```bash
 cargo build
 ```
+
+# Continuous Integration
+
+There are multiple checks executed through the usage of Github Actions to verify
+the health of the code when pushed:
+1. **Compiler warning/errors**: checked using `cargo check` and 
+`cargo check ---tests`. Use `cargo fix` and `cargo fix --tests` to fix the 
+issues that appear.
+2. **Unit tests**: check that all unit tests pass using `cargo test`.
+3. **Code style**: check that the code style follows standard Rust format, using
+`cargo fmt -- --check`. Fix it using `cargo fmt`.
+4. **Code linting**: Lint that checks for common Rust mistakes using 
+`cargo clippy`. You can try to fix automatically most of those mistakes using
+`cargo clippy --fix -Z unstable-options`.
+5. **Code coverage**: Detects code coverage with [grcov] and pushes the 
+information (in master branch) to [codecov].
+6. **Dependencies scan**: Audit dependencies for security vulnerabilities in the
+[RustSec Advisory Database], unmaintained dependencies, incompatible licenses 
+and banned packages using [cargo-deny]. Use `cargo deny fix` or 
+`cargo deny --allow-incompatible` to try to solve the detected issues.
 
 ## Demo
 
@@ -64,3 +84,7 @@ Braid uses standard crytpographic techniques, most significantly
 
 [nVotes]: https://nvotes.com
 [Rust]: https://www.rust-lang.org/
+[grcov]: https://crates.io/crates/grcov
+[codecov]: http://codecov.com/
+[RustSec Advisory Database]: https://github.com/RustSec/advisory-db/
+[cargo-deny]: https://crates.io/crates/cargo-deny

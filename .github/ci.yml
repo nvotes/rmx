@@ -1,4 +1,4 @@
-name: build
+name: CI
 
 on: [push, pull_request]
 
@@ -68,8 +68,8 @@ jobs:
           command: clippy
           args: -- -D warnings
 
+  # based on https://github.com/actions-rs/example
   coverage:
-    # based on https://github.com/actions-rs/example
     name: Coverage
     runs-on: ubuntu-latest
     steps:
@@ -99,3 +99,16 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ${{ steps.coverage.outputs.report }}
           fail_ci_if_error: True
+      
+  # check dependencies
+  # based on https://github.com/EmbarkStudios/cargo-deny-action
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: EmbarkStudios/cargo-deny-action@v1
+        with:
+          log-level: warn
+          command: check
+          arguments: --all-features

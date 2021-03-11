@@ -72,6 +72,15 @@ unlicensed = "deny"
 # [possible values: any SPDX 3.11 short identifier (+ optional exception)].
 allow = [
     "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSL-1.0",
+    "CC0-1.0",
+    # @edulix: LGPL-3.0 is here disabled just to remove the warning that no
+    # dependency is being detected to use it, but it's a license we are legally
+    # compatible with.
+    # "LGPL-3.0", 
+    "BSD-3-Clause"
 ]
 # List of explictly disallowed licenses
 # See https://spdx.org/licenses/ for list of possible licenses
@@ -80,14 +89,14 @@ deny = [
     #"Nokia",
 ]
 # Lint level for licenses considered copyleft
-copyleft = "allow"
+copyleft = "deny"
 # Blanket approval or denial for OSI-approved or FSF Free/Libre licenses
 # * both - The license will be approved if it is both OSI-approved *AND* FSF
 # * either - The license will be approved if it is either OSI-approved *OR* FSF
 # * osi-only - The license will be approved if is OSI-approved *AND NOT* FSF
 # * fsf-only - The license will be approved if is FSF *AND NOT* OSI-approved
 # * neither - This predicate is ignored and the default lint level is used
-allow-osi-fsf-free = "either"
+allow-osi-fsf-free = "neither"
 # Lint level used when no other predicates are matched
 # 1. License isn't in the allow or deny lists
 # 2. License isn't copyleft
@@ -101,9 +110,11 @@ confidence-threshold = 0.8
 # Allow 1 or more licenses on a per-crate basis, so that particular licenses
 # aren't accepted for every possible crate as with the normal allow list
 exceptions = [
-    # Each entry is the crate and version constraint, and its specific allow
-    # list
-    #{ allow = ["Zlib"], name = "adler32", version = "*" },
+    # @edulix: Actually these two packages are alternatively licensed, so even 
+    # if cargo deny detects them as GPL AND LGPL, it's GPL OR LGPL. And we allow
+    # LGPL. That's why they are added here as exceptions.
+    { allow = ["GPL-3.0", "LGPL-3.0"], name = "rug", version = "*" },
+    { allow = ["GPL-3.0", "LGPL-3.0"], name = "gmp-mpfr-sys", version = "*" }
 ]
 
 # Some crates don't have (easily) machine readable licensing information,

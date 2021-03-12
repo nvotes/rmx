@@ -81,6 +81,8 @@ jobs:
           override: true
 
       - uses: actions-rs/cargo@v1
+        # continue on error so we upload the code coverage
+        continue-on-error: true 
         with:
           command: test
           args: --all-features --no-fail-fast

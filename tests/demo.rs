@@ -217,7 +217,7 @@ fn demo() {
     let mut trustee_pks = Vec::new();
     let mut drivers = Vec::new();
 
-    let basic = MBasic::new();
+    let basic = MBasic::default();
     let board = GenericBulletinBoard::<RistrettoPoint, RistrettoGroup, MBasic>::new(basic);
     bbs.push(board);
 

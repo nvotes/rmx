@@ -1,3 +1,6 @@
+// Alow this for the clone() function in this file
+#[allow(clippy::should_implement_trait)]
+
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -39,10 +42,7 @@ impl BasicBoard for GitBulletinBoard {
         self.get_object(Path::new(&target), hash)
     }
     fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError> {
-        let ret = self.post(entries, "GitBulletinBoard: put")?;
-
-        ret;
-        Ok(())
+        Ok(self.post(entries, "GitBulletinBoard: put")?)
     }
     fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError> {
         let target_file = Path::new(&self.fs_path).join(target);
@@ -495,7 +495,7 @@ fn add_and_commit(
     Ok(true)
 }
 
-fn remote_callbacks<'a>(ssh_path: &'a str) -> RemoteCallbacks<'a> {
+fn remote_callbacks(ssh_path: &str) -> RemoteCallbacks {
     let mut cb = RemoteCallbacks::new();
     let path = Path::new(ssh_path);
     cb.credentials(move |_, _, _| {

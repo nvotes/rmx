@@ -19,16 +19,9 @@ pub trait BasicBoard {
     fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError>;
 }
 
+#[derive(Default)]
 pub struct MBasic {
     data: HashMap<String, Vec<u8>>,
-}
-
-impl MBasic {
-    pub fn new() -> MBasic {
-        MBasic {
-            data: HashMap::new(),
-        }
-    }
 }
 
 impl BasicBoard for MBasic {
@@ -65,7 +58,7 @@ impl BasicBoard for MBasic {
             let bytes = util::read_file_bytes(data)?;
             let key = name
                 .to_str()
-                .ok_or(BBError::Msg("Invalid path string when putting".to_string()))?
+                .ok_or_else(|| BBError::Msg("Invalid path string when putting".to_string()))?
                 .to_string();
             if self.data.contains_key(&key) {
                 panic!(

@@ -98,7 +98,7 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
         let public_value = group.generator().mod_pow(&value, &group.modulus());
 
         PrivateKey {
-            value: value,
+            value,
             group: group.clone(),
             public_value,
         }

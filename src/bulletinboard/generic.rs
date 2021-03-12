@@ -266,7 +266,7 @@ impl<
             let s_bytes = self
                 .basic
                 .get_unsafe(s)?
-                .ok_or(BBError::Msg("Statement not found".to_string()))?;
+                .ok_or_else(|| BBError::Msg("Statement not found".to_string()))?;
             let (name, trustee, contest) = self.artifact_location(s);
 
             let stmt = SignedStatement::deser(&s_bytes)?;
@@ -323,7 +323,7 @@ mod tests {
             phantom_e: PhantomData,
         };
 
-        let mut bb = GenericBulletinBoard::<Integer, RugGroup, MBasic>::new(MBasic::new());
+        let mut bb = GenericBulletinBoard::<Integer, RugGroup, MBasic>::new(MBasic::default());
         let cfg_b = cfg.ser();
 
         let tmp_file = NamedTempFile::new().unwrap();

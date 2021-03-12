@@ -35,14 +35,14 @@ use simplelog::*;
 fn run_rug_mem() {
     // setup_log();
     let group = RugGroup::default();
-    run(group, MBasic::new()).unwrap();
+    run(group, MBasic::default()).unwrap();
 }
 
 #[test]
 fn run_ristretto_mem() {
     // setup_log();
     let group = RistrettoGroup;
-    run(group, MBasic::new()).unwrap();
+    run(group, MBasic::default()).unwrap();
 }
 
 #[ignore]

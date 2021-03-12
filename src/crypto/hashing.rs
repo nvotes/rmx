@@ -455,75 +455,75 @@ impl HashBytes for Act {
     fn get_bytes(&self) -> Vec<u8> {
         match self {
             Act::CheckConfig(h) => {
-                let mut v = vec![1u8];
-                v.extendl(&h.to_vec());
-                v
+                let mut out = vec![1u8];
+                out.extendl(&h.to_vec());
+                out
             }
             Act::PostShare(h, i) => {
-                let mut v = vec![2u8];
-                v.extendl(&h.to_vec());
-                v.extendl(&i.to_le_bytes().to_vec());
-                v
+                let mut out = vec![2u8];
+                out.extendl(&h.to_vec());
+                out.extendl(&i.to_le_bytes().to_vec());
+                out
             }
             Act::CombineShares(h, i, s) => {
-                let mut v = vec![3u8];
-                v.extendl(&h.to_vec());
-                v.extendl(&i.to_le_bytes().to_vec());
-                v.extendl(&concat_bytes_iter(s));
-                v
+                let mut out = vec![3u8];
+                out.extendl(&h.to_vec());
+                out.extendl(&i.to_le_bytes().to_vec());
+                out.extendl(&concat_bytes_iter(s));
+                out
             }
             Act::CheckPk(h, i, pk, s) => {
-                let mut v = vec![4u8];
-                v.extendl(&h.to_vec());
-                v.extendl(&i.to_le_bytes().to_vec());
-                v.extendl(&pk.to_vec());
-                v.extendl(&concat_bytes_iter(s));
-                v
+                let mut out = vec![4u8];
+                out.extendl(&h.to_vec());
+                out.extendl(&i.to_le_bytes().to_vec());
+                out.extendl(&pk.to_vec());
+                out.extendl(&concat_bytes_iter(s));
+                out
             }
             Act::Mix(h, i, bs, pk_h) => {
-                let mut v = vec![5u8];
-                v.extendl(&h.to_vec());
-                v.extendl(&i.to_le_bytes().to_vec());
-                v.extendl(&bs.to_vec());
-                v.extendl(&pk_h.to_vec());
-                v
+                let mut out = vec![5u8];
+                out.extendl(&h.to_vec());
+                out.extendl(&i.to_le_bytes().to_vec());
+                out.extendl(&bs.to_vec());
+                out.extendl(&pk_h.to_vec());
+                out
             }
             Act::CheckMix(h, i, t, m, bs, pk_h) => {
-                let mut v = vec![6u8];
-                v.extendl(&h.to_vec());
-                v.extendl(&i.to_le_bytes().to_vec());
-                v.extendl(&t.to_le_bytes().to_vec());
-                v.extendl(&m.to_vec());
-                v.extendl(&bs.to_vec());
-                v.extendl(&pk_h.to_vec());
-                v
+                let mut out = vec![6u8];
+                out.extendl(&h.to_vec());
+                out.extendl(&i.to_le_bytes().to_vec());
+                out.extendl(&t.to_le_bytes().to_vec());
+                out.extendl(&m.to_vec());
+                out.extendl(&bs.to_vec());
+                out.extendl(&pk_h.to_vec());
+                out
             }
             Act::PartialDecrypt(h, i, bs, share_h) => {
-                let mut v = vec![7u8];
-                v.extendl(&h.to_vec());
-                v.extendl(&i.to_le_bytes().to_vec());
-                v.extendl(&bs.to_vec());
-                v.extendl(&share_h.to_vec());
-                v
+                let mut out = vec![7u8];
+                out.extendl(&h.to_vec());
+                out.extendl(&i.to_le_bytes().to_vec());
+                out.extendl(&bs.to_vec());
+                out.extendl(&share_h.to_vec());
+                out
             }
             Act::CombineDecryptions(h, i, ds, mix_h, shares) => {
-                let mut v = vec![8u8];
-                v.extendl(&h.to_vec());
-                v.extendl(&i.to_le_bytes().to_vec());
-                v.extendl(&concat_bytes_iter(ds));
-                v.extendl(&mix_h.to_vec());
-                v.extendl(&concat_bytes_iter(shares));
-                v
+                let mut out = vec![8u8];
+                out.extendl(&h.to_vec());
+                out.extendl(&i.to_le_bytes().to_vec());
+                out.extendl(&concat_bytes_iter(ds));
+                out.extendl(&mix_h.to_vec());
+                out.extendl(&concat_bytes_iter(shares));
+                out
             }
             Act::CheckPlaintexts(h, i, p, ds, m, shares) => {
-                let mut v = vec![9u8];
-                v.extendl(&h.to_vec());
-                v.extendl(&i.to_le_bytes().to_vec());
-                v.extendl(&p.to_vec());
-                v.extendl(&concat_bytes_iter(ds));
-                v.extendl(&m.to_vec());
-                v.extendl(&concat_bytes_iter(shares));
-                v
+                let mut out = vec![9u8];
+                out.extendl(&h.to_vec());
+                out.extendl(&i.to_le_bytes().to_vec());
+                out.extendl(&p.to_vec());
+                out.extendl(&concat_bytes_iter(ds));
+                out.extendl(&m.to_vec());
+                out.extendl(&concat_bytes_iter(shares));
+                out
             }
         }
     }

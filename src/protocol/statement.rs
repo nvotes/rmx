@@ -43,7 +43,7 @@ impl Statement {
     pub fn keyshare(config: VHash, share: VHash, contest: u32) -> Statement {
         Statement {
             stype: StatementType::Keyshare,
-            contest: contest,
+            contest,
             trustee_aux: None,
             hashes: vec![config, share],
         }
@@ -51,7 +51,7 @@ impl Statement {
     pub fn public_key(config: VHash, public_key: VHash, contest: u32) -> Statement {
         Statement {
             stype: StatementType::PublicKey,
-            contest: contest,
+            contest,
             trustee_aux: None,
             hashes: vec![config, public_key],
         }
@@ -59,7 +59,7 @@ impl Statement {
     pub fn ballots(config: VHash, ballots: VHash, contest: u32) -> Statement {
         Statement {
             stype: StatementType::Ballots,
-            contest: contest,
+            contest,
             trustee_aux: None,
             hashes: vec![config, ballots],
         }
@@ -73,7 +73,7 @@ impl Statement {
     ) -> Statement {
         Statement {
             stype: StatementType::Mix,
-            contest: contest,
+            contest,
             trustee_aux: mixing_trustee,
             hashes: vec![config, mix, ballots],
         }
@@ -85,7 +85,7 @@ impl Statement {
     ) -> Statement {
         Statement {
             stype: StatementType::PDecryption,
-            contest: contest,
+            contest,
             trustee_aux: None,
             hashes: vec![config, partial_decryptions],
         }
@@ -93,7 +93,7 @@ impl Statement {
     pub fn plaintexts(config: VHash, plaintexts: VHash, contest: u32) -> Statement {
         Statement {
             stype: StatementType::Plaintexts,
-            contest: contest,
+            contest,
             trustee_aux: None,
             hashes: vec![config, plaintexts],
         }

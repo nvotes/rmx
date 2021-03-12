@@ -41,7 +41,8 @@ impl BasicBoard for GitBulletinBoard {
     fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError> {
         let ret = self.post(entries, "GitBulletinBoard: put")?;
 
-        Ok(ret)
+        ret;
+        Ok(())
     }
     fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError> {
         let target_file = Path::new(&self.fs_path).join(target);
@@ -214,7 +215,7 @@ impl GitBulletinBoard {
                     }
                 }
             }
-            let refname = format!("refs/heads/master");
+            let refname = "refs/heads/master".to_string();
             let mut r = repo.find_reference(&refname)?;
             fast_forward(&repo, &mut r, &commit)?;
             info!("GIT refresh ffwd: [{}ms]", now.elapsed().as_millis());
@@ -281,8 +282,8 @@ impl GitBulletinBoard {
         fs::copy(source, tmp_file_path).unwrap();
 
         GitAddEntry {
-            tmp_file: tmp_file,
-            fs_path: target_file.to_path_buf(),
+            tmp_file,
+            fs_path: target_file,
             repo_path: target_path.to_path_buf(),
         }
     }
@@ -416,9 +417,7 @@ fn merge(
 
     if idx.has_conflicts() {
         error!("Merge conficts detected...");
-        return Err(git2::Error::from_str(&format!(
-            "Found conflicts during merge attempt"
-        )));
+        return Err(git2::Error::from_str(&"Found conflicts during merge attempt".to_string()));
     }
     let result_tree = repo.find_tree(idx.write_tree_to(repo)?)?;
     // now create the merge commit
@@ -513,7 +512,7 @@ fn is_hidden(entry: &DirEntry) -> bool {
     entry
         .file_name()
         .to_str()
-        .map(|s| s.starts_with("."))
+        .map(|s| s.starts_with('.'))
         .unwrap_or(false)
 }
 

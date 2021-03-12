@@ -371,7 +371,7 @@ impl AllFacts {
         }
     }
     fn get_config_present(&self) -> Option<InputFact> {
-        if self.input_facts.len() > 0 {
+        if !self.input_facts.is_empty() {
             Some(self.input_facts[self.input_facts.len() - 1])
         } else {
             None

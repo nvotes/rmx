@@ -63,9 +63,9 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + HashBytes + BTree
         let response = r.add(&challenge.mul(secret)).modulo(&self.exp_modulus());
 
         Schnorr {
-            commitment: commitment,
-            challenge: challenge,
-            response: response,
+            commitment,
+            challenge,
+            response,
         }
     }
     fn schnorr_verify(&self, public: &E, g: &E, proof: &Schnorr<E>) -> bool {
@@ -104,10 +104,10 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + HashBytes + BTree
         let response = r.add(&challenge.mul(secret)).modulo(&self.exp_modulus());
 
         ChaumPedersen {
-            commitment1: commitment1,
-            commitment2: commitment2,
-            challenge: challenge,
-            response: response,
+            commitment1,
+            commitment2,
+            challenge,
+            response,
         }
     }
 

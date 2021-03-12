@@ -758,7 +758,7 @@ impl FromByteTree for Statement {
         let contest_ = trees[1].leaf()?;
         let contest = u32::from_le_bytes(contest_.as_slice().try_into().unwrap());
         let trustee_aux_ = trees[2].leaf()?;
-        let trustee_aux = if trustee_aux_.len() == 0 {
+        let trustee_aux = if trustee_aux_.is_empty() {
             None
         } else {
             Some(u32::from_le_bytes(

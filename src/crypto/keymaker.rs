@@ -13,15 +13,15 @@ pub struct Keymaker<E: Element, G> {
 impl<E: Element, G: Group<E>> Keymaker<E, G> {
     pub fn gen(group: &G) -> Keymaker<E, G> {
         let sk = group.gen_key();
-        let pk = PublicKey::from(&sk.public_value.clone(), group);
+        let pk = PublicKey::from(&sk.public_value, group);
 
-        Keymaker { sk: sk, pk: pk }
+        Keymaker { sk, pk }
     }
 
     pub fn from_sk(sk: PrivateKey<E, G>, group: &G) -> Keymaker<E, G> {
-        let pk = PublicKey::from(&sk.public_value.clone(), group);
+        let pk = PublicKey::from(&sk.public_value, group);
 
-        Keymaker { sk: sk, pk: pk }
+        Keymaker { sk, pk }
     }
 
     pub fn share(&self) -> (PublicKey<E, G>, Schnorr<E>) {

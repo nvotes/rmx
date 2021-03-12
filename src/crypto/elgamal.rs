@@ -80,13 +80,13 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
         PrivateKey {
             value: secret.clone(),
             group: group.clone(),
-            public_value: public_value,
+            public_value,
         }
     }
     pub fn to_encrypted(&self, key: GenericArray<u8, U32>) -> EncryptedPrivateKey {
         let key_bytes = self.value.ser();
         let (b, iv) = symmetric::encrypt(key, &key_bytes);
-        EncryptedPrivateKey { bytes: b, iv: iv }
+        EncryptedPrivateKey { bytes: b, iv }
     }
     pub fn from_encrypted(
         key: GenericArray<u8, U32>,
@@ -98,9 +98,9 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
         let public_value = group.generator().mod_pow(&value, &group.modulus());
 
         PrivateKey {
-            value: value.clone(),
+            value: value,
             group: group.clone(),
-            public_value: public_value,
+            public_value,
         }
     }
 }

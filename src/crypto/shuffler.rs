@@ -79,7 +79,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
                     c.b.mul(&group.generator().mod_pow(&r, &group.modulus()))
                         .modulo(&group.modulus());
 
-                let c_ = Ciphertext { a: a, b: b };
+                let c_ = Ciphertext { a, b };
                 rs_mutex.lock().unwrap()[*p] = Some(r);
                 c_
             })
@@ -216,8 +216,8 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         //        println!("t-hats loop {}", now.elapsed().as_millis());
 
         let y = YChallengeInput {
-            es: es,
-            e_primes: e_primes,
+            es,
+            e_primes,
             cs: &cs,
             c_hats: &c_hats,
             pk: self.pk,
@@ -328,8 +328,8 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             .modulo(gmod);
 
         let y = YChallengeInput {
-            es: es,
-            e_primes: e_primes,
+            es,
+            e_primes,
             cs: &proof.cs,
             c_hats: &proof.c_hats,
             pk: self.pk,
@@ -490,7 +490,7 @@ fn gen_permutation(size: usize) -> Vec<usize> {
         ret.push(j);
     }
 
-    return ret;
+    ret
 }
 
 #[cfg(test)]

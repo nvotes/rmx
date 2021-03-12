@@ -31,7 +31,7 @@ impl<
 {
     pub fn new(basic: B) -> GenericBulletinBoard<E, G, B> {
         GenericBulletinBoard {
-            basic: basic,
+            basic,
             phantom_e: PhantomData,
             phantom_g: PhantomData,
         }
@@ -52,56 +52,56 @@ impl<
     }
 
     fn config_stmt(auth: u32) -> String {
-        format!("{}/{}.stmt", auth, CONFIG).to_string()
+        format!("{}/{}.stmt", auth, CONFIG)
     }
 
     fn share(contest: u32, auth: u32) -> String {
-        format!("{}/{}/{}", auth, contest, SHARE).to_string()
+        format!("{}/{}/{}", auth, contest, SHARE)
     }
     fn share_stmt(contest: u32, auth: u32) -> String {
-        format!("{}/{}/{}.stmt", auth, contest, SHARE).to_string()
+        format!("{}/{}/{}.stmt", auth, contest, SHARE)
     }
 
     pub fn public_key(contest: u32, auth: u32) -> String {
-        format!("{}/{}/{}", auth, contest, PUBLIC_KEY).to_string()
+        format!("{}/{}/{}", auth, contest, PUBLIC_KEY)
     }
     fn public_key_stmt(contest: u32, auth: u32) -> String {
-        format!("{}/{}/{}.stmt", auth, contest, PUBLIC_KEY).to_string()
+        format!("{}/{}/{}.stmt", auth, contest, PUBLIC_KEY)
     }
 
     pub fn ballots(contest: u32) -> String {
-        format!("ballotbox/{}/{}", contest, BALLOTS).to_string()
+        format!("ballotbox/{}/{}", contest, BALLOTS)
     }
     fn ballots_stmt(contest: u32) -> String {
-        format!("ballotbox/{}/{}.stmt", contest, BALLOTS).to_string()
+        format!("ballotbox/{}/{}.stmt", contest, BALLOTS)
     }
 
     fn mix(contest: u32, auth: u32) -> String {
-        format!("{}/{}/{}", auth, contest, MIX).to_string()
+        format!("{}/{}/{}", auth, contest, MIX)
     }
     fn mix_stmt(contest: u32, auth: u32) -> String {
-        format!("{}/{}/{}.stmt", auth, contest, MIX).to_string()
+        format!("{}/{}/{}.stmt", auth, contest, MIX)
     }
     fn mix_stmt_other(contest: u32, auth: u32, other_t: u32) -> String {
-        format!("{}/{}/{}.{}.stmt", auth, contest, MIX, other_t).to_string()
+        format!("{}/{}/{}.{}.stmt", auth, contest, MIX, other_t)
     }
 
     fn decryption(contest: u32, auth: u32) -> String {
-        format!("{}/{}/{}", auth, contest, DECRYPTION).to_string()
+        format!("{}/{}/{}", auth, contest, DECRYPTION)
     }
     fn decryption_stmt(contest: u32, auth: u32) -> String {
-        format!("{}/{}/{}.stmt", auth, contest, DECRYPTION).to_string()
+        format!("{}/{}/{}.stmt", auth, contest, DECRYPTION)
     }
 
     pub fn plaintexts(contest: u32, auth: u32) -> String {
-        format!("{}/{}/{}", auth, contest, PLAINTEXTS).to_string()
+        format!("{}/{}/{}", auth, contest, PLAINTEXTS)
     }
     fn plaintexts_stmt(contest: u32, auth: u32) -> String {
-        format!("{}/{}/{}.stmt", auth, contest, PLAINTEXTS).to_string()
+        format!("{}/{}/{}.stmt", auth, contest, PLAINTEXTS)
     }
 
     fn auth_error(auth: u32) -> String {
-        format!("{}/error", auth).to_string()
+        format!("{}/error", auth)
     }
 }
 
@@ -153,7 +153,7 @@ impl<
         auth: u32,
         hash: Hash,
     ) -> Result<Option<Keyshare<E, G>>, BBError> {
-        let key = Self::share(contest, auth).to_string();
+        let key = Self::share(contest, auth);
         self.get(key, hash)
     }
 
@@ -174,7 +174,7 @@ impl<
     }
     fn get_pk(&mut self, contest: u32, hash: Hash) -> Result<Option<PublicKey<E, G>>, BBError> {
         // 0: trustee 0 combines shares into pk
-        let key = Self::public_key(contest, 0).to_string();
+        let key = Self::public_key(contest, 0);
         self.get(key, hash)
     }
 
@@ -185,7 +185,7 @@ impl<
         ])
     }
     fn get_ballots(&self, contest: u32, hash: Hash) -> Result<Option<Ballots<E>>, BBError> {
-        let key = Self::ballots(contest).to_string();
+        let key = Self::ballots(contest);
         self.get(key, hash)
     }
 
@@ -208,7 +208,7 @@ impl<
         )])
     }
     fn get_mix(&self, contest: u32, trustee: u32, hash: Hash) -> Result<Option<Mix<E>>, BBError> {
-        let key = Self::mix(contest, trustee).to_string();
+        let key = Self::mix(contest, trustee);
         let now_ = std::time::Instant::now();
         let ret = self.get(key, hash);
         info!(">> Get mix {}", now_.elapsed().as_millis());
@@ -233,7 +233,7 @@ impl<
         trustee: u32,
         hash: Hash,
     ) -> Result<Option<PartialDecryption<E>>, BBError> {
-        let key = Self::decryption(contest, trustee).to_string();
+        let key = Self::decryption(contest, trustee);
         self.get(key, hash)
     }
 
@@ -254,7 +254,7 @@ impl<
     }
     fn get_plaintexts(&self, contest: u32, hash: Hash) -> Result<Option<Plaintexts<E>>, BBError> {
         // 0: trustee 0 combines shares into pk
-        let key = Self::plaintexts(contest, 0).to_string();
+        let key = Self::plaintexts(contest, 0);
         self.get(key, hash)
     }
 
@@ -273,8 +273,8 @@ impl<
 
             let next = StatementVerifier {
                 statement: stmt,
-                trustee: trustee,
-                contest: contest,
+                trustee,
+                contest,
                 artifact_name: name,
             };
             ret.push(next);

@@ -170,7 +170,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
 
         let mix = Mix {
             mixed_ballots: e_primes,
-            proof: proof,
+            proof,
         };
         let mix_h = hashing::hash(&mix);
 
@@ -298,7 +298,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let rate = mix.mixed_ballots.len() as f32 / now_.elapsed().as_millis() as f32;
         let pd = PartialDecryption {
             pd_ballots: decs,
-            proofs: proofs,
+            proofs,
         };
         let pd_h = hashing::hash(&pd);
         let ss = SignedStatement::pdecryptions(&cfg_h, &pd_h, contest, &self.keypair);

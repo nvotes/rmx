@@ -32,7 +32,7 @@ impl Element for Integer {
     fn modulo(&self, modulus: &Self) -> Self {
         let (_, mut rem) = self.clone().div_rem(modulus.clone());
         if rem < 0 {
-            rem = rem + modulus;
+            rem += modulus;
         }
 
         rem
@@ -59,7 +59,7 @@ impl Exponent for Integer {
         let (_, mut rem) = self.clone().div_rem(modulus.clone());
 
         if rem < 0 {
-            rem = rem + modulus;
+            rem += modulus;
         }
 
         rem
@@ -77,7 +77,7 @@ struct OsRandgen(OsRng);
 
 impl RandGen for OsRandgen {
     fn gen(&mut self) -> u32 {
-        return self.0.next_u32();
+        self.0.next_u32()
     }
 }
 
@@ -85,7 +85,7 @@ struct StdRandgen(StdRng);
 
 impl RandGen for StdRandgen {
     fn gen(&mut self) -> u32 {
-        return self.0.next_u32();
+        self.0.next_u32()
     }
 }
 
@@ -108,13 +108,13 @@ impl RugGroup {
         let g = Integer::from(3);
         let co_factor = Integer::from(2);
 
-        assert!(g.clone().legendre(&p) == 1);
+        assert!(g.legendre(&p) == 1);
 
         RugGroup {
             generator: g,
-            modulus: p.clone(),
+            modulus: p,
             modulus_exp: q,
-            co_factor: co_factor,
+            co_factor,
         }
     }
 
@@ -133,7 +133,7 @@ impl RugGroup {
             let mut x: u64 = 1;
             loop {
                 assert!(x != 0);
-                x = x + 1;
+                x += 1;
                 next.extend(&x.to_le_bytes());
                 let elem: Integer = hasher.hash_to(&next);
                 let g = elem.mod_pow(&self.co_factor, &self.modulus());
@@ -194,7 +194,7 @@ impl Group<Integer> for RugGroup {
         assert!(plaintext < &(self.modulus_exp.clone() - 1));
 
         let notzero: Integer = plaintext.clone() + 1;
-        let legendre = notzero.clone().legendre(&self.modulus());
+        let legendre = notzero.legendre(&self.modulus());
         let product = legendre * notzero;
 
         // this syntax to disambiguate between traits

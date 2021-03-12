@@ -153,7 +153,7 @@ impl<E: Element, G: Group<E>> WorkCache<E, G> {
             }
         }
 
-        if ret.len() > 0 {
+        if !ret.is_empty() {
             Some(ret)
         } else {
             None

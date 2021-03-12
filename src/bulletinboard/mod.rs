@@ -134,14 +134,14 @@ pub struct PDecryptionsPath(pub PathBuf, pub PathBuf);
 pub struct PlaintextsPath(pub PathBuf, pub PathBuf);
 pub struct PlaintextsStmtPath(pub PathBuf);
 
-pub const CONFIG: &'static str = "config";
-pub const CONFIG_STMT: &'static str = "config.stmt";
+pub const CONFIG: &str = "config";
+pub const CONFIG_STMT: &str = "config.stmt";
 
-pub const SHARE: &'static str = "share";
-pub const PUBLIC_KEY: &'static str = "public_key";
-pub const BALLOTS: &'static str = "ballots";
-pub const MIX: &'static str = "mix";
-pub const DECRYPTION: &'static str = "decryption";
-pub const PLAINTEXTS: &'static str = "plaintexts";
-pub const PAUSE: &'static str = "pause";
-pub const ERROR: &'static str = "error";
+pub const SHARE: &str = "share";
+pub const PUBLIC_KEY: &str = "public_key";
+pub const BALLOTS: &str = "ballots";
+pub const MIX: &str = "mix";
+pub const DECRYPTION: &str = "decryption";
+pub const PLAINTEXTS: &str = "plaintexts";
+pub const PAUSE: &str = "pause";
+pub const ERROR: &str = "error";

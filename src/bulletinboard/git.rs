@@ -1,6 +1,5 @@
 // Alow this for the clone() function in this file
 #[allow(clippy::should_implement_trait)]
-
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -417,7 +416,9 @@ fn merge(
 
     if idx.has_conflicts() {
         error!("Merge conficts detected...");
-        return Err(git2::Error::from_str(&"Found conflicts during merge attempt".to_string()));
+        return Err(git2::Error::from_str(
+            &"Found conflicts during merge attempt".to_string(),
+        ));
     }
     let result_tree = repo.find_tree(idx.write_tree_to(repo)?)?;
     // now create the merge commit

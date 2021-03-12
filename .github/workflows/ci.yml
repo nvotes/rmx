@@ -7,7 +7,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
+      - name: Checkout repository
         uses: actions/checkout@v2
 
       - name: Install stable toolchain
@@ -26,7 +26,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
+      - name: Checkout repository
         uses: actions/checkout@v2
 
       - name: Install stable toolchain
@@ -45,7 +45,7 @@ jobs:
     name: Lints
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout sources
+      - name: Checkout repository
         uses: actions/checkout@v2
 
       - name: Install stable toolchain
@@ -73,30 +73,33 @@ jobs:
     name: Coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-      - uses: actions-rs/toolchain@v1
+      - name: Install stable toolchain
+        uses: actions-rs/toolchain@v1
         with:
-          toolchain: nightly
+          toolchain: stable
           override: true
 
-      - uses: actions-rs/cargo@v1
-        # continue on error so we upload the code coverage
-        continue-on-error: true 
+      - name: Run cargo-tarpaulin
+        uses: actions-rs/tarpaulin@v0.1
         with:
-          command: test
-          args: --all-features --no-fail-fast
-
-      - id: coverage
-        uses: actions-rs/grcov@v0.1
+          version: '0.15.0'
+          args: '-- --test-threads 1'
 
       # update code coverage in codecov.io
       - uses: codecov/codecov-action@v1
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: ${{ steps.coverage.outputs.report }}
           fail_ci_if_error: True
+
+      - name: Archive code coverage results
+        uses: actions/upload-artifact@v1
+        with:
+          name: code-coverage-report
+          path: coverage-report.xml
       
   # check dependencies
   # based on https://github.com/EmbarkStudios/cargo-deny-action
@@ -104,8 +107,11 @@ jobs:
     name: Dependencies
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
-      - uses: EmbarkStudios/cargo-deny-action@v1
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Run cargo deny
+        uses: EmbarkStudios/cargo-deny-action@v1
         with:
           log-level: warn
           command: check

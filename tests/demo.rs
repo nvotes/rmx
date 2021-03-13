@@ -250,6 +250,7 @@ fn demo() {
         let driver: Driver<RistrettoPoint, RistrettoGroup, GenericBulletinBoard<RistrettoPoint, RistrettoGroup, GitBulletinBoard>>
             = Driver::new(trustee);
         drivers.push(driver);*/
+        
         let driver: Driver<
             RistrettoPoint,
             RistrettoGroup,

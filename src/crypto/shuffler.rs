@@ -4,7 +4,7 @@ use rand::rngs::OsRng;
 use rand::Rng;
 
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
@@ -19,7 +19,7 @@ pub struct YChallengeInput<'a, E: Element + HashBytes, G: Group<E>> {
     pub pk: &'a PublicKey<E, G>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Clone)]
 pub struct TValues<E: Element> {
     pub t1: E,
     pub t2: E,
@@ -29,7 +29,7 @@ pub struct TValues<E: Element> {
     pub t_hats: Vec<E>,
 }
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Clone)]
 pub struct Responses<E: Element> {
     pub s1: E::Exp,
     pub s2: E::Exp,
@@ -39,7 +39,7 @@ pub struct Responses<E: Element> {
     pub s_primes: Vec<E::Exp>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct ShuffleProof<E: Element> {
     pub t: TValues<E>,
     pub s: Responses<E>,

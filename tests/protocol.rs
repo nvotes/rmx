@@ -8,7 +8,6 @@ use std::path::Path;
 
 use ed25519_dalek::{Keypair, PublicKey as SPublicKey};
 use rand::rngs::OsRng;
-use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
 use braid::bulletinboard::basic::*;
@@ -66,8 +65,8 @@ fn run_ristretto_git() {
 }
 
 fn run<
-    E: Element + DeserializeOwned + std::cmp::PartialEq,
-    G: Group<E> + DeserializeOwned,
+    E: Element + std::cmp::PartialEq,
+    G: Group<E>,
     B: BasicBoard,
 >(
     group: G,

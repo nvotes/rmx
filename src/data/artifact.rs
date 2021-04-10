@@ -1,13 +1,13 @@
 use std::marker::PhantomData;
 
 use ed25519_dalek::PublicKey as SPublicKey;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
 use crate::crypto::shuffler::*;
 
-#[derive(Serialize, Deserialize, Eq, PartialEq, Debug)]
+#[derive(Serialize, Eq, PartialEq, Debug)]
 pub struct Config<E, G> {
     pub id: [u8; 16],
     pub group: G,
@@ -17,37 +17,37 @@ pub struct Config<E, G> {
     pub phantom_e: PhantomData<E>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct Keyshare<E: Element, G> {
     pub share: PublicKey<E, G>,
     pub proof: Schnorr<E>,
     pub encrypted_sk: EncryptedPrivateKey,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Serialize, Eq, PartialEq)]
 pub struct EncryptedPrivateKey {
     pub bytes: Vec<u8>,
     pub iv: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Serialize, Eq, PartialEq)]
 pub struct Ballots<E> {
     pub ciphertexts: Vec<Ciphertext<E>>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct Mix<E: Element> {
     pub mixed_ballots: Vec<Ciphertext<E>>,
     pub proof: ShuffleProof<E>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 pub struct PartialDecryption<E: Element> {
     pub pd_ballots: Vec<E>,
     pub proofs: Vec<ChaumPedersen<E>>,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Serialize, Eq, PartialEq)]
 pub struct Plaintexts<E> {
     pub plaintexts: Vec<E>,
 }

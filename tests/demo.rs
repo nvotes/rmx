@@ -11,7 +11,6 @@ use std::sync::{Arc, Mutex};
 use curve25519_dalek::ristretto::RistrettoPoint;
 use ed25519_dalek::{Keypair, PublicKey as SPublicKey};
 use rand::rngs::OsRng;
-use serde::de::DeserializeOwned;
 use uuid::Uuid;
 
 use braid::crypto::base::Element;
@@ -57,7 +56,7 @@ struct Demo<E: Element, G, B> {
     boards: Vec<GenericBulletinBoard<E, G, B>>,
 }
 
-impl<E: Element + DeserializeOwned, G: Group<E> + DeserializeOwned, B: BasicBoard> Demo<E, G, B>
+impl<E: Element, G: Group<E>, B: BasicBoard> Demo<E, G, B>
 where
     <E as Element>::Plaintext: std::hash::Hash,
 {
@@ -427,8 +426,8 @@ fn demo() {
 }
 
 fn step_t<
-    E: 'static + Element + DeserializeOwned + std::cmp::PartialEq,
-    G: 'static + Group<E> + DeserializeOwned,
+    E: 'static + Element + std::cmp::PartialEq,
+    G: 'static + Group<E>,
     B: 'static + BasicBoard + Send + Sync,
 >(
     demo_arc: DemoArc<E, G, B>,
@@ -440,8 +439,8 @@ fn step_t<
 }
 
 fn ballots_t<
-    E: 'static + Element + DeserializeOwned + std::cmp::PartialEq,
-    G: 'static + Group<E> + DeserializeOwned,
+    E: 'static + Element + std::cmp::PartialEq,
+    G: 'static + Group<E>,
     B: 'static + BasicBoard + Send + Sync,
 >(
     demo_arc: DemoArc<E, G, B>,
@@ -453,8 +452,8 @@ fn ballots_t<
 }
 
 fn check_t<
-    E: 'static + Element + DeserializeOwned + std::cmp::PartialEq,
-    G: 'static + Group<E> + DeserializeOwned,
+    E: 'static + Element + std::cmp::PartialEq,
+    G: 'static + Group<E>,
     B: 'static + BasicBoard + Send + Sync,
 >(
     demo_arc: DemoArc<E, G, B>,
@@ -466,8 +465,8 @@ fn check_t<
 }
 
 fn step<
-    E: Element + DeserializeOwned + std::cmp::PartialEq,
-    G: Group<E> + DeserializeOwned,
+    E: Element + std::cmp::PartialEq,
+    G: Group<E>,
     B: BasicBoard + Send + Sync,
 >(
     demo_arc: DemoArc<E, G, B>,
@@ -486,8 +485,8 @@ fn step<
 }
 
 fn ballots<
-    E: Element + DeserializeOwned + std::cmp::PartialEq,
-    G: Group<E> + DeserializeOwned,
+    E: Element + std::cmp::PartialEq,
+    G: Group<E>,
     B: BasicBoard + Send + Sync,
 >(
     demo_arc: DemoArc<E, G, B>,
@@ -503,8 +502,8 @@ fn ballots<
 }
 
 fn check<
-    E: 'static + Element + DeserializeOwned + std::cmp::PartialEq,
-    G: 'static + Group<E> + DeserializeOwned,
+    E: 'static + Element + std::cmp::PartialEq,
+    G: 'static + Group<E>,
     B: BasicBoard + Send + Sync,
 >(
     demo_arc: DemoArc<E, G, B>,

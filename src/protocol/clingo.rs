@@ -1,4 +1,7 @@
 use clingo::*;
+use crate::protocol::logic::*;
+use crate::crypto::hashing::Hash;
+
 use std::env;
 
 #[derive(ToSymbol)]
@@ -8,6 +11,126 @@ struct Guilty(Person);
 enum Person {
     Bob,
     Harry
+}
+
+#[derive(ToSymbol)]
+struct Hsh(u32, String);
+
+use base64::encode;
+
+fn symbol_from_hash(hash: Hash) -> Result<clingo::Symbol, clingo::ClingoError> {
+    Symbol::create_string(&encode(hash))
+}
+
+impl ToSymbol for ConfigPresent {
+    fn symbol(&self) -> Result<clingo::Symbol, clingo::ClingoError> {
+        
+        Symbol::create_function("config_present", 
+            &[
+                symbol_from_hash(self.0)?,
+                self.1.symbol()?,
+                self.2.symbol()?,
+                self.3.symbol()?
+            ],
+        true)
+    }
+}
+
+impl ToSymbol for ConfigSignedBy {
+    fn symbol(&self) -> Result<clingo::Symbol, clingo::ClingoError> {
+    
+        Symbol::create_function("config_signed_by", 
+            &[
+                symbol_from_hash(self.0)?,
+                self.1.symbol()?
+            ],
+        true)
+    }
+}
+
+impl ToSymbol for PkShareSignedBy {
+    fn symbol(&self) -> Result<clingo::Symbol, clingo::ClingoError> {
+    
+        Symbol::create_function("pk_share_signed_by", 
+            &[
+                symbol_from_hash(self.0)?,
+                self.1.symbol()?,
+                symbol_from_hash(self.2)?,
+                self.3.symbol()?
+            ],
+        true)
+    }
+}
+
+impl ToSymbol for PkSignedBy {
+    fn symbol(&self) -> Result<clingo::Symbol, clingo::ClingoError> {
+    
+        Symbol::create_function("pk_signed_by", 
+            &[
+                symbol_from_hash(self.0)?,
+                self.1.symbol()?,
+                symbol_from_hash(self.2)?,
+                self.3.symbol()?
+            ],
+        true)
+    }
+}
+
+impl ToSymbol for BallotsSigned {
+    fn symbol(&self) -> Result<clingo::Symbol, clingo::ClingoError> {
+    
+        Symbol::create_function("ballots_signed", 
+            &[
+                symbol_from_hash(self.0)?,
+                self.1.symbol()?,
+                symbol_from_hash(self.2)?
+            ],
+        true)
+    }
+}
+
+impl ToSymbol for MixSignedBy {
+    fn symbol(&self) -> Result<clingo::Symbol, clingo::ClingoError> {
+    
+        Symbol::create_function("mix_signed_by", 
+            &[
+                symbol_from_hash(self.0)?,
+                self.1.symbol()?,
+                symbol_from_hash(self.2)?,
+                symbol_from_hash(self.3)?,
+                self.4.symbol()?,
+                self.5.symbol()?
+            ],
+        true)
+    }
+}
+
+impl ToSymbol for DecryptionSignedBy {
+    fn symbol(&self) -> Result<clingo::Symbol, clingo::ClingoError> {
+    
+        Symbol::create_function("decryption_signed_by", 
+            &[
+                symbol_from_hash(self.0)?,
+                self.1.symbol()?,
+                symbol_from_hash(self.2)?,
+                self.3.symbol()?
+            ],
+        true)
+    }
+}
+
+impl ToSymbol for PlaintextsSignedBy {
+    fn symbol(&self) -> Result<clingo::Symbol, clingo::ClingoError> {
+    
+        Symbol::create_function("plaintexts_signed_by", 
+            &[
+                symbol_from_hash(self.0)?,
+                self.1.symbol()?,
+                symbol_from_hash(self.2)?,
+                self.3.symbol()?
+            ],
+        true)
+    }
 }
 
 fn print_model(model: &Model, label: &str, show: ShowType) {
@@ -25,48 +148,90 @@ fn print_model(model: &Model, label: &str, show: ShowType) {
     println!();
 }
 
+fn parse_model(model: &Model) {
+    let atoms = model
+        .symbols(ShowType::ATOMS)
+        .expect("Failed to retrieve symbols in the model.");
+
+    for atom in atoms {
+        // retrieve and print the symbol's string
+        // print!(" {}", atom.to_string().unwrap());
+        let name = atom.name().unwrap();
+        println!("{}", name);
+
+        match name {
+            "valp" => println!("valppppp"),
+            _ => (),
+        };
+    }
+    
+}
+
 fn solve(ctl: &mut Control) {
     // get a solve handle
     let mut handle = ctl
         .solve(SolveMode::YIELD, &[])
         .expect("Failed retrieving solve handle.");
 
-    // loop over all models
-    loop {
-        handle.resume().expect("Failed resume on solve handle.");
-        match handle.model() {
-            Ok(Some(model)) => {
-                // get model type
-                let model_type = model.model_type().unwrap();
+    let result = handle.get().expect("Failed get on solve handle.");
+    let unsat = result.intersects(SolveResult::UNSATISFIABLE);
 
-                let type_string = match model_type {
-                    ModelType::StableModel => "Stable model",
-                    ModelType::BraveConsequences => "Brave consequences",
-                    ModelType::CautiousConsequences => "Cautious consequences",
-                };
+    if unsat {
+        println!("Unsatisfiable");
+    }
+    else {
 
-                // get running number of model
-                let number = model.number().unwrap();
+        // loop over all models
+        loop {
+            match handle.model() {
+                Ok(Some(model)) => {
+                    // get model type
+                    let model_type = model.model_type().unwrap();
 
-                println!("{}: {}", type_string, number);
+                    // get running number of model
+                    let number = model.number().unwrap();
 
-                print_model(model, "  shown", ShowType::SHOWN);
-                print_model(model, "  atoms", ShowType::ATOMS);
-                print_model(model, "  terms", ShowType::TERMS);
-                // print_model(model, " ~atoms", ShowType::COMPLEMENT | ShowType::ATOMS);
+                    print_model(model, "  shown", ShowType::SHOWN);
+                    print_model(model, "  atoms", ShowType::ATOMS);
+                }
+                Ok(None) => {
+                    // stop if there are no more models
+                    break;
+                }
+                Err(e) => {
+                    panic!("Error: {}", e);
+                }
             }
-            Ok(None) => {
-                // stop if there are no more models
-                break;
-            }
-            Err(e) => {
-                panic!("Error: {}", e);
-            }
+            handle.resume().expect("Failed resume on solve handle.");
         }
     }
 
     // close the solve handle
     handle.close().expect("Failed to close solve handle.");
+}
+
+use clingo::{ExternalError, ExternalFunctionHandler};
+
+struct Concat {}
+impl ExternalFunctionHandler for Concat {
+    fn on_external_function(
+        &mut self,
+        _location: &Location,
+        name: &str,
+        arguments: &[Symbol],
+    ) -> Result<Vec<Symbol>,ExternalError> {
+        if name == "concat" && arguments.len() == 2 {
+
+            let value1 = arguments[0].string().unwrap();
+            let value2 = arguments[1].string().unwrap();
+            let result = format!("{},{}", value1, value2);
+
+            let symbol = Symbol::create_string(&result).unwrap();
+            Ok(vec![symbol])
+        } else {            
+            Err(ExternalError{ msg: "passed arguments "})?
+        }
+    }
 }
 
 #[cfg(test)]
@@ -84,30 +249,35 @@ mod tests {
         // create a control object and pass command line arguments
         let mut ctl = Control::new(vec![]).expect("Failed creating clingo_control.");
 
-        let program = "
+        let program = r#"
         motive(harry).
         motive(sally).
         guilty(harry).
         motive(bob).
         
-        
+        valp(N + 1, @concat(H, H2)) :- hsh(N + 1, H), hsh(N, H2).
+
+        :- valp(2, X).
         
         innocent(Suspect) :- motive(Suspect), not guilty(Suspect).
-        #show innocent/1.
-        ";
+        #show valp/2.
+        "#;
 
         ctl.add("base", &[], program).expect("Failed to add a logic program.");
 
         // ground the base part
         let part = Part::new("base", &[]).unwrap();
         let parts = vec![part];
-        // let p = Motive("bob".to_string());
         let p = Guilty(Person::Bob);
         let mut fb = FactBase::new();
         fb.insert(&p);
+        fb.insert(&Hsh(1, String::from("hohoo")));
+        fb.insert(&Hsh(2, String::from("hohoo")));
+        fb.insert(&ConfigPresent([0u8;64], 1, 2, 3));
         ctl.add_facts(&fb);
 
-        ctl.ground(&parts)
+        let mut concat = Concat{};
+        ctl.ground_with_event_handler(&parts, &mut concat)
             .expect("Failed to ground a logic program.");
 
         // solve

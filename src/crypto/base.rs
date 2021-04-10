@@ -1,5 +1,5 @@
-use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+
+use serde::Serialize;
 use std::marker::{Send, Sync};
 
 use crate::crypto::elgamal::*;
@@ -25,7 +25,6 @@ pub trait Exponent:
     + Send
     + Sync
     + Serialize
-    + DeserializeOwned
     + HashBytes
     + FromByteTree
     + BTree
@@ -147,14 +146,14 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + HashBytes + BTree
     }
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Serialize, Eq, PartialEq)]
 pub struct Schnorr<E: Element> {
     pub commitment: E,
     pub challenge: E::Exp,
     pub response: E::Exp,
 }
 
-#[derive(Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Serialize, Eq, PartialEq)]
 pub struct ChaumPedersen<E: Element> {
     pub commitment1: E,
     pub commitment2: E,

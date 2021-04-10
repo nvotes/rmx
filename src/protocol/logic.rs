@@ -1,6 +1,5 @@
 use crepe::crepe;
 use log::*;
-use serde::de::DeserializeOwned;
 use std::marker::PhantomData;
 
 use crate::bulletinboard::*;
@@ -290,7 +289,7 @@ pub struct Driver<E, G, B> {
     phantom_b: PhantomData<B>,
 }
 
-impl<E: Element + DeserializeOwned, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
+impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
     pub fn new(trustee: Trustee<E, G>) -> Driver<E, G, B> {
         Driver {
             trustee,

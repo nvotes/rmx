@@ -6,7 +6,6 @@ use std::path::{Path, PathBuf};
 use git2::build::{CheckoutBuilder, RepoBuilder};
 use git2::*;
 use log::{error, info, warn};
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use walkdir::{DirEntry, WalkDir};
@@ -33,7 +32,7 @@ impl BasicBoard for GitBulletinBoard {
     fn list(&self) -> Result<Vec<String>, BBError> {
         self.list_entries()
     }
-    fn get<A: HashBytes + DeserializeOwned + Deser>(
+    fn get<A: HashBytes + Deser>(
         &self,
         target: String,
         hash: Hash,
@@ -127,7 +126,7 @@ impl GitBulletinBoard {
         Ok(files)
     }
 
-    fn get_object<A: HashBytes + DeserializeOwned + Deser>(
+    fn get_object<A: HashBytes + Deser>(
         &self,
         target_path: &Path,
         hash: Hash,

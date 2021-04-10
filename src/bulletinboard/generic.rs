@@ -1,4 +1,3 @@
-use serde::de::DeserializeOwned;
 use std::marker::PhantomData;
 use std::path::Path;
 
@@ -24,8 +23,8 @@ pub struct GenericBulletinBoard<E, G, B> {
 }
 
 impl<
-        E: Element + DeserializeOwned + FromByteTree,
-        G: Group<E> + DeserializeOwned + FromByteTree,
+        E: Element + FromByteTree,
+        G: Group<E> + FromByteTree,
         B: BasicBoard,
     > GenericBulletinBoard<E, G, B>
 {
@@ -40,7 +39,7 @@ impl<
         let entries_ = entries.iter().map(|(a, b)| (Path::new(a), *b)).collect();
         self.basic.put(entries_)
     }
-    fn get<A: HashBytes + DeserializeOwned + FromByteTree>(
+    fn get<A: HashBytes + FromByteTree>(
         &self,
         target: String,
         hash: Hash,
@@ -106,8 +105,8 @@ impl<
 }
 
 impl<
-        E: Element + DeserializeOwned + FromByteTree,
-        G: Group<E> + DeserializeOwned + FromByteTree,
+        E: Element + FromByteTree,
+        G: Group<E> + FromByteTree,
         B: BasicBoard,
     > BulletinBoard<E, G> for GenericBulletinBoard<E, G, B>
 {

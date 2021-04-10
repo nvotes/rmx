@@ -9,7 +9,7 @@ use crate::util;
 
 pub trait BasicBoard {
     fn list(&self) -> Result<Vec<String>, BBError>;
-    fn get<A: HashBytes + Deser>(
+    fn get<A: ToByteTree + Deser>(
         &self,
         target: String,
         hash: Hash,
@@ -27,7 +27,7 @@ impl BasicBoard for MBasic {
     fn list(&self) -> Result<Vec<String>, BBError> {
         Ok(self.data.iter().map(|(a, _)| a.clone()).collect())
     }
-    fn get<A: HashBytes + Deser>(
+    fn get<A: ToByteTree + Deser>(
         &self,
         target: String,
         hash: Hash,

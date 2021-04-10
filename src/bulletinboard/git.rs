@@ -32,7 +32,7 @@ impl BasicBoard for GitBulletinBoard {
     fn list(&self) -> Result<Vec<String>, BBError> {
         self.list_entries()
     }
-    fn get<A: HashBytes + Deser>(
+    fn get<A: ToByteTree + Deser>(
         &self,
         target: String,
         hash: Hash,
@@ -126,7 +126,7 @@ impl GitBulletinBoard {
         Ok(files)
     }
 
-    fn get_object<A: HashBytes + Deser>(
+    fn get_object<A: ToByteTree + Deser>(
         &self,
         target_path: &Path,
         hash: Hash,

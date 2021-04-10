@@ -39,7 +39,7 @@ impl<
         let entries_ = entries.iter().map(|(a, b)| (Path::new(a), *b)).collect();
         self.basic.put(entries_)
     }
-    fn get<A: HashBytes + FromByteTree>(
+    fn get<A: ToByteTree + FromByteTree>(
         &self,
         target: String,
         hash: Hash,
@@ -313,7 +313,7 @@ mod tests {
             let keypair = Keypair::generate(&mut csprng);
             trustee_pks.push(keypair.public);
         }
-        let mut cfg = Config {
+        let mut cfg: Config<Integer, RugGroup> = Config {
             id: id.as_bytes().clone(),
             group: group,
             contests: contests,

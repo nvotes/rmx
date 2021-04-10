@@ -161,12 +161,12 @@ pub fn cp_proof_challenge<E: Element>(
 use crate::data::bytes::ToByteTree;
 use crate::util;
 
-pub fn hash<T: HashBytes>(data: &T) -> [u8; 64] {
+pub fn hash_<T: HashBytes>(data: &T) -> [u8; 64] {
     let bytes = data.get_bytes();
     hash_bytes(bytes)
 }
 
-pub fn hash_<T: ToByteTree>(data: &T) -> [u8; 64] {
+pub fn hash<T: ToByteTree>(data: &T) -> [u8; 64] {
     let tree = data.to_byte_tree();
     let bytes = tree.to_hashable_bytes();
     hash_bytes(bytes)
@@ -442,8 +442,6 @@ impl<E: Element> HashBytes for Plaintexts<E> {
         concat_bytes(&self.plaintexts)
     }
 }
-
-use crate::protocol::facts::Act;
 
 impl HashBytes for Hash {
     fn get_bytes(&self) -> Vec<u8> {

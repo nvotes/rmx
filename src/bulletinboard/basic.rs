@@ -3,7 +3,7 @@ use std::path::Path;
 
 use crate::bulletinboard::BBError;
 use crate::crypto::hashing;
-use crate::crypto::hashing::{Hash, HashBytes};
+use crate::crypto::hashing::Hash;
 use crate::data::bytes::*;
 use crate::util;
 

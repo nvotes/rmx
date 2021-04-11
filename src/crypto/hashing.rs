@@ -4,10 +4,15 @@ use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use rug::{integer::Order, Integer};
 use sha2::{Digest, Sha256, Sha512};
+use serde_bytes::ByteBuf;
 
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
 use crate::crypto::shuffler::{TValues, YChallengeInput};
+use crate::data::bytes::ByteTree;
+use crate::data::bytes::ByteTree::Leaf;
+use crate::data::bytes::ToByteTree;
+use crate::util;
 
 pub type Hash = [u8; 64];
 
@@ -64,6 +69,8 @@ impl HashTo<Integer> for RugHasher {
     }
 }
 
+
+/*
 // https://stackoverflow.com/questions/39675949/is-there-a-trait-supplying-iter
 fn concat_bytes_iter<'a, H: 'a + HashBytes, I: IntoIterator<Item = &'a H>>(cs: I) -> Vec<u8> {
     cs.into_iter()
@@ -78,7 +85,7 @@ fn concat_bytes_iter<'a, H: 'a + HashBytes, I: IntoIterator<Item = &'a H>>(cs: I
 
 fn concat_bytes<T: HashBytes>(cs: &Vec<T>) -> Vec<u8> {
     concat_bytes_iter(cs)
-}
+}*/
 
 pub fn shuffle_proof_us<E: Element>(
     es: &Vec<Ciphertext<E>>,
@@ -87,23 +94,35 @@ pub fn shuffle_proof_us<E: Element>(
     exp_hasher: &dyn HashTo<E::Exp>,
     n: usize,
 ) -> Vec<E::Exp> {
-    let mut prefix_vector = concat_bytes(es);
+    /* let mut prefix_vector = concat_bytes(es);
     prefix_vector.extend(concat_bytes(e_primes));
-    prefix_vector.extend(concat_bytes(cs));
+    prefix_vector.extend(concat_bytes(cs)); */
+
+    let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
+    trees.push(es.to_byte_tree());
+    trees.push(e_primes.to_byte_tree());
+    trees.push(cs.to_byte_tree());
+
+    let prefix_bytes = ByteTree::Tree(trees).to_hashable_bytes();
 
     // optimization: instead of calculating u = H(prefix || i),
     // we do u = H(H(prefix) || i)
     // that way we avoid allocating prefix-size bytes n times
     let mut hasher = Sha512::new();
-    hasher.update(prefix_vector);
+    hasher.update(prefix_bytes);
     let prefix_hash = hasher.finalize().to_vec();
     let mut ret = Vec::with_capacity(n);
 
     for i in 0..n {
-        let mut next = prefix_hash.clone();
-        next.extendl(&i.to_le_bytes().to_vec());
+        // let mut next = prefix_hash.clone();
+        // next.extendl(&i.to_le_bytes().to_vec());
 
-        let u: E::Exp = exp_hasher.hash_to(&next);
+        let mut next: Vec<ByteTree> = Vec::with_capacity(2);
+        next.push(Leaf(ByteBuf::from(prefix_hash.clone())));
+        next.push(Leaf(ByteBuf::from(i.to_le_bytes())));
+        let bytes = ByteTree::Tree(next).to_hashable_bytes();
+
+        let u: E::Exp = exp_hasher.hash_to(&bytes);
         ret.push(u);
     }
 
@@ -115,18 +134,21 @@ pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(
     t: &TValues<E>,
     exp_hasher: &dyn HashTo<E::Exp>,
 ) -> E::Exp {
-    let mut bytes = concat_bytes(&y.es);
-    bytes.extend(concat_bytes(&y.e_primes));
-    bytes.extend(concat_bytes(&y.cs));
-    bytes.extend(concat_bytes(&y.c_hats));
-    bytes.extend(y.pk.value.get_bytes());
+    let mut trees: Vec<ByteTree> = Vec::with_capacity(11);
+    trees.push(y.es.to_byte_tree());
+    trees.push(y.e_primes.to_byte_tree());
+    trees.push(y.cs.to_byte_tree());
+    trees.push(y.c_hats.to_byte_tree());
+    trees.push(y.pk.value.to_byte_tree());
 
-    bytes.extend(t.t1.get_bytes());
-    bytes.extend(t.t2.get_bytes());
-    bytes.extend(t.t3.get_bytes());
-    bytes.extend(t.t4_1.get_bytes());
-    bytes.extend(t.t4_2.get_bytes());
-    bytes.extend(concat_bytes(&t.t_hats));
+    trees.push(t.t1.to_byte_tree());
+    trees.push(t.t2.to_byte_tree());
+    trees.push(t.t3.to_byte_tree());
+    trees.push(t.t4_1.to_byte_tree());
+    trees.push(t.t4_2.to_byte_tree());
+    trees.push(t.t_hats.to_byte_tree());
+
+    let bytes = ByteTree::Tree(trees).to_hashable_bytes();
 
     exp_hasher.hash_to(&bytes)
 }
@@ -139,7 +161,9 @@ pub fn schnorr_proof_challenge<E: Element>(
 ) -> E::Exp {
     let values = [g, public, commitment].to_vec();
 
-    let bytes = concat_bytes_iter(values);
+    let tree = values.iter().map(|e| e.to_byte_tree()).collect();
+    let bytes = ByteTree::Tree(tree).to_hashable_bytes();
+    
     exp_hasher.hash_to(&bytes)
 }
 
@@ -154,17 +178,18 @@ pub fn cp_proof_challenge<E: Element>(
 ) -> E::Exp {
     let values = [g1, g2, public1, public2, commitment1, commitment2].to_vec();
 
-    let bytes = concat_bytes_iter(values);
+    let tree = values.iter().map(|e| e.to_byte_tree()).collect();
+    let bytes = ByteTree::Tree(tree).to_hashable_bytes();
+
     exp_hasher.hash_to(&bytes)
 }
 
-use crate::data::bytes::ToByteTree;
-use crate::util;
 
-pub fn hash_<T: HashBytes>(data: &T) -> [u8; 64] {
+
+/* pub fn hash_<T: HashBytes>(data: &T) -> [u8; 64] {
     let bytes = data.get_bytes();
     hash_bytes(bytes)
-}
+}*/
 
 pub fn hash<T: ToByteTree>(data: &T) -> [u8; 64] {
     let tree = data.to_byte_tree();
@@ -185,6 +210,7 @@ pub fn hash_bytes_256(bytes: Vec<u8>) -> [u8; 32] {
     util::to_u8_32(&hasher.finalize().to_vec())
 }
 
+/*
 impl<E: Element + HashBytes> HashBytes for Ciphertext<E> {
     fn get_bytes(&self) -> Vec<u8> {
         let mut ret = self.a.get_bytes();
@@ -525,7 +551,7 @@ impl HashBytes for Act {
             }
         }
     }
-}
+}*/
 
 #[cfg(test)]
 mod tests {

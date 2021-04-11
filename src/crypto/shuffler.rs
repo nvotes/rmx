@@ -9,9 +9,9 @@ use serde::Serialize;
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
 use crate::crypto::hashing;
-use crate::crypto::hashing::{HashBytes, HashTo};
+use crate::crypto::hashing::HashTo;
 
-pub struct YChallengeInput<'a, E: Element + HashBytes, G: Group<E>> {
+pub struct YChallengeInput<'a, E: Element, G: Group<E>> {
     pub es: &'a Vec<Ciphertext<E>>,
     pub e_primes: &'a Vec<Ciphertext<E>>,
     pub cs: &'a Vec<E>,

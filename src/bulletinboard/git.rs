@@ -14,7 +14,6 @@ use crate::bulletinboard::basic::BasicBoard;
 use crate::bulletinboard::BBError;
 use crate::crypto::hashing;
 use crate::crypto::hashing::Hash;
-use crate::crypto::hashing::HashBytes;
 use crate::data::bytes::*;
 use crate::util;
 

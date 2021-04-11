@@ -70,7 +70,7 @@ pub fn shuffle_rug(n: usize) -> Mix<Integer> {
     }
 }
 
-fn ser_mix_rug(mix: &Mix<Integer>) -> Vec<u8> {
+/* fn ser_mix_rug(mix: &Mix<Integer>) -> Vec<u8> {
     bincode::serialize(mix).unwrap()
 }
 
@@ -84,7 +84,7 @@ fn ser_mix_ristretto(mix: &Mix<RistrettoPoint>) -> Vec<u8> {
 
 fn deser_mix_ristretto(bytes: &Vec<u8>) {
     let _mix: Mix<RistrettoPoint> = bincode::deserialize(&bytes).unwrap();
-}
+}*/
 
 fn ser_mix_rug_bt(mix: &Mix<Integer>) -> Vec<u8> {
     mix.ser()

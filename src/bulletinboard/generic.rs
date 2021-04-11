@@ -7,7 +7,7 @@ use crate::bulletinboard::*;
 use crate::crypto::base::Element;
 use crate::crypto::base::Group;
 use crate::crypto::elgamal::PublicKey;
-use crate::crypto::hashing::{Hash, HashBytes};
+use crate::crypto::hashing::Hash;
 use crate::data::artifact::*;
 use crate::data::bytes::*;
 

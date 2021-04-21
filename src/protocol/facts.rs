@@ -1,6 +1,7 @@
 use log::info;
 use std::collections::HashSet;
 use std::fmt;
+// use clingo::Symbol;
 
 use strum::Display;
 
@@ -297,6 +298,19 @@ impl AllFacts {
             plaintexts_ok,
         }
     }
+
+    /* pub(super) fn from_clingo(atoms: Vec<Symbol>) {
+        for atom in atoms {
+            let name = atom.name().unwrap();
+            println!("{}", name);
+
+            match name {
+                "valp" => println!("valppppp"),
+                _ => (),
+            };
+        
+        }
+    }*/
 
     pub(super) fn log(&self) {
         let next = &self.config_ok;

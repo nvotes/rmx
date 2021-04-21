@@ -8,7 +8,7 @@ use serde_bytes::ByteBuf;
 
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
-use crate::crypto::shuffler::{TValues, YChallengeInput};
+use crate::crypto::shuffler::{Commitments, YChallengeInput};
 use crate::data::bytes::ByteTree;
 use crate::data::bytes::ByteTree::Leaf;
 use crate::data::bytes::ToByteTree;
@@ -26,10 +26,6 @@ impl ConcatWithLength for Vec<u8> {
         self.extend(&length.to_le_bytes());
         self.extend(add);
     }
-}
-
-pub trait HashBytes {
-    fn get_bytes(&self) -> Vec<u8>;
 }
 
 pub trait HashTo<T>: Send + Sync {
@@ -69,24 +65,6 @@ impl HashTo<Integer> for RugHasher {
     }
 }
 
-
-/*
-// https://stackoverflow.com/questions/39675949/is-there-a-trait-supplying-iter
-fn concat_bytes_iter<'a, H: 'a + HashBytes, I: IntoIterator<Item = &'a H>>(cs: I) -> Vec<u8> {
-    cs.into_iter()
-        .map(|x| x.get_bytes())
-        .fold(vec![], |mut a, b| {
-            let length = b.len() as u64;
-            a.extend(&length.to_le_bytes());
-            a.extend(b);
-            a
-        })
-}
-
-fn concat_bytes<T: HashBytes>(cs: &Vec<T>) -> Vec<u8> {
-    concat_bytes_iter(cs)
-}*/
-
 pub fn shuffle_proof_us<E: Element>(
     es: &Vec<Ciphertext<E>>,
     e_primes: &Vec<Ciphertext<E>>,
@@ -94,9 +72,6 @@ pub fn shuffle_proof_us<E: Element>(
     exp_hasher: &dyn HashTo<E::Exp>,
     n: usize,
 ) -> Vec<E::Exp> {
-    /* let mut prefix_vector = concat_bytes(es);
-    prefix_vector.extend(concat_bytes(e_primes));
-    prefix_vector.extend(concat_bytes(cs)); */
 
     let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
     trees.push(es.to_byte_tree());
@@ -114,9 +89,6 @@ pub fn shuffle_proof_us<E: Element>(
     let mut ret = Vec::with_capacity(n);
 
     for i in 0..n {
-        // let mut next = prefix_hash.clone();
-        // next.extendl(&i.to_le_bytes().to_vec());
-
         let mut next: Vec<ByteTree> = Vec::with_capacity(2);
         next.push(Leaf(ByteBuf::from(prefix_hash.clone())));
         next.push(Leaf(ByteBuf::from(i.to_le_bytes())));
@@ -131,7 +103,7 @@ pub fn shuffle_proof_us<E: Element>(
 
 pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(
     y: &YChallengeInput<E, G>,
-    t: &TValues<E>,
+    t: &Commitments<E>,
     exp_hasher: &dyn HashTo<E::Exp>,
 ) -> E::Exp {
     let mut trees: Vec<ByteTree> = Vec::with_capacity(11);
@@ -184,13 +156,6 @@ pub fn cp_proof_challenge<E: Element>(
     exp_hasher.hash_to(&bytes)
 }
 
-
-
-/* pub fn hash_<T: HashBytes>(data: &T) -> [u8; 64] {
-    let bytes = data.get_bytes();
-    hash_bytes(bytes)
-}*/
-
 pub fn hash<T: ToByteTree>(data: &T) -> [u8; 64] {
     let tree = data.to_byte_tree();
     let bytes = tree.to_hashable_bytes();
@@ -210,348 +175,6 @@ pub fn hash_bytes_256(bytes: Vec<u8>) -> [u8; 32] {
     util::to_u8_32(&hasher.finalize().to_vec())
 }
 
-/*
-impl<E: Element + HashBytes> HashBytes for Ciphertext<E> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut ret = self.a.get_bytes();
-        ret.extend(self.b.get_bytes());
-
-        ret
-    }
-}
-
-impl HashBytes for RistrettoPoint {
-    fn get_bytes(&self) -> Vec<u8> {
-        self.compress().as_bytes().to_vec()
-    }
-}
-
-impl HashBytes for Scalar {
-    fn get_bytes(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
-    }
-}
-
-impl HashBytes for Integer {
-    fn get_bytes(&self) -> Vec<u8> {
-        self.to_digits::<u8>(Order::LsfLe)
-    }
-}
-
-use crate::crypto::backend::rug_b::RugGroup;
-
-impl HashBytes for RugGroup {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.generator.get_bytes();
-        bytes.extend(self.modulus.get_bytes());
-        bytes.extend(self.modulus_exp.get_bytes());
-
-        bytes
-    }
-}
-
-impl HashBytes for Option<RugGroup> {
-    fn get_bytes(&self) -> Vec<u8> {
-        match self {
-            Some(g) => g.get_bytes(),
-            None => vec![],
-        }
-    }
-}
-
-use crate::crypto::backend::ristretto_b::RistrettoGroup;
-
-impl HashBytes for RistrettoGroup {
-    fn get_bytes(&self) -> Vec<u8> {
-        vec![]
-    }
-}
-
-use crate::crypto::base::ChaumPedersen;
-use crate::crypto::base::Schnorr;
-
-impl<E: Element> HashBytes for Schnorr<E> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.commitment.get_bytes();
-        bytes.extend(self.challenge.get_bytes());
-        bytes.extend(self.response.get_bytes());
-
-        bytes
-    }
-}
-
-impl<E: Element> HashBytes for ChaumPedersen<E> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.commitment1.get_bytes();
-        bytes.extend(self.commitment2.get_bytes());
-        bytes.extend(self.challenge.get_bytes());
-        bytes.extend(self.response.get_bytes());
-
-        bytes
-    }
-}
-
-use crate::crypto::shuffler::Responses;
-use crate::crypto::shuffler::ShuffleProof;
-
-impl<E: Element> HashBytes for TValues<E> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.t1.get_bytes();
-        bytes.extend(self.t2.get_bytes());
-        bytes.extend(self.t3.get_bytes());
-        bytes.extend(self.t4_1.get_bytes());
-        bytes.extend(self.t4_2.get_bytes());
-        bytes.extend(concat_bytes(&self.t_hats));
-
-        bytes
-    }
-}
-
-impl<E: Element> HashBytes for Responses<E> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.s1.get_bytes();
-        bytes.extend(self.s2.get_bytes());
-        bytes.extend(self.s3.get_bytes());
-        bytes.extend(self.s4.get_bytes());
-        bytes.extend(concat_bytes(&self.s_hats));
-        bytes.extend(concat_bytes(&self.s_primes));
-
-        bytes
-    }
-}
-
-impl<E: Element> HashBytes for ShuffleProof<E> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.t.get_bytes();
-        bytes.extend(self.s.get_bytes());
-        bytes.extend(concat_bytes(&self.cs));
-        bytes.extend(concat_bytes(&self.c_hats));
-
-        bytes
-    }
-}
-
-use crate::crypto::elgamal::PrivateKey;
-use crate::crypto::elgamal::PublicKey;
-
-impl<E: Element, G: Group<E>> HashBytes for PrivateKey<E, G> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.value.get_bytes();
-        bytes.extend(self.public_value.get_bytes());
-        bytes.extend(self.group.get_bytes());
-
-        bytes
-    }
-}
-
-impl<E: Element, G: Group<E>> HashBytes for PublicKey<E, G> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.value.get_bytes();
-        bytes.extend(self.group.get_bytes());
-
-        bytes
-    }
-}
-
-use ed25519_dalek::PublicKey as SPublicKey;
-
-impl HashBytes for SPublicKey {
-    fn get_bytes(&self) -> Vec<u8> {
-        self.as_bytes().to_vec()
-    }
-}
-
-use ed25519_dalek::Signature;
-
-impl HashBytes for Signature {
-    fn get_bytes(&self) -> Vec<u8> {
-        self.to_bytes().to_vec()
-    }
-}
-
-use crate::protocol::statement::SignedStatement;
-use crate::protocol::statement::Statement;
-
-impl HashBytes for Statement {
-    fn get_bytes(&self) -> Vec<u8> {
-        let discriminant = self.stype as u8;
-        let mut bytes: Vec<u8> = vec![discriminant];
-        bytes.extend(&self.contest.to_le_bytes());
-
-        for b in self.hashes.iter() {
-            bytes.extend(b);
-        }
-
-        bytes
-    }
-}
-
-impl HashBytes for SignedStatement {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes: Vec<u8> = self.statement.get_bytes();
-        bytes.extendl(&self.signature.get_bytes());
-
-        bytes
-    }
-}
-
-use crate::data::artifact::Config;
-
-impl<E: Element, G: Group<E>> HashBytes for Config<E, G> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.id.to_vec();
-        bytes.extend(self.group.get_bytes());
-        bytes.extend(&self.contests.to_le_bytes());
-        bytes.extend(self.ballotbox.get_bytes());
-        bytes.extend(concat_bytes(&self.trustees));
-
-        bytes
-    }
-}
-
-use crate::data::artifact::Keyshare;
-
-impl<E: Element, G: Group<E>> HashBytes for Keyshare<E, G> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.share.get_bytes();
-        bytes.extend(self.proof.get_bytes());
-
-        bytes
-    }
-}
-
-use crate::data::artifact::EncryptedPrivateKey;
-
-impl HashBytes for EncryptedPrivateKey {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = self.bytes.to_vec();
-        bytes.extend(self.iv.clone());
-
-        bytes
-    }
-}
-
-use crate::data::artifact::Ballots;
-
-impl<E: Element> HashBytes for Ballots<E> {
-    fn get_bytes(&self) -> Vec<u8> {
-        concat_bytes(&self.ciphertexts)
-    }
-}
-
-use crate::data::artifact::Mix;
-
-impl<E: Element> HashBytes for Mix<E> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = concat_bytes(&self.mixed_ballots);
-        bytes.extend(self.proof.get_bytes());
-
-        bytes
-    }
-}
-
-use crate::data::artifact::PartialDecryption;
-
-impl<E: Element> HashBytes for PartialDecryption<E> {
-    fn get_bytes(&self) -> Vec<u8> {
-        let mut bytes = concat_bytes(&self.pd_ballots);
-        bytes.extend(concat_bytes(&self.proofs));
-
-        bytes
-    }
-}
-
-use crate::data::artifact::Plaintexts;
-
-impl<E: Element> HashBytes for Plaintexts<E> {
-    fn get_bytes(&self) -> Vec<u8> {
-        concat_bytes(&self.plaintexts)
-    }
-}
-
-impl HashBytes for Hash {
-    fn get_bytes(&self) -> Vec<u8> {
-        self.to_vec()
-    }
-}
-
-impl HashBytes for Act {
-    fn get_bytes(&self) -> Vec<u8> {
-        match self {
-            Act::CheckConfig(h) => {
-                let mut out = vec![1u8];
-                out.extendl(&h.to_vec());
-                out
-            }
-            Act::PostShare(h, i) => {
-                let mut out = vec![2u8];
-                out.extendl(&h.to_vec());
-                out.extendl(&i.to_le_bytes().to_vec());
-                out
-            }
-            Act::CombineShares(h, i, s) => {
-                let mut out = vec![3u8];
-                out.extendl(&h.to_vec());
-                out.extendl(&i.to_le_bytes().to_vec());
-                out.extendl(&concat_bytes_iter(s));
-                out
-            }
-            Act::CheckPk(h, i, pk, s) => {
-                let mut out = vec![4u8];
-                out.extendl(&h.to_vec());
-                out.extendl(&i.to_le_bytes().to_vec());
-                out.extendl(&pk.to_vec());
-                out.extendl(&concat_bytes_iter(s));
-                out
-            }
-            Act::Mix(h, i, bs, pk_h) => {
-                let mut out = vec![5u8];
-                out.extendl(&h.to_vec());
-                out.extendl(&i.to_le_bytes().to_vec());
-                out.extendl(&bs.to_vec());
-                out.extendl(&pk_h.to_vec());
-                out
-            }
-            Act::CheckMix(h, i, t, m, bs, pk_h) => {
-                let mut out = vec![6u8];
-                out.extendl(&h.to_vec());
-                out.extendl(&i.to_le_bytes().to_vec());
-                out.extendl(&t.to_le_bytes().to_vec());
-                out.extendl(&m.to_vec());
-                out.extendl(&bs.to_vec());
-                out.extendl(&pk_h.to_vec());
-                out
-            }
-            Act::PartialDecrypt(h, i, bs, share_h) => {
-                let mut out = vec![7u8];
-                out.extendl(&h.to_vec());
-                out.extendl(&i.to_le_bytes().to_vec());
-                out.extendl(&bs.to_vec());
-                out.extendl(&share_h.to_vec());
-                out
-            }
-            Act::CombineDecryptions(h, i, ds, mix_h, shares) => {
-                let mut out = vec![8u8];
-                out.extendl(&h.to_vec());
-                out.extendl(&i.to_le_bytes().to_vec());
-                out.extendl(&concat_bytes_iter(ds));
-                out.extendl(&mix_h.to_vec());
-                out.extendl(&concat_bytes_iter(shares));
-                out
-            }
-            Act::CheckPlaintexts(h, i, p, ds, m, shares) => {
-                let mut out = vec![9u8];
-                out.extendl(&h.to_vec());
-                out.extendl(&i.to_le_bytes().to_vec());
-                out.extendl(&p.to_vec());
-                out.extendl(&concat_bytes_iter(ds));
-                out.extendl(&m.to_vec());
-                out.extendl(&concat_bytes_iter(shares));
-                out
-            }
-        }
-    }
-}*/
 
 #[cfg(test)]
 mod tests {

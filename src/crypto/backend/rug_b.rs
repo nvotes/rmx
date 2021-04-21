@@ -128,13 +128,16 @@ impl RugGroup {
         prefix.extend("ggen".to_string().into_bytes());
         prefix.extend(&contest.to_le_bytes());
 
+        let mut index: u64 = 0;
         for _ in 0..size {
+            index += 1;
             let mut next = prefix.clone();
-            let mut x: u64 = 1;
+            let mut count: u64 = 0;
             loop {
-                assert!(x != 0);
-                x += 1;
-                next.extend(&x.to_le_bytes());
+                count += 1;
+                assert!(count != 0);
+                next.extend(&index.to_le_bytes());
+                next.extend(&count.to_le_bytes());
                 let elem: Integer = hasher.hash_to(&next);
                 let g = elem.mod_pow(&self.co_factor, &self.modulus());
                 if g >= two {

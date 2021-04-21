@@ -20,7 +20,7 @@ pub struct YChallengeInput<'a, E: Element, G: Group<E>> {
 }
 
 #[derive(Serialize, Clone)]
-pub struct TValues<E: Element> {
+pub struct Commitments<E: Element> {
     pub t1: E,
     pub t2: E,
     pub t3: E,
@@ -41,9 +41,13 @@ pub struct Responses<E: Element> {
 
 #[derive(Serialize)]
 pub struct ShuffleProof<E: Element> {
-    pub t: TValues<E>,
+    // proof commitment
+    pub t: Commitments<E>,
+    // proof response
     pub s: Responses<E>,
+    // permutation commitment
     pub cs: Vec<E>,
+    // commitment chain
     pub c_hats: Vec<E>,
 }
 
@@ -223,7 +227,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             pk: self.pk,
         };
 
-        let t = TValues {
+        let t = Commitments {
             t1,
             t2,
             t3,
@@ -466,7 +470,6 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
     }
 }
 
-// FIXME not kosher
 pub fn generators<E: Element, G: Group<E>>(
     size: usize,
     group: &G,
@@ -508,9 +511,9 @@ mod tests {
 
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
-
-        let mut es = Vec::with_capacity(10);
+        
         let n = 100;
+        let mut es = Vec::with_capacity(n);
 
         for _ in 0..n {
             let plaintext = group.rnd();
@@ -540,8 +543,7 @@ mod tests {
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
         let n = 100;
-
-        let mut es: Vec<Ciphertext<Integer>> = Vec::with_capacity(10);
+        let mut es: Vec<Ciphertext<Integer>> = Vec::with_capacity(n);
 
         for _ in 0..n {
             let plaintext: Integer = group.encode(&group.rnd_exp());
@@ -561,5 +563,56 @@ mod tests {
         let ok = shuffler.check_proof(&proof, &es, &e_primes);
 
         assert!(ok == true);
+    }
+
+    #[test]
+    fn test_verify_shuffle_coq() {
+        let group = RugGroup::default();
+        let exp_hasher = &*group.exp_hasher();
+
+        let sk = group.gen_key();
+        let pk = PublicKey::from(&sk.public_value, &group);
+
+        let n = 100;
+        let mut es: Vec<Ciphertext<Integer>> = Vec::with_capacity(n);
+
+        for _ in 0..n {
+            let plaintext: Integer = group.encode(&group.rnd_exp());
+            let c = pk.encrypt(&plaintext);
+            es.push(c);
+        }
+        let seed = vec![];
+        let hs = generators(es.len() + 1, &group, 0, seed);
+        let shuffler = Shuffler {
+            pk: &pk,
+            generators: &hs,
+            hasher: exp_hasher,
+        };
+
+        let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
+        let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
+        let ok = shuffler.check_proof(&proof, &es, &e_primes);
+
+        assert!(ok == true);
+
+        let pk_list = vec![pk.group.generator.to_string_radix(16), pk.value.to_string_radix(16)];
+        let pk_j = serde_json::to_string(&pk_list).unwrap();
+        println!("================ pk.json =======================");
+        println!("{}", pk_j);
+        println!("================================================");
+
+        let hs_list: Vec<String> = hs.iter().map(|h| { h.to_string_radix(16) }).collect();
+        let h_list = vec![vec![hs_list[0].clone()], hs_list[1..].to_vec()];
+        let h_j = serde_json::to_string(&h_list).unwrap();
+        println!("====================== hs.json =================");
+        println!("{}", h_j);
+        println!("================================================");
+
+        let cs = proof.cs;
+        let cs_list: Vec<String> = cs.iter().map(|c| { c.to_string_radix(16) }).collect();
+        let c_j = serde_json::to_string(&cs_list).unwrap();
+        println!("========= PermutationCommitment.json ==========");
+        println!("{}", c_j);
+        println!("================================================");
     }
 }

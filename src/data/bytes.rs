@@ -13,7 +13,7 @@ use crate::crypto::backend::ristretto_b::*;
 use crate::crypto::backend::rug_b::*;
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
-use crate::crypto::shuffler::{Responses, ShuffleProof, TValues};
+use crate::crypto::shuffler::{Responses, ShuffleProof, Commitments};
 use crate::data::artifact::*;
 use crate::protocol::statement::*;
 use crate::protocol::facts::Act;
@@ -600,7 +600,7 @@ where
 {
     fn from_byte_tree(tree: &ByteTree) -> Result<ShuffleProof<E>, ByteError> {
         let trees = tree.tree(4)?;
-        let t = TValues::<E>::from_byte_tree(&trees[0])?;
+        let t = Commitments::<E>::from_byte_tree(&trees[0])?;
         let s = Responses::<E>::from_byte_tree(&trees[1])?;
         let cs = Vec::<E>::from_byte_tree(&trees[2])?;
         let c_hats = Vec::<E>::from_byte_tree(&trees[3])?;
@@ -611,7 +611,7 @@ where
     }
 }
 
-impl<E: Element + ToByteTree> ToByteTree for TValues<E>
+impl<E: Element + ToByteTree> ToByteTree for Commitments<E>
 where
     E::Exp: ToByteTree,
 {
@@ -627,11 +627,11 @@ where
     }
 }
 
-impl<E: Element + FromByteTree> FromByteTree for TValues<E>
+impl<E: Element + FromByteTree> FromByteTree for Commitments<E>
 where
     E::Exp: FromByteTree,
 {
-    fn from_byte_tree(tree: &ByteTree) -> Result<TValues<E>, ByteError> {
+    fn from_byte_tree(tree: &ByteTree) -> Result<Commitments<E>, ByteError> {
         let trees = tree.tree(6)?;
         let t1 = E::from_byte_tree(&trees[0])?;
         let t2 = E::from_byte_tree(&trees[1])?;
@@ -640,7 +640,7 @@ where
         let t4_2 = E::from_byte_tree(&trees[4])?;
         let t_hats = Vec::<E>::from_byte_tree(&trees[5])?;
 
-        let ret = TValues {
+        let ret = Commitments {
             t1,
             t2,
             t3,

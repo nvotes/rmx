@@ -141,6 +141,7 @@ impl Group<RistrettoPoint> for RistrettoGroup {
         Box::new(RistrettoHasher)
     }
 
+    // FIXME not kosher
     fn generators(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<RistrettoPoint> {
         let mut seed_ = seed.to_vec();
         seed_.extend(&contest.to_le_bytes());

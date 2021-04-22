@@ -3,6 +3,7 @@ use rand::rngs::StdRng;
 use rand::RngCore;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
+use hex;
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
@@ -33,6 +34,8 @@ impl Element for RistrettoPoint {
     fn mul_identity() -> RistrettoPoint {
         RistrettoPoint::identity()
     }
+
+
 }
 
 impl Exponent for Scalar {
@@ -56,6 +59,10 @@ impl Exponent for Scalar {
     }
     fn mul_identity() -> Scalar {
         Scalar::one()
+    }
+
+    fn to_string(&self) -> String {
+        hex::encode(self.to_bytes())
     }
 }
 

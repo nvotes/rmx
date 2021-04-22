@@ -36,6 +36,8 @@ pub trait Exponent:
 
     fn add_identity() -> Self;
     fn mul_identity() -> Self;
+
+    fn to_string(&self) -> String;
 }
 
 pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {

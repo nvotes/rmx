@@ -1,4 +1,5 @@
 use std::sync::Mutex;
+use std::fs::File;
 
 use rand::rngs::OsRng;
 use rand::Rng;
@@ -128,6 +129,11 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
 
         let us = hashing::shuffle_proof_us(&es, &e_primes, &cs, self.hasher, N);
 
+        // FIXME remove
+        let us_list: Vec<String> = us.iter().map(|u| { u.to_string() }).collect();
+        serde_json::to_writer_pretty(File::create("us.json").unwrap(), &us_list).unwrap();
+        // FIXME remove
+        
         let mut u_primes: Vec<&E::Exp> = Vec::with_capacity(N);
         for &i in perm.iter() {
             u_primes.push(&us[i]);
@@ -161,9 +167,9 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         r_tilde = r_tilde.modulo(xmod);
         r_prime = r_prime.modulo(xmod);
 
-        let omegas = vec![group.rnd_exp(); 4];
-        let omega_hats = vec![group.rnd_exp(); N];
-        let omega_primes = vec![group.rnd_exp(); N];
+        let omegas: Vec<E::Exp> = (0..4).map(|_| group.rnd_exp()).collect();
+        let omega_hats: Vec<E::Exp> = (0..N).map(|_| group.rnd_exp()).collect();
+        let omega_primes: Vec<E::Exp> = (0..N).map(|_| group.rnd_exp()).collect();
 
         let t1 = group.generator().mod_pow(&omegas[0], gmod);
         let t2 = group.generator().mod_pow(&omegas[1], gmod);
@@ -239,6 +245,11 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         // ~0
         let c: E::Exp = hashing::shuffle_proof_challenge(&y, &t, self.hasher);
 
+        // FIXME remove
+        let challenge: Vec<String> = vec![c.to_string()];
+        serde_json::to_writer_pretty(File::create("challenge.json").unwrap(), &challenge).unwrap();
+        // FIXME remove
+
         let s1 = omegas[0].add(&c.mul(&r_bar)).modulo(xmod);
         let s2 = omegas[1].add(&c.mul(&r_hat)).modulo(xmod);
         let s3 = omegas[2].add(&c.mul(&r_tilde)).modulo(xmod);
@@ -249,8 +260,11 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
 
         // 0
         for i in 0..N {
-            s_hats.push(omega_hats[i].add(&c.mul(&r_hats[i])).modulo(xmod));
-            s_primes.push(omega_primes[i].add(&c.mul(&u_primes[i])).modulo(xmod));
+            let next_s_hat = omega_hats[i].add(&c.mul(&r_hats[i])).modulo(xmod);
+            let next_s_prime = omega_primes[i].add(&c.mul(&u_primes[i])).modulo(xmod);
+            
+            s_hats.push(next_s_hat);
+            s_primes.push(next_s_prime);
         }
 
         let s = Responses {
@@ -566,7 +580,7 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_shuffle_coq() {
+    fn test_gen_coq_data() {
         let group = RugGroup::default();
         let exp_hasher = &*group.exp_hasher();
 
@@ -583,6 +597,7 @@ mod tests {
         }
         let seed = vec![];
         let hs = generators(es.len() + 1, &group, 0, seed);
+
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
@@ -596,23 +611,66 @@ mod tests {
         assert!(ok == true);
 
         let pk_list = vec![pk.group.generator.to_string_radix(16), pk.value.to_string_radix(16)];
-        let pk_j = serde_json::to_string(&pk_list).unwrap();
-        println!("================ pk.json =======================");
-        println!("{}", pk_j);
-        println!("================================================");
+        serde_json::to_writer_pretty(File::create("pk.json").unwrap(), &pk_list).unwrap();
 
         let hs_list: Vec<String> = hs.iter().map(|h| { h.to_string_radix(16) }).collect();
         let h_list = vec![vec![hs_list[0].clone()], hs_list[1..].to_vec()];
-        let h_j = serde_json::to_string(&h_list).unwrap();
-        println!("====================== hs.json =================");
-        println!("{}", h_j);
-        println!("================================================");
-
+        serde_json::to_writer_pretty(File::create("hs.json").unwrap(), &h_list).unwrap();
+        
         let cs = proof.cs;
         let cs_list: Vec<String> = cs.iter().map(|c| { c.to_string_radix(16) }).collect();
-        let c_j = serde_json::to_string(&cs_list).unwrap();
-        println!("========= PermutationCommitment.json ==========");
-        println!("{}", c_j);
-        println!("================================================");
+        serde_json::to_writer_pretty(File::create("PermutationCommitment.json").unwrap(), &cs_list).unwrap();
+    
+        let c_hats: Vec<String> = proof.c_hats.iter().map(|c| { c.to_string_radix(16) }).collect();
+        let t3 = proof.t.t3.to_string_radix(16);
+        let t_hats: Vec<String> = proof.t.t_hats.iter().map(|c| { c.to_string_radix(16) }).collect();
+        let t1 = proof.t.t1.to_string_radix(16);
+        let t2 = proof.t.t2.to_string_radix(16);
+        let t4_1 = proof.t.t4_1.to_string_radix(16);
+        let t4_2 = proof.t.t4_2.to_string_radix(16);
+
+        let t_list = vec![
+            c_hats,
+            vec![t3],
+            t_hats,
+            vec![t1],
+            vec![t2],
+            vec![t4_1, t4_2]
+        ];
+
+        serde_json::to_writer_pretty(File::create("ProofCommitment.json").unwrap(), &t_list).unwrap();
+
+        let ciphers_in_a: Vec<String> = es.iter().map(|c| { c.a.to_string_radix(16) }).collect();
+        let ciphers_in_b: Vec<String> = es.iter().map(|c| { c.b.to_string_radix(16) }).collect();
+
+        let ciphers_out_a: Vec<String> = e_primes.iter().map(|c| { c.a.to_string_radix(16) }).collect();
+        let ciphers_out_b: Vec<String> = e_primes.iter().map(|c| { c.b.to_string_radix(16) }).collect();
+
+        let ciphers_in = vec![ciphers_in_a, ciphers_in_b];
+        let ciphers_out = vec![ciphers_out_a, ciphers_out_b];
+
+        serde_json::to_writer_pretty(File::create("CiphersIn.json").unwrap(), &ciphers_in).unwrap();
+        serde_json::to_writer_pretty(File::create("CiphersOut.json").unwrap(), &ciphers_out).unwrap();
+
+        let s1 = proof.s.s1.to_string_radix(16);
+        let s2 = proof.s.s2.to_string_radix(16);
+        let s3 = proof.s.s3.to_string_radix(16);
+        let s4 = proof.s.s4.to_string_radix(16);
+        let s_hats: Vec<String> = proof.s.s_hats.iter().map(|c| { c.to_string_radix(16) }).collect();
+        let s_primes: Vec<String> = proof.s.s_primes.iter().map(|c| { c.to_string_radix(16) }).collect();
+
+        let s_list = vec![
+            vec![s3],
+            s_hats,
+            vec![s1],
+            vec![s2],
+            s_primes,
+            vec![s4]
+        ];
+
+        serde_json::to_writer_pretty(File::create("ProofReply.json").unwrap(), &s_list).unwrap();
+
+        println!("p = {}", group.modulus.to_string_radix(10));
+        println!("q = {}", group.modulus_exp.to_string_radix(10));
     }
 }

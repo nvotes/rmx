@@ -176,7 +176,6 @@ mod tests {
     use curve25519_dalek::traits::Identity;
 
     use crate::crypto::backend::ristretto_b::*;
-    use crate::crypto::base::*;
     use crate::crypto::keymaker::*;
     use crate::crypto::shuffler::*;
     use crate::crypto::symmetric;

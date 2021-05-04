@@ -30,11 +30,11 @@ pub fn shuffle_rug(n: usize) -> bool {
         hasher: exp_hasher,
     };
     let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
-    let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
+    let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
     // simulate computing the generators again
     let seed = vec![];
     let _hs = generators(es.len() + 1, &group, 0, seed);
-    let ok = shuffler.check_proof(&proof, &es, &e_primes);
+    let ok = shuffler.check_proof(&proof, &es, &e_primes, &vec![]);
 
     assert_eq!(ok, true);
     ok
@@ -62,11 +62,11 @@ pub fn shuffle_ristretto(n: usize) -> bool {
         hasher: exp_hasher,
     };
     let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
-    let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
+    let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
     // simulate computing the generators again
     let seed = vec![];
     let _hs = generators(es.len() + 1, &group, 0, seed);
-    let ok = shuffler.check_proof(&proof, &es, &e_primes);
+    let ok = shuffler.check_proof(&proof, &es, &e_primes, &vec![]);
 
     assert!(ok);
 

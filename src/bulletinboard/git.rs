@@ -148,7 +148,6 @@ impl GitBulletinBoard {
 
     // refreshes the local copy with remote updates,
     // preserving local commits, uncommitted changes are discarded.
-    // upstream changes only applied in fast forward mode, conflicts cause panic
     fn refresh(&self, repo: &Repository) -> Result<bool, Error> {
         info!("GIT {}: refresh..", self.fs_path);
         let now = std::time::Instant::now();

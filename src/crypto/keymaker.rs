@@ -24,11 +24,11 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         Keymaker { sk, pk }
     }
 
-    pub fn share(&self) -> (PublicKey<E, G>, Schnorr<E>) {
+    pub fn share(&self, label: &Vec<u8>) -> (PublicKey<E, G>, Schnorr<E>) {
         let group = &self.sk.group;
         let pk = group.pk_from_value(&self.pk.value);
 
-        let proof = group.schnorr_prove(&self.sk.value, &pk.value, &group.generator());
+        let proof = group.schnorr_prove(&self.sk.value, &pk.value, &group.generator(), label);
 
         (pk, proof)
     }
@@ -37,8 +37,8 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         self.sk.to_encrypted(symmetric)
     }
 
-    pub fn verify_share(group: &G, pk: &PublicKey<E, G>, proof: &Schnorr<E>) -> bool {
-        group.schnorr_verify(&pk.value, &group.generator(), &proof)
+    pub fn verify_share(group: &G, pk: &PublicKey<E, G>, proof: &Schnorr<E>, label: &Vec<u8>) -> bool {
+        group.schnorr_verify(&pk.value, &group.generator(), &proof, label)
     }
 
     pub fn combine_pks(group: &G, pks: Vec<PublicKey<E, G>>) -> PublicKey<E, G> {
@@ -50,7 +50,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         group.pk_from_value(&acc)
     }
 
-    pub fn decryption_factor(&self, c: &Ciphertext<E>) -> (E, ChaumPedersen<E>) {
+    pub fn decryption_factor(&self, c: &Ciphertext<E>, label: &Vec<u8>) -> (E, ChaumPedersen<E>) {
         let group = &self.sk.group;
         let dec_factor = self.sk.decryption_factor(c);
 
@@ -60,6 +60,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
             &dec_factor,
             &group.generator(),
             &c.b,
+            label
         );
 
         (dec_factor, proof)
@@ -68,9 +69,10 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
     pub fn decryption_factor_many(
         &self,
         cs: &Vec<Ciphertext<E>>,
+        label: &Vec<u8>
     ) -> (Vec<E>, Vec<ChaumPedersen<E>>) {
         let decs_proofs: (Vec<E>, Vec<ChaumPedersen<E>>) =
-            cs.par_iter().map(|c| self.decryption_factor(c)).unzip();
+            cs.par_iter().map(|c| self.decryption_factor(c, label)).unzip();
 
         decs_proofs
     }
@@ -107,6 +109,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         ciphertexts: &Vec<Ciphertext<E>>,
         decs: &Vec<E>,
         proofs: &Vec<ChaumPedersen<E>>,
+        label: &Vec<u8>
     ) -> bool {
         assert_eq!(decs.len(), proofs.len());
         assert_eq!(decs.len(), ciphertexts.len());
@@ -120,6 +123,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
                     &generator,
                     &ciphertexts[i].b,
                     &proofs[i],
+                    label
                 )
             })
             .collect();

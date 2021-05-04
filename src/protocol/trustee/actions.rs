@@ -50,7 +50,8 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             .get_config(cfg_h)?
             .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
 
-        let share = self.gen_share(&cfg.group);
+        
+        let share = self.gen_share(&cfg.group, &self.get_label(&cfg, contest));
         let share_h = hashing::hash(&share);
         let ss = SignedStatement::keyshare(&cfg_h, &share_h, contest, &self.keypair);
         let share_path = self.work_cache.set_share(&action, share, &ss)?;
@@ -80,7 +81,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let hashes = clear_zeroes(&share_hs);
         assert!(hashes.len() == cfg.trustees.len());
         let pk = self
-            .get_pk(board, hashes, &cfg.group, contest)
+            .get_pk(board, hashes, &cfg, contest)
             .ok_or(TrusteeError::Msg("Could not build pk".to_string()))?;
         let pk_h = hashing::hash(&pk);
         let ss = SignedStatement::public_key(&cfg_h, &pk_h, contest, &self.keypair);
@@ -112,7 +113,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let hashes = clear_zeroes(&share_hs);
         assert!(hashes.len() == cfg.trustees.len());
         let pk = self
-            .get_pk(board, hashes, &cfg.group, contest)
+            .get_pk(board, hashes, &cfg, contest)
             .ok_or(TrusteeError::Msg("Could not build pk".to_string()))?;
         let pk_h_ = hashing::hash(&pk);
         assert!(pk_h == pk_h_);
@@ -163,7 +164,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
 
         let now_ = std::time::Instant::now();
         let (e_primes, rs, perm) = shuffler.gen_shuffle(&ciphertexts);
-        let proof = shuffler.gen_proof(&ciphertexts, &e_primes, &rs, &perm);
+        let proof = shuffler.gen_proof(&ciphertexts, &e_primes, &rs, &perm, &self.get_label(&cfg, contest));
         // assert!(shuffler.check_proof(&proof, &ciphertexts, &e_primes));
         let rate = ciphertexts.len() as f32 / now_.elapsed().as_millis() as f32;
         info!("Shuffle + Proof ({:.1} ciphertexts/s)", 1000.0 * rate);
@@ -241,7 +242,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         );
 
         let now_ = std::time::Instant::now();
-        assert!(shuffler.check_proof(&proof, &ciphertexts, &mix.mixed_ballots));
+        assert!(shuffler.check_proof(&proof, &ciphertexts, &mix.mixed_ballots, &self.get_label(&cfg, contest)));
         let rate = ciphertexts.len() as f32 / now_.elapsed().as_millis() as f32;
         info!("Check proof ({:.1} ciphertexts/s)", 1000.0 * rate);
 
@@ -294,7 +295,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             PrivateKey::from_encrypted(self.symmetric, encrypted_sk, &cfg.group);
         let keymaker = Keymaker::from_sk(sk, &cfg.group);
 
-        let (decs, proofs) = keymaker.decryption_factor_many(&mix.mixed_ballots);
+        let (decs, proofs) = keymaker.decryption_factor_many(&mix.mixed_ballots, &self.get_label(&cfg, contest));
         let rate = mix.mixed_ballots.len() as f32 / now_.elapsed().as_millis() as f32;
         let pd = PartialDecryption {
             pd_ballots: decs,
@@ -386,6 +387,8 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         Ok(())
     }
 }
+
+
 
 fn clear_zeroes(input: &[[u8; 64]; crate::protocol::MAX_TRUSTEES]) -> Vec<[u8; 64]> {
     input.iter().cloned().filter(|&a| a != [0u8; 64]).collect()

@@ -968,15 +968,15 @@ mod tests {
         let g = group.generator();
         let secret = group.rnd_exp();
         let public = g.mod_pow(&secret, &group.modulus());
-        let schnorr = group.schnorr_prove(&secret, &public, &g);
-        let verified = group.schnorr_verify(&public, &g, &schnorr);
+        let schnorr = group.schnorr_prove(&secret, &public, &g, &vec![]);
+        let verified = group.schnorr_verify(&public, &g, &schnorr, &vec![]);
         assert!(verified == true);
 
         let bytes = schnorr.ser();
         let back = Schnorr::<Integer>::deser(&bytes).unwrap();
         assert!(schnorr == back);
 
-        let verified = group.schnorr_verify(&public, &g, &back);
+        let verified = group.schnorr_verify(&public, &g, &back, &vec![]);
         assert!(verified == true);
     }
 
@@ -988,15 +988,15 @@ mod tests {
         let secret = group.rnd_exp();
         let public1 = g1.mod_pow(&secret, &group.modulus());
         let public2 = g2.mod_pow(&secret, &group.modulus());
-        let proof = group.cp_prove(&secret, &public1, &public2, &g1, &g2);
-        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &proof);
+        let proof = group.cp_prove(&secret, &public1, &public2, &g1, &g2, &vec![]);
+        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &proof, &vec![]);
         assert!(verified == true);
 
         let bytes = proof.ser();
         let back = ChaumPedersen::<Integer>::deser(&bytes).unwrap();
         assert!(proof == back);
 
-        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &back);
+        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &back, &vec![]);
         assert!(verified == true);
     }
 
@@ -1028,7 +1028,7 @@ mod tests {
         let group = RugGroup::default();
 
         let km = Keymaker::gen(&group);
-        let (pk, proof) = km.share();
+        let (pk, proof) = km.share(&vec![]);
 
         let sym = symmetric::gen_key();
         let esk = km.get_encrypted_sk(sym);
@@ -1082,8 +1082,8 @@ mod tests {
         };
 
         let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
-        let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
-        let ok = shuffler.check_proof(&proof, &es, &e_primes);
+        let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
+        let ok = shuffler.check_proof(&proof, &es, &e_primes, &vec![]);
         assert!(ok == true);
 
         let mix = Mix {
@@ -1094,7 +1094,7 @@ mod tests {
         let back = Mix::<Integer>::deser(&bytes).unwrap();
 
         assert!(mix.mixed_ballots == back.mixed_ballots);
-        let ok = shuffler.check_proof(&back.proof, &es, &back.mixed_ballots);
+        let ok = shuffler.check_proof(&back.proof, &es, &back.mixed_ballots, &vec![]);
         assert!(ok == true);
     }
 

@@ -176,6 +176,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                 &ciphertexts,
                 &next_d.pd_ballots,
                 &next_d.proofs,
+                &self.get_label(cfg, cnt)
             );
             assert!(ok);
 
@@ -197,7 +198,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         &self,
         board: &B,
         hs: Vec<Hash>,
-        group: &G,
+        cfg: &Config<E, G>,
         cnt: u32,
     ) -> Option<PublicKey<E, G>> {
         let mut shares = Vec::with_capacity(hs.len());
@@ -205,7 +206,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             let next = board.get_share(cnt, i as u32, *h).ok()??;
 
             info!("Verifying share proof..");
-            let ok = Keymaker::verify_share(group, &next.share, &next.proof);
+            let ok = Keymaker::verify_share(&cfg.group, &next.share, &next.proof, &self.get_label(cfg, cnt));
             if ok {
                 shares.push(next.share);
             } else {
@@ -213,16 +214,16 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             }
         }
         if shares.len() == hs.len() {
-            let pk = Keymaker::combine_pks(group, shares);
+            let pk = Keymaker::combine_pks(&cfg.group, shares);
             Some(pk)
         } else {
             None
         }
     }
 
-    fn gen_share(&self, group: &G) -> Keyshare<E, G> {
+    fn gen_share(&self, group: &G, label: &Vec<u8>) -> Keyshare<E, G> {
         let keymaker = Keymaker::gen(group);
-        let (share, proof) = keymaker.share();
+        let (share, proof) = keymaker.share(label);
         let encrypted_sk = keymaker.get_encrypted_sk(self.symmetric);
 
         Keyshare {
@@ -230,5 +231,12 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             proof,
             encrypted_sk,
         }
+    }
+
+    fn get_label(&self, cfg: &Config<E, G>, contest: u32) -> Vec<u8> {
+        let mut ret = cfg.label();  
+        ret.extend(&contest.to_le_bytes());
+    
+        ret
     }
 }

@@ -71,9 +71,11 @@ pub fn shuffle_proof_us<E: Element>(
     cs: &Vec<E>,
     exp_hasher: &dyn HashTo<E::Exp>,
     n: usize,
+    label: &Vec<u8>
 ) -> Vec<E::Exp> {
 
-    let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
+    let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
+    trees.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
     trees.push(es.to_byte_tree());
     trees.push(e_primes.to_byte_tree());
     trees.push(cs.to_byte_tree());
@@ -105,8 +107,10 @@ pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(
     y: &YChallengeInput<E, G>,
     t: &Commitments<E>,
     exp_hasher: &dyn HashTo<E::Exp>,
+    label: &Vec<u8>
 ) -> E::Exp {
-    let mut trees: Vec<ByteTree> = Vec::with_capacity(11);
+    let mut trees: Vec<ByteTree> = Vec::with_capacity(12);
+    trees.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
     trees.push(y.es.to_byte_tree());
     trees.push(y.e_primes.to_byte_tree());
     trees.push(y.cs.to_byte_tree());
@@ -130,10 +134,12 @@ pub fn schnorr_proof_challenge<E: Element>(
     public: &E,
     commitment: &E,
     exp_hasher: &dyn HashTo<E::Exp>,
+    label: &Vec<u8>
 ) -> E::Exp {
     let values = [g, public, commitment].to_vec();
 
-    let tree = values.iter().map(|e| e.to_byte_tree()).collect();
+    let mut tree: Vec<ByteTree> = values.iter().map(|e| e.to_byte_tree()).collect();
+    tree.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
     let bytes = ByteTree::Tree(tree).to_hashable_bytes();
     
     exp_hasher.hash_to(&bytes)
@@ -147,10 +153,12 @@ pub fn cp_proof_challenge<E: Element>(
     commitment1: &E,
     commitment2: &E,
     exp_hasher: &dyn HashTo<E::Exp>,
+    label: &Vec<u8>
 ) -> E::Exp {
     let values = [g1, g2, public1, public2, commitment1, commitment2].to_vec();
 
-    let tree = values.iter().map(|e| e.to_byte_tree()).collect();
+    let mut tree: Vec<ByteTree> = values.iter().map(|e| e.to_byte_tree()).collect();
+    tree.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
     let bytes = ByteTree::Tree(tree).to_hashable_bytes();
 
     exp_hasher.hash_to(&bytes)

@@ -53,7 +53,7 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
         c.a.div(&c.b.mod_pow(&self.value, modulus), modulus)
             .modulo(modulus)
     }
-    pub fn decrypt_and_prove(&self, c: &Ciphertext<E>) -> (E, ChaumPedersen<E>) {
+    pub fn decrypt_and_prove(&self, c: &Ciphertext<E>, label: &Vec<u8>) -> (E, ChaumPedersen<E>) {
         let modulus = &self.group.modulus();
 
         let dec_factor = &c.b.mod_pow(&self.value, modulus);
@@ -64,6 +64,7 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
             dec_factor,
             &self.group.generator(),
             &c.b,
+            label
         );
 
         let decrypted = c.a.div(dec_factor, modulus).modulo(modulus);

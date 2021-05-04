@@ -17,6 +17,12 @@ pub struct Config<E, G> {
     pub phantom_e: PhantomData<E>,
 }
 
+impl<E, G> Config<E, G> {
+    pub fn label(&self) -> Vec<u8> {
+        self.id.to_vec()
+    }
+}
+
 #[derive(Serialize)]
 pub struct Keyshare<E: Element, G> {
     pub share: PublicKey<E, G>,

@@ -35,6 +35,7 @@ crepe! {
     pub(super) struct PkSignedBy(pub ConfigHash, pub ContestIndex, pub PkHash, pub TrusteeIndex);
     @input
     pub(super) struct BallotsSigned(pub ConfigHash, pub ContestIndex, pub BallotsHash);
+    // first trustee parameter is mixing trusteee, second trustee parameter is signing trustee
     @input
     pub(super) struct MixSignedBy(pub ConfigHash, pub ContestIndex, pub MixHash, pub BallotsHash, pub TrusteeIndex, pub TrusteeIndex);
     @input
@@ -126,7 +127,9 @@ crepe! {
         ConfigPresent(config, _, _, self_t),
         ConfigOk(config),
         (self_t > 0),
+        // the previous mix was signed by its producer
         MixSignedBy(config, contest, mix_ballots_hash, _, self_t - 1, self_t - 1),
+        // we have verified the previous mix
         MixSignedBy(config, contest, mix_ballots_hash, _, self_t - 1, self_t),
         !MixSignedBy(config, contest, _, _, self_t, self_t);
 
@@ -135,6 +138,7 @@ crepe! {
         PkOk(config, contest, pk_hash),
         ConfigPresent(config, _, _, self_t),
         ConfigOk(config),
+        // the mix to verify
         MixSignedBy(config, contest, mix_hash, ballots_hash, 0, 0),
         // input ballots to mix came from the ballotbox
         BallotsSigned(config, contest, ballots_hash),
@@ -145,10 +149,11 @@ crepe! {
         PkOk(config, contest, pk_hash),
         ConfigPresent(config, _, _, self_t),
         ConfigOk(config),
+        // the mix to verify
         MixSignedBy(config, contest, mix_hash, mix_ballots_hash, mixer_t, _signer_t),
         (mixer_t > 0),
         // input ballots to mix came from a previous mix, thus (mixer_t - 1)
-        MixSignedBy(config, contest, mix_ballots_hash, _, mixer_t - 1, _),
+        MixSignedBy(config, contest, mix_ballots_hash, _, mixer_t - 1, _signer_t),
         !MixSignedBy(config, contest, mix_hash, mix_ballots_hash, mixer_t, self_t);
 
     Do(Act::PartialDecrypt(config, contest, mix_hash, share)) <-

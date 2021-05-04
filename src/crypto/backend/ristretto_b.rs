@@ -275,13 +275,13 @@ mod tests {
         let g = group.generator();
         let secret = group.rnd_exp();
         let public = g.mod_pow(&secret, &group.modulus());
-        let schnorr = group.schnorr_prove(&secret, &public, &g);
-        let verified = group.schnorr_verify(&public, &g, &schnorr);
+        let schnorr = group.schnorr_prove(&secret, &public, &g, &vec![]);
+        let verified = group.schnorr_verify(&public, &g, &schnorr, &vec![]);
         assert!(verified == true);
         let public_false = group
             .generator()
             .mod_pow(&group.rnd_exp(), &group.modulus());
-        let verified_false = group.schnorr_verify(&public_false, &g, &schnorr);
+        let verified_false = group.schnorr_verify(&public_false, &g, &schnorr, &vec![]);
         assert!(verified_false == false);
     }
 
@@ -293,14 +293,14 @@ mod tests {
         let secret = group.rnd_exp();
         let public1 = g1.mod_pow(&secret, &group.modulus());
         let public2 = g2.mod_pow(&secret, &group.modulus());
-        let proof = group.cp_prove(&secret, &public1, &public2, &g1, &g2);
-        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &proof);
+        let proof = group.cp_prove(&secret, &public1, &public2, &g1, &g2, &vec![]);
+        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &proof, &vec![]);
 
         assert!(verified == true);
         let public_false = group
             .generator()
             .mod_pow(&group.rnd_exp(), &group.modulus());
-        let verified_false = group.cp_verify(&public1, &public_false, &g1, &g2, &proof);
+        let verified_false = group.cp_verify(&public1, &public_false, &g1, &g2, &proof, &vec![]);
         assert!(verified_false == false);
     }
 
@@ -317,11 +317,11 @@ mod tests {
         let plaintext = group.encode(&util::to_u8_30(&fill.to_vec()));
 
         let c = pk.encrypt(&plaintext);
-        let (d, proof) = sk.decrypt_and_prove(&c);
+        let (d, proof) = sk.decrypt_and_prove(&c, &vec![]);
 
         let dec_factor = c.a.div(&d, &group.modulus()).modulo(&group.modulus());
 
-        let verified = group.cp_verify(&pk.value, &dec_factor, &group.generator(), &c.b, &proof);
+        let verified = group.cp_verify(&pk.value, &dec_factor, &group.generator(), &c.b, &proof, &vec![]);
         let recovered = group.decode(&d).to_vec();
         assert!(verified == true);
         assert_eq!(fill.to_vec(), recovered);
@@ -334,11 +334,11 @@ mod tests {
 
         let km1 = Keymaker::gen(&group);
         let km2 = Keymaker::gen(&group);
-        let (pk1, proof1) = km1.share();
-        let (pk2, proof2) = km2.share();
+        let (pk1, proof1) = km1.share(&vec![]);
+        let (pk2, proof2) = km2.share(&vec![]);
 
-        let verified1 = group.schnorr_verify(&pk1.value, &group.generator(), &proof1);
-        let verified2 = group.schnorr_verify(&pk2.value, &group.generator(), &proof2);
+        let verified1 = group.schnorr_verify(&pk1.value, &group.generator(), &proof1, &vec![]);
+        let verified2 = group.schnorr_verify(&pk2.value, &group.generator(), &proof2, &vec![]);
         assert!(verified1 == true);
         assert!(verified2 == true);
 
@@ -353,11 +353,11 @@ mod tests {
         let pk_combined = Keymaker::combine_pks(&group, pks);
         let c = pk_combined.encrypt(&plaintext);
 
-        let (dec_f1, proof1) = km1.decryption_factor(&c);
-        let (dec_f2, proof2) = km2.decryption_factor(&c);
+        let (dec_f1, proof1) = km1.decryption_factor(&c, &vec![]);
+        let (dec_f2, proof2) = km2.decryption_factor(&c, &vec![]);
 
-        let verified1 = group.cp_verify(pk1_value, &dec_f1, &group.generator(), &c.b, &proof1);
-        let verified2 = group.cp_verify(pk2_value, &dec_f2, &group.generator(), &c.b, &proof2);
+        let verified1 = group.cp_verify(pk1_value, &dec_f1, &group.generator(), &c.b, &proof1, &vec![]);
+        let verified2 = group.cp_verify(pk2_value, &dec_f2, &group.generator(), &c.b, &proof2, &vec![]);
         assert!(verified1 == true);
         assert!(verified2 == true);
 
@@ -374,8 +374,8 @@ mod tests {
 
         let km1 = Keymaker::gen(&group);
         let km2 = Keymaker::gen(&group);
-        let (pk1, proof1) = km1.share();
-        let (pk2, proof2) = km2.share();
+        let (pk1, proof1) = km1.share(&vec![]);
+        let (pk2, proof2) = km2.share(&vec![]);
         let sym1 = symmetric::gen_key();
         let sym2 = symmetric::gen_key();
         let esk1 = km1.get_encrypted_sk(sym1);
@@ -397,8 +397,8 @@ mod tests {
         let share1_d = Keyshare::<RistrettoPoint, RistrettoGroup>::deser(&share1_b).unwrap();
         let share2_d = Keyshare::<RistrettoPoint, RistrettoGroup>::deser(&share2_b).unwrap();
 
-        let verified1 = Keymaker::verify_share(&group, &share1_d.share, &share1_d.proof);
-        let verified2 = Keymaker::verify_share(&group, &share2_d.share, &share2_d.proof);
+        let verified1 = Keymaker::verify_share(&group, &share1_d.share, &share1_d.proof, &vec![]);
+        let verified2 = Keymaker::verify_share(&group, &share2_d.share, &share2_d.proof, &vec![]);
 
         assert!(verified1 == true);
         assert!(verified2 == true);
@@ -420,8 +420,8 @@ mod tests {
             cs.push(c);
         }
 
-        let (decs1, proofs1) = km1.decryption_factor_many(&cs);
-        let (decs2, proofs2) = km2.decryption_factor_many(&cs);
+        let (decs1, proofs1) = km1.decryption_factor_many(&cs, &vec![]);
+        let (decs2, proofs2) = km2.decryption_factor_many(&cs, &vec![]);
 
         let pd1 = PartialDecryption {
             pd_ballots: decs1,
@@ -443,6 +443,7 @@ mod tests {
             &cs,
             &pd1_d.pd_ballots,
             &pd1_d.proofs,
+            &vec![]
         );
         let verified2 = Keymaker::verify_decryption_factors(
             &group,
@@ -450,6 +451,7 @@ mod tests {
             &cs,
             &pd2_d.pd_ballots,
             &pd2_d.proofs,
+            &vec![]
         );
 
         assert!(verified1 == true);
@@ -487,8 +489,8 @@ mod tests {
             hasher: exp_hasher,
         };
         let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
-        let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
-        let ok = shuffler.check_proof(&proof, &es, &e_primes);
+        let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
+        let ok = shuffler.check_proof(&proof, &es, &e_primes, &vec![]);
 
         let mix = Mix {
             mixed_ballots: e_primes,
@@ -510,7 +512,7 @@ mod tests {
             generators: &hs,
             hasher: exp_hasher,
         };
-        let ok_d = shuffler_d.check_proof(&mix_d.proof, &es_d, &mix_d.mixed_ballots);
+        let ok_d = shuffler_d.check_proof(&mix_d.proof, &es_d, &mix_d.mixed_ballots, &vec![]);
 
         assert!(ok_d == true);
     }

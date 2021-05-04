@@ -124,6 +124,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         e_primes: &Vec<Ciphertext<E>>,
         r_primes: &Vec<E::Exp>,
         perm: &Vec<usize>,
+        label: &Vec<u8>
     ) -> ShuffleProof<E> {
 
         // let h_generators = &self.generators[1..];
@@ -134,7 +135,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             commitments_r: &rs
         };
 
-        let transcript = self.gen_proof_ext(es, e_primes, r_primes, &perm_data);
+        let transcript = self.gen_proof_ext(es, e_primes, r_primes, &perm_data, label);
         transcript.0
     }
 
@@ -144,6 +145,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         e_primes: &Vec<Ciphertext<E>>,
         r_primes: &Vec<E::Exp>,
         perm_data: &PermutationData<E>,
+        label: &Vec<u8>
     ) -> (ShuffleProof<E>, Vec<E::Exp>, E::Exp) {
         let group = &self.pk.group;
 
@@ -167,7 +169,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         let perm = perm_data.permutation;
         //        println!("Commitments {}", now.elapsed().as_millis());
         
-        let us = hashing::shuffle_proof_us(&es, &e_primes, &cs, self.hasher, N);
+        let us = hashing::shuffle_proof_us(&es, &e_primes, &cs, self.hasher, N, label);
         
         let mut u_primes: Vec<&E::Exp> = Vec::with_capacity(N);
         for &i in perm.iter() {
@@ -278,7 +280,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         };
 
         // ~0
-        let c: E::Exp = hashing::shuffle_proof_challenge(&y, &t, self.hasher);
+        let c: E::Exp = hashing::shuffle_proof_challenge(&y, &t, self.hasher, label);
 
         let s1 = omegas[0].add(&c.mul(&r_bar)).modulo(xmod);
         let s2 = omegas[1].add(&c.mul(&r_hat)).modulo(xmod);
@@ -316,6 +318,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         proof: &ShuffleProof<E>,
         es: &Vec<Ciphertext<E>>,
         e_primes: &Vec<Ciphertext<E>>,
+        label: &Vec<u8>
     ) -> bool {
         let group = &self.pk.group;
 
@@ -331,7 +334,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         let gmod = &group.modulus();
         let xmod = &group.exp_modulus();
 
-        let us: Vec<E::Exp> = hashing::shuffle_proof_us(es, e_primes, &proof.cs, self.hasher, N);
+        let us: Vec<E::Exp> = hashing::shuffle_proof_us(es, e_primes, &proof.cs, self.hasher, N, label);
 
         let mut c_bar_num: E = E::mul_identity();
         let mut c_bar_den: E = E::mul_identity();
@@ -385,7 +388,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             pk: self.pk,
         };
 
-        let c = hashing::shuffle_proof_challenge(&y, &proof.t, self.hasher);
+        let c = hashing::shuffle_proof_challenge(&y, &proof.t, self.hasher, label);
 
         let t_prime1 = (c_bar.mod_pow(&c.neg(), gmod))
             .mul(&group.generator().mod_pow(&proof.s.s1, gmod))
@@ -578,8 +581,8 @@ mod tests {
         };
 
         let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
-        let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
-        let ok = shuffler.check_proof(&proof, &es, &e_primes);
+        let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
+        let ok = shuffler.check_proof(&proof, &es, &e_primes, &vec![]);
 
         assert!(ok == true);
     }
@@ -608,8 +611,8 @@ mod tests {
         };
 
         let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
-        let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm);
-        let ok = shuffler.check_proof(&proof, &es, &e_primes);
+        let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
+        let ok = shuffler.check_proof(&proof, &es, &e_primes, &vec![]);
 
         assert!(ok == true);
     }
@@ -648,15 +651,15 @@ mod tests {
             commitments_r: &rs
         };
         let (e_primes1, rs1) = shuffler.apply_permutation(&perm, &es1);
-        let (proof1, _, _) = shuffler.gen_proof_ext(&es1, &e_primes1, &rs1, &perm_data);
+        let (proof1, _, _) = shuffler.gen_proof_ext(&es1, &e_primes1, &rs1, &perm_data, &vec![]);
 
         let (e_primes2, rs2) = shuffler.apply_permutation(&perm, &es2);
-        let (proof2, _, _) = shuffler.gen_proof_ext(&es2, &e_primes2, &rs2, &perm_data);
+        let (proof2, _, _) = shuffler.gen_proof_ext(&es2, &e_primes2, &rs2, &perm_data, &vec![]);
 
-        let ok = shuffler.check_proof(&proof1, &es1, &e_primes1);
+        let ok = shuffler.check_proof(&proof1, &es1, &e_primes1, &vec![]);
         assert!(ok == true);
         
-        let ok = shuffler.check_proof(&proof2, &es2, &e_primes2);
+        let ok = shuffler.check_proof(&proof2, &es2, &e_primes2, &vec![]);
         assert!(ok == true);
 
         assert!(proof1.cs.len() == proof2.cs.len());
@@ -678,9 +681,9 @@ mod tests {
         assert!(mismatch == 0);
 
         let (e_primes2b, rs2b, perm2) = shuffler.gen_shuffle(&es2);
-        let proof2b = shuffler.gen_proof(&es2, &e_primes2b, &rs2b, &perm2);
+        let proof2b = shuffler.gen_proof(&es2, &e_primes2b, &rs2b, &perm2, &vec![]);
         
-        let ok = shuffler.check_proof(&proof2b, &es2, &e_primes2b);
+        let ok = shuffler.check_proof(&proof2b, &es2, &e_primes2b, &vec![]);
         assert!(ok == true);
 
         let mut mismatch = 0;
@@ -743,8 +746,8 @@ mod tests {
             commitments_c: &cs,
             commitments_r: &c_rs
         };
-        let (proof, us, c) = shuffler.gen_proof_ext(&es, &e_primes, &rs, &perm_data);
-        let ok = shuffler.check_proof(&proof, &es, &e_primes);
+        let (proof, us, c) = shuffler.gen_proof_ext(&es, &e_primes, &rs, &perm_data, &vec![]);
+        let ok = shuffler.check_proof(&proof, &es, &e_primes, &vec![]);
 
         assert!(ok == true);
 

@@ -48,7 +48,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         );
         let cfg = board
             .get_config(cfg_h)?
-            .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find cfg".to_string()))?;
 
         
         let share = self.gen_share(&cfg.group, &self.get_label(&cfg, contest));
@@ -77,12 +77,12 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         );
         let cfg = board
             .get_config(cfg_h)?
-            .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find cfg".to_string()))?;
         let hashes = clear_zeroes(&share_hs);
         assert!(hashes.len() == cfg.trustees.len());
         let pk = self
             .get_pk(board, hashes, &cfg, contest)
-            .ok_or(TrusteeError::Msg("Could not build pk".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not build pk".to_string()))?;
         let pk_h = hashing::hash(&pk);
         let ss = SignedStatement::public_key(&cfg_h, &pk_h, contest, &self.keypair);
 
@@ -109,12 +109,12 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         );
         let cfg = board
             .get_config(cfg_h)?
-            .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find cfg".to_string()))?;
         let hashes = clear_zeroes(&share_hs);
         assert!(hashes.len() == cfg.trustees.len());
         let pk = self
             .get_pk(board, hashes, &cfg, contest)
-            .ok_or(TrusteeError::Msg("Could not build pk".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not build pk".to_string()))?;
         let pk_h_ = hashing::hash(&pk);
         assert!(pk_h == pk_h_);
         let ss = SignedStatement::public_key(&cfg_h, &pk_h, contest, &self.keypair);
@@ -142,15 +142,15 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         );
         let cfg = board
             .get_config(cfg_h)?
-            .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find cfg".to_string()))?;
         let ciphertexts = self
             .get_mix_src(board, contest, self_index, ballots_h)
-            .ok_or(TrusteeError::Msg(
+            .ok_or_else(|| TrusteeError::Msg(
                 "Could not find source ciphertexts".to_string(),
             ))?;
         let pk = board
             .get_pk(contest, pk_h)?
-            .ok_or(TrusteeError::Msg("Could not find pk".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find pk".to_string()))?;
 
         let group = &cfg.group;
         let hs = generators(ciphertexts.len() + 1, group, contest, cfg.id.to_vec());
@@ -206,7 +206,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
     ) -> Result<(), TrusteeError> {
         let cfg = board
             .get_config(cfg_h)?
-            .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find cfg".to_string()))?;
 
         info!(
             ">> Action:: Verifying mix (contest=[{}], self=[{}])..",
@@ -215,16 +215,16 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
 
         let mix = board
             .get_mix(contest, trustee, mix_h)?
-            .ok_or(TrusteeError::Msg("Could not find mix".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find mix".to_string()))?;
 
         let ciphertexts =
             self.get_mix_src(board, contest, trustee, ballots_h)
-                .ok_or(TrusteeError::Msg(
+                .ok_or_else(|| TrusteeError::Msg(
                     "Could not find source ciphertexts".to_string(),
                 ))?;
         let pk = board
             .get_pk(contest, pk_h)?
-            .ok_or(TrusteeError::Msg("Could not find pk".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find pk".to_string()))?;
         let group = &cfg.group;
 
         let hs = generators(ciphertexts.len() + 1, group, contest, cfg.id.to_vec());
@@ -280,15 +280,15 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
 
         let cfg = board
             .get_config(cfg_h)?
-            .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find cfg".to_string()))?;
 
         let mix = board
             .get_mix(contest, (cfg.trustees.len() - 1) as u32, mix_h)?
-            .ok_or(TrusteeError::Msg("Could not find mix".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find mix".to_string()))?;
 
         let share = board
             .get_share(contest, self_index, share_h)?
-            .ok_or(TrusteeError::Msg("Could not find share".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find share".to_string()))?;
 
         let encrypted_sk = share.encrypted_sk;
         let sk: PrivateKey<E, G> =
@@ -324,7 +324,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
     ) -> Result<(), TrusteeError> {
         let cfg = board
             .get_config(cfg_h)?
-            .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find cfg".to_string()))?;
         info!(
             ">> Action: Combining decryptions (contest=[{}], self=[{}])..",
             contest, self_index
@@ -334,7 +334,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let s_hs = clear_zeroes(&share_hs);
         let pls = self
             .get_plaintexts(board, contest, d_hs, mix_h, s_hs, &cfg)
-            .ok_or(TrusteeError::Msg("Could not build plaintexts".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not build plaintexts".to_string()))?;
 
         let rate = pls.len() as f32 / now_.elapsed().as_millis() as f32;
         let plaintexts = Plaintexts { plaintexts: pls };
@@ -362,7 +362,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
     ) -> Result<(), TrusteeError> {
         let cfg = board
             .get_config(cfg_h)?
-            .ok_or(TrusteeError::Msg("Could not find cfg".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find cfg".to_string()))?;
         info!(
             ">> Action: Checking plaintexts (contest=[{}], self=[{}])",
             contest, self_index
@@ -372,11 +372,11 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let d_hs = clear_zeroes(&decryptions_hs);
         let pls = self
             .get_plaintexts(board, contest, d_hs, mix_h, s_hs, &cfg)
-            .ok_or(TrusteeError::Msg("Could not build plaintexts".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not build plaintexts".to_string()))?;
         let rate = pls.len() as f32 / now_.elapsed().as_millis() as f32;
         let pls_board = board
             .get_plaintexts(contest, plaintexts_h)?
-            .ok_or(TrusteeError::Msg("Could not find plaintexts".to_string()))?;
+            .ok_or_else(|| TrusteeError::Msg("Could not find plaintexts".to_string()))?;
         assert!(pls == pls_board.plaintexts);
 
         let ss = SignedStatement::plaintexts(&cfg_h, &plaintexts_h, contest, &self.keypair);

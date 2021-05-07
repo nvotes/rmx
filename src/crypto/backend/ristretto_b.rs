@@ -3,7 +3,6 @@ use rand::rngs::StdRng;
 use rand::RngCore;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
-use hex;
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};

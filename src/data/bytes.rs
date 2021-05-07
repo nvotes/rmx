@@ -51,7 +51,7 @@ use ByteTree::*;
 // OPT: try to move instead of copy
 impl ByteTree {
     pub(crate) fn to_hashable_bytes(&self) -> Vec<u8> {
-        let ret = match self {
+        match self {
             Leaf(bytes) => {
                 let mut next: Vec<u8> = vec![];
                 let length = bytes.len() as u64;
@@ -72,9 +72,7 @@ impl ByteTree {
                 }
                 next
             }
-        };
-
-        ret
+        }
     }
 
     fn leaf(&self) -> Result<&Vec<u8>, ByteError> {
@@ -193,7 +191,7 @@ impl FromByteTree for Scalar {
         let bytes = tree.leaf()?;
         let b32 = util::to_u8_32(&bytes);
         Scalar::from_canonical_bytes(b32)
-            .ok_or(ByteError::Msg(String::from("Failed constructing scalar")))
+            .ok_or_else(|| ByteError::Msg(String::from("Failed constructing scalar")))
     }
 }
 
@@ -209,7 +207,7 @@ impl FromByteTree for RistrettoPoint {
         let b32 = util::to_u8_32(&bytes);
         CompressedRistretto(b32)
             .decompress()
-            .ok_or(ByteError::Msg(String::from(
+            .ok_or_else(|| ByteError::Msg(String::from(
                 "Failed constructing ristretto point",
             )))
     }

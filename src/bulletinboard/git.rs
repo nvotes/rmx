@@ -1,5 +1,5 @@
 // Alow this for the clone() function in this file
-#[allow(clippy::should_implement_trait)]
+#![allow(clippy::should_implement_trait)]
 use std::fs;
 use std::path::{Path, PathBuf};
 

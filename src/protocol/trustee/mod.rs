@@ -69,7 +69,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let now = std::time::Instant::now();
         for action in actions {
             let self_t =
-                self_index.ok_or(TrusteeError::Msg("Could not find self index".to_string()))?;
+                self_index.ok_or_else(|| TrusteeError::Msg("Could not find self index".to_string()))?;
 
             match action {
                 Act::CheckConfig(cfg_h) => {

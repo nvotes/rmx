@@ -60,7 +60,6 @@ do(act_sign_pk(ConfigHash, Contest, PkHash, Hashes), A, T) :-
     not posted(pk_signature(ConfigHash, Contest, PkHash, SelfT), T),
 	a(A).
 
-
 % input and output facts are shared with execution mode
 
 %********** CONFIG **********%

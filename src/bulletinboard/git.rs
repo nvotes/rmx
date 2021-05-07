@@ -528,6 +528,7 @@ mod tests {
     use crate::bulletinboard::git::*;
     use crate::util;
 
+    #[ignore]
     #[test]
     #[serial]
     fn test_open_or_clone() {
@@ -539,6 +540,7 @@ mod tests {
         assert!(dir.exists() && dir.is_dir());
     }
 
+    #[ignore]
     #[test]
     #[serial]
     fn test_refresh() {
@@ -550,6 +552,7 @@ mod tests {
         g.list().unwrap();
     }
 
+    #[ignore]
     #[test]
     #[serial]
     fn test_post() {
@@ -566,6 +569,7 @@ mod tests {
         assert!(files.contains(&name.to_str().unwrap().to_string()));
     }
 
+    #[ignore]
     #[test]
     #[serial]
     fn test_append_only() {
@@ -616,6 +620,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
+    #[ignore]
     #[test]
     #[serial]
     fn test_clear() {
@@ -630,6 +635,7 @@ mod tests {
         assert!(files.len() == 0);
     }
 
+    #[ignore]
     #[test]
     #[serial]
     fn test_divergent() {

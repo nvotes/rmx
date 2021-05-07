@@ -16,18 +16,6 @@ use crate::util;
 
 pub type Hash = [u8; 64];
 
-trait ConcatWithLength {
-    fn extendl(&mut self, add: &Vec<u8>);
-}
-
-impl ConcatWithLength for Vec<u8> {
-    fn extendl(&mut self, add: &Vec<u8>) {
-        let length = add.len() as u64;
-        self.extend(&length.to_le_bytes());
-        self.extend(add);
-    }
-}
-
 pub trait HashTo<T>: Send + Sync {
     fn hash_to(&self, bytes: &[u8]) -> T;
 }

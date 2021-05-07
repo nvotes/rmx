@@ -305,10 +305,9 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
     fn get_facts(&self, board: &B) -> Vec<InputFact> {
         let self_pk = self.trustee.keypair.public;
         let now = std::time::Instant::now();
-        let svs = board.get_statements();
-        if svs.is_ok() {
+        let maybe_svs = board.get_statements();
+        if let Ok(svs) = maybe_svs {
             let mut facts: Vec<InputFact> = svs
-                .unwrap()
                 .iter()
                 .map(|sv| sv.verify(board))
                 .filter(|f| f.is_some())
@@ -339,7 +338,7 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
             info!("");
             facts
         } else {
-            warn!("Error retrieving statements: {:?}", svs);
+            warn!("Error retrieving statements: {:?}", maybe_svs);
             vec![]
         }
     }

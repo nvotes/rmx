@@ -48,8 +48,9 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
 
     pub fn combine_pks(group: &G, pks: Vec<PublicKey<E, G>>) -> PublicKey<E, G> {
         let mut acc: E = pks[0].value.clone();
-        for i in 1..pks.len() {
-            acc = acc.mul(&pks[i].value).modulo(&group.modulus());
+        
+        for pk in pks.iter().skip(1) {
+            acc = acc.mul(&pk.value).modulo(&group.modulus());
         }
 
         group.pk_from_value(&acc)
@@ -86,8 +87,10 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
 
     pub fn joint_dec(group: &G, decs: Vec<E>, c: &Ciphertext<E>) -> E {
         let mut acc: E = decs[0].clone();
-        for i in 1..decs.len() {
-            acc = acc.mul(&decs[i]).modulo(&group.modulus());
+        // for i in 1..decs.len() {
+        for dec in decs.iter().skip(1) {
+            // acc = acc.mul(&decs[i]).modulo(&group.modulus());
+            acc = acc.mul(&dec).modulo(&group.modulus());
         }
 
         c.a.div(&acc, &group.modulus()).modulo(&group.modulus())
@@ -100,8 +103,9 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
             .enumerate()
             .map(|(i, c)| {
                 let mut acc: E = decs[0][i].clone();
-                for j in 1..decs.len() {
-                    acc = acc.mul(&decs[j][i]).modulo(&modulus);
+                // for j in 1..decs.len() {
+                for dec in decs.iter().skip(1) {
+                    acc = acc.mul(&dec[i]).modulo(&modulus);
                 }
                 c.a.div(&acc, &modulus).modulo(&modulus)
             })

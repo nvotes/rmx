@@ -227,10 +227,15 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         //        println!("values loop {}", now.elapsed().as_millis());
 
         // ~0
-        for i in 0..N {
-            t3_temp = t3_temp.mul(&values[i].0).modulo(gmod);
+        // for i in 0..N {
+        for value in values.iter().take(N) {
+            /* t3_temp = t3_temp.mul(&values[i].0).modulo(gmod);
             t4_1_temp = t4_1_temp.mul(&values[i].1).modulo(gmod);
-            t4_2_temp = t4_2_temp.mul(&values[i].2).modulo(gmod);
+            t4_2_temp = t4_2_temp.mul(&values[i].2).modulo(gmod);*/
+
+            t3_temp = t3_temp.mul(&value.0).modulo(gmod);
+            t4_1_temp = t4_1_temp.mul(&value.1).modulo(gmod);
+            t4_2_temp = t4_2_temp.mul(&value.2).modulo(gmod);
         }
 
         let t3 = (group.generator().mod_pow(&omegas[2], gmod))
@@ -250,11 +255,9 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             .map(|i| {
                 let previous_c = if i == 0 { h_initial } else { &c_hats[i - 1] };
 
-                let next = (group.generator().mod_pow(&omega_hats[i], gmod))
+                (group.generator().mod_pow(&omega_hats[i], gmod))
                     .mul(&previous_c.mod_pow(&omega_primes[i], gmod))
-                    .modulo(gmod);
-
-                next
+                    .modulo(gmod)
             })
             .collect();
         //        println!("t-hats loop {}", now.elapsed().as_millis());
@@ -421,12 +424,10 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
                     &proof.c_hats[i - 1]
                 };
 
-                let next = (proof.c_hats[i].mod_pow(&c.neg(), gmod))
+                (proof.c_hats[i].mod_pow(&c.neg(), gmod))
                     .mul(&group.generator().mod_pow(&proof.s.s_hats[i], gmod))
                     .mul(&c_term.mod_pow(&proof.s.s_primes[i], gmod))
-                    .modulo(gmod);
-
-                next
+                    .modulo(gmod)
             })
             .collect();
 
@@ -436,9 +437,10 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         checks.push(proof.t.t3.eq(&t_prime3));
         checks.push(proof.t.t4_1.eq(&t_prime41));
         checks.push(proof.t.t4_2.eq(&t_prime42));
+        
         // batch verification OPT 3b
-        for i in 0..N {
-            checks.push(proof.t.t_hats[i].eq(&t_hat_primes[i]));
+        for (i, t_hat) in proof.t.t_hats.iter().enumerate().take(N) {
+            checks.push(t_hat.eq(&t_hat_primes[i]));    
         }
 
         !checks.contains(&false)

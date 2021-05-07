@@ -159,9 +159,7 @@ pub fn random_encrypt_ballots<E: Element, G: Group<E>>(
         .par_iter()
         .map(|p| {
             let encoded = pk.group.encode(&p);
-            let encrypted = pk.encrypt(&encoded);
-            // (value, encrypted)
-            encrypted
+            pk.encrypt(&encoded)
         })
         .collect();
 

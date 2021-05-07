@@ -13,10 +13,10 @@ use crate::crypto::backend::ristretto_b::*;
 use crate::crypto::backend::rug_b::*;
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
-use crate::crypto::shuffler::{Responses, ShuffleProof, Commitments};
+use crate::crypto::shuffler::{Commitments, Responses, ShuffleProof};
 use crate::data::artifact::*;
-use crate::protocol::statement::*;
 use crate::protocol::facts::Act;
+use crate::protocol::statement::*;
 use crate::util;
 
 const LEAF: u8 = 0;
@@ -156,7 +156,7 @@ impl<T: FromByteTree> FromByteTree for Vec<T> {
     }
 }
 
-impl ToByteTree for [u8;64] {
+impl ToByteTree for [u8; 64] {
     fn to_byte_tree(&self) -> ByteTree {
         ByteTree::Leaf(ByteBuf::from(self.to_vec()))
     }
@@ -207,9 +207,7 @@ impl FromByteTree for RistrettoPoint {
         let b32 = util::to_u8_32(&bytes);
         CompressedRistretto(b32)
             .decompress()
-            .ok_or_else(|| ByteError::Msg(String::from(
-                "Failed constructing ristretto point",
-            )))
+            .ok_or_else(|| ByteError::Msg(String::from("Failed constructing ristretto point")))
     }
 }
 

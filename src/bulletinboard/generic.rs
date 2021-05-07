@@ -22,11 +22,8 @@ pub struct GenericBulletinBoard<E, G, B> {
     phantom_g: PhantomData<G>,
 }
 
-impl<
-        E: Element + FromByteTree,
-        G: Group<E> + FromByteTree,
-        B: BasicBoard,
-    > GenericBulletinBoard<E, G, B>
+impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard>
+    GenericBulletinBoard<E, G, B>
 {
     pub fn new(basic: B) -> GenericBulletinBoard<E, G, B> {
         GenericBulletinBoard {
@@ -104,11 +101,8 @@ impl<
     }
 }
 
-impl<
-        E: Element + FromByteTree,
-        G: Group<E> + FromByteTree,
-        B: BasicBoard,
-    > BulletinBoard<E, G> for GenericBulletinBoard<E, G, B>
+impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> BulletinBoard<E, G>
+    for GenericBulletinBoard<E, G, B>
 {
     fn list(&self) -> Result<Vec<String>, BBError> {
         self.basic.list()

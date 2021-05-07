@@ -9,11 +9,7 @@ use crate::util;
 
 pub trait BasicBoard {
     fn list(&self) -> Result<Vec<String>, BBError>;
-    fn get<A: ToByteTree + Deser>(
-        &self,
-        target: String,
-        hash: Hash,
-    ) -> Result<Option<A>, BBError>;
+    fn get<A: ToByteTree + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError>;
     fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError>;
     fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError>;
 }
@@ -27,11 +23,7 @@ impl BasicBoard for MBasic {
     fn list(&self) -> Result<Vec<String>, BBError> {
         Ok(self.data.iter().map(|(a, _)| a.clone()).collect())
     }
-    fn get<A: ToByteTree + Deser>(
-        &self,
-        target: String,
-        hash: Hash,
-    ) -> Result<Option<A>, BBError> {
+    fn get<A: ToByteTree + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError> {
         let key = target;
         if let Some(bytes) = self.data.get(&key) {
             let _now_ = std::time::Instant::now();

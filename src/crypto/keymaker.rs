@@ -37,7 +37,12 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         self.sk.to_encrypted(symmetric)
     }
 
-    pub fn verify_share(group: &G, pk: &PublicKey<E, G>, proof: &Schnorr<E>, label: &Vec<u8>) -> bool {
+    pub fn verify_share(
+        group: &G,
+        pk: &PublicKey<E, G>,
+        proof: &Schnorr<E>,
+        label: &Vec<u8>,
+    ) -> bool {
         group.schnorr_verify(&pk.value, &group.generator(), &proof, label)
     }
 
@@ -60,7 +65,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
             &dec_factor,
             &group.generator(),
             &c.b,
-            label
+            label,
         );
 
         (dec_factor, proof)
@@ -69,10 +74,12 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
     pub fn decryption_factor_many(
         &self,
         cs: &Vec<Ciphertext<E>>,
-        label: &Vec<u8>
+        label: &Vec<u8>,
     ) -> (Vec<E>, Vec<ChaumPedersen<E>>) {
-        let decs_proofs: (Vec<E>, Vec<ChaumPedersen<E>>) =
-            cs.par_iter().map(|c| self.decryption_factor(c, label)).unzip();
+        let decs_proofs: (Vec<E>, Vec<ChaumPedersen<E>>) = cs
+            .par_iter()
+            .map(|c| self.decryption_factor(c, label))
+            .unzip();
 
         decs_proofs
     }
@@ -109,7 +116,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         ciphertexts: &Vec<Ciphertext<E>>,
         decs: &Vec<E>,
         proofs: &Vec<ChaumPedersen<E>>,
-        label: &Vec<u8>
+        label: &Vec<u8>,
     ) -> bool {
         assert_eq!(decs.len(), proofs.len());
         assert_eq!(decs.len(), ciphertexts.len());
@@ -123,7 +130,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
                     &generator,
                     &ciphertexts[i].b,
                     &proofs[i],
-                    label
+                    label,
                 )
             })
             .collect();

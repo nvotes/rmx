@@ -249,7 +249,7 @@ fn demo() {
         let driver: Driver<RistrettoPoint, RistrettoGroup, GenericBulletinBoard<RistrettoPoint, RistrettoGroup, GitBulletinBoard>>
             = Driver::new(trustee);
         drivers.push(driver);*/
-        
+
         let driver: Driver<
             RistrettoPoint,
             RistrettoGroup,
@@ -464,11 +464,7 @@ fn check_t<
     std::thread::spawn(move || check(Arc::clone(&demo_arc), t));
 }
 
-fn step<
-    E: Element + std::cmp::PartialEq,
-    G: Group<E>,
-    B: BasicBoard + Send + Sync,
->(
+fn step<E: Element + std::cmp::PartialEq, G: Group<E>, B: BasicBoard + Send + Sync>(
     demo_arc: DemoArc<E, G, B>,
     t: u32,
 ) where
@@ -484,11 +480,7 @@ fn step<
     demo.done(t);
 }
 
-fn ballots<
-    E: Element + std::cmp::PartialEq,
-    G: Group<E>,
-    B: BasicBoard + Send + Sync,
->(
+fn ballots<E: Element + std::cmp::PartialEq, G: Group<E>, B: BasicBoard + Send + Sync>(
     demo_arc: DemoArc<E, G, B>,
     t: u32,
 ) where

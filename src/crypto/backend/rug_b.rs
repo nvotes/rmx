@@ -330,7 +330,14 @@ mod tests {
         let (d, proof) = sk.decrypt_and_prove(&c, &vec![]);
 
         let dec_factor = Element::modulo(&c.a.div(&d, &group.modulus()), &group.modulus());
-        let verified = group.cp_verify(&pk.value, &dec_factor, &group.generator(), &c.b, &proof, &vec![]);
+        let verified = group.cp_verify(
+            &pk.value,
+            &dec_factor,
+            &group.generator(),
+            &c.b,
+            &proof,
+            &vec![],
+        );
 
         assert!(verified == true);
         assert_eq!(group.decode(&d), plaintext);
@@ -364,8 +371,22 @@ mod tests {
         let (dec_f1, proof1) = km1.decryption_factor(&c, &vec![]);
         let (dec_f2, proof2) = km2.decryption_factor(&c, &vec![]);
 
-        let verified1 = group.cp_verify(pk1_value, &dec_f1, &group.generator(), &c.b, &proof1, &vec![]);
-        let verified2 = group.cp_verify(pk2_value, &dec_f2, &group.generator(), &c.b, &proof2, &vec![]);
+        let verified1 = group.cp_verify(
+            pk1_value,
+            &dec_f1,
+            &group.generator(),
+            &c.b,
+            &proof1,
+            &vec![],
+        );
+        let verified2 = group.cp_verify(
+            pk2_value,
+            &dec_f2,
+            &group.generator(),
+            &c.b,
+            &proof2,
+            &vec![],
+        );
         assert!(verified1 == true);
         assert!(verified2 == true);
 
@@ -446,7 +467,7 @@ mod tests {
             &cs,
             &pd1_d.pd_ballots,
             &pd1_d.proofs,
-            &vec![]
+            &vec![],
         );
         let verified2 = Keymaker::verify_decryption_factors(
             &group,
@@ -454,7 +475,7 @@ mod tests {
             &cs,
             &pd2_d.pd_ballots,
             &pd2_d.proofs,
-            &vec![]
+            &vec![],
         );
         assert!(verified1 == true);
         assert!(verified2 == true);

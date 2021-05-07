@@ -3,8 +3,8 @@ use std::marker::{Send, Sync};
 use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use rug::{integer::Order, Integer};
-use sha2::{Digest, Sha256, Sha512};
 use serde_bytes::ByteBuf;
+use sha2::{Digest, Sha256, Sha512};
 
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
@@ -71,9 +71,8 @@ pub fn shuffle_proof_us<E: Element>(
     cs: &Vec<E>,
     exp_hasher: &dyn HashTo<E::Exp>,
     n: usize,
-    label: &Vec<u8>
+    label: &Vec<u8>,
 ) -> Vec<E::Exp> {
-
     let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
     trees.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
     trees.push(es.to_byte_tree());
@@ -107,7 +106,7 @@ pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(
     y: &YChallengeInput<E, G>,
     t: &Commitments<E>,
     exp_hasher: &dyn HashTo<E::Exp>,
-    label: &Vec<u8>
+    label: &Vec<u8>,
 ) -> E::Exp {
     let mut trees: Vec<ByteTree> = Vec::with_capacity(12);
     trees.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
@@ -134,14 +133,14 @@ pub fn schnorr_proof_challenge<E: Element>(
     public: &E,
     commitment: &E,
     exp_hasher: &dyn HashTo<E::Exp>,
-    label: &Vec<u8>
+    label: &Vec<u8>,
 ) -> E::Exp {
     let values = [g, public, commitment].to_vec();
 
     let mut tree: Vec<ByteTree> = values.iter().map(|e| e.to_byte_tree()).collect();
     tree.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
     let bytes = ByteTree::Tree(tree).to_hashable_bytes();
-    
+
     exp_hasher.hash_to(&bytes)
 }
 
@@ -153,7 +152,7 @@ pub fn cp_proof_challenge<E: Element>(
     commitment1: &E,
     commitment2: &E,
     exp_hasher: &dyn HashTo<E::Exp>,
-    label: &Vec<u8>
+    label: &Vec<u8>,
 ) -> E::Exp {
     let values = [g1, g2, public1, public2, commitment1, commitment2].to_vec();
 
@@ -182,7 +181,6 @@ pub fn hash_bytes_256(bytes: Vec<u8>) -> [u8; 32] {
     hasher.update(bytes);
     util::to_u8_32(&hasher.finalize().to_vec())
 }
-
 
 #[cfg(test)]
 mod tests {

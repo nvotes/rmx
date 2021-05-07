@@ -308,7 +308,7 @@ impl AllFacts {
                 "valp" => println!("valppppp"),
                 _ => (),
             };
-        
+
         }
     }*/
 

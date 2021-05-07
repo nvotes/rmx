@@ -64,7 +64,7 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
             dec_factor,
             &self.group.generator(),
             &c.b,
-            label
+            label,
         );
 
         let decrypted = c.a.div(dec_factor, modulus).modulo(modulus);

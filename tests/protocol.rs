@@ -64,11 +64,7 @@ fn run_ristretto_git() {
     run(group, bb).unwrap();
 }
 
-fn run<
-    E: Element + std::cmp::PartialEq,
-    G: Group<E>,
-    B: BasicBoard,
->(
+fn run<E: Element + std::cmp::PartialEq, G: Group<E>, B: BasicBoard>(
     group: G,
     basic: B,
 ) -> Result<(), TrusteeError>

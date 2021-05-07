@@ -31,11 +31,7 @@ impl BasicBoard for GitBulletinBoard {
     fn list(&self) -> Result<Vec<String>, BBError> {
         self.list_entries()
     }
-    fn get<A: ToByteTree + Deser>(
-        &self,
-        target: String,
-        hash: Hash,
-    ) -> Result<Option<A>, BBError> {
+    fn get<A: ToByteTree + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError> {
         self.get_object(Path::new(&target), hash)
     }
     fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError> {

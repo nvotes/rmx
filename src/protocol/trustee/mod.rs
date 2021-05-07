@@ -68,8 +68,8 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         info!(">>>> Trustee::run: found {} actions", ret);
         let now = std::time::Instant::now();
         for action in actions {
-            let self_t =
-                self_index.ok_or_else(|| TrusteeError::Msg("Could not find self index".to_string()))?;
+            let self_t = self_index
+                .ok_or_else(|| TrusteeError::Msg("Could not find self index".to_string()))?;
 
             match action {
                 Act::CheckConfig(cfg_h) => {
@@ -176,7 +176,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                 &ciphertexts,
                 &next_d.pd_ballots,
                 &next_d.proofs,
-                &self.get_label(cfg, cnt)
+                &self.get_label(cfg, cnt),
             );
             assert!(ok);
 
@@ -206,7 +206,12 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             let next = board.get_share(cnt, i as u32, *h).ok()??;
 
             info!("Verifying share proof..");
-            let ok = Keymaker::verify_share(&cfg.group, &next.share, &next.proof, &self.get_label(cfg, cnt));
+            let ok = Keymaker::verify_share(
+                &cfg.group,
+                &next.share,
+                &next.proof,
+                &self.get_label(cfg, cnt),
+            );
             if ok {
                 shares.push(next.share);
             } else {
@@ -234,9 +239,9 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
     }
 
     fn get_label(&self, cfg: &Config<E, G>, contest: u32) -> Vec<u8> {
-        let mut ret = cfg.label();  
+        let mut ret = cfg.label();
         ret.extend(&contest.to_le_bytes());
-    
+
         ret
     }
 }

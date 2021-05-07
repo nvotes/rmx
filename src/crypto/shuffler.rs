@@ -1,6 +1,6 @@
-use std::sync::Mutex;
 use rand::rngs::OsRng;
 use rand::Rng;
+use std::sync::Mutex;
 
 use rayon::prelude::*;
 use serde::Serialize;
@@ -53,7 +53,7 @@ pub struct ShuffleProof<E: Element> {
 pub(super) struct PermutationData<'a, E: Element> {
     permutation: &'a Vec<usize>,
     commitments_c: &'a Vec<E>,
-    commitments_r: &'a Vec<E::Exp>
+    commitments_r: &'a Vec<E::Exp>,
 }
 
 pub struct Shuffler<'a, E: Element, G: Group<E>> {
@@ -68,19 +68,17 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         ciphertexts: &Vec<Ciphertext<E>>,
     ) -> (Vec<Ciphertext<E>>, Vec<E::Exp>, Vec<usize>) {
         let perm: Vec<usize> = gen_permutation(ciphertexts.len());
-        
+
         let (result, rs) = self.apply_permutation(&perm, ciphertexts);
 
         (result, rs, perm)
     }
-
 
     pub fn apply_permutation(
         &self,
         perm: &Vec<usize>,
         ciphertexts: &Vec<Ciphertext<E>>,
     ) -> (Vec<Ciphertext<E>>, Vec<E::Exp>) {
-        
         assert!(perm.len() == ciphertexts.len());
 
         let rs_temp: Vec<Option<E::Exp>> = vec![None; ciphertexts.len()];
@@ -124,15 +122,14 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         e_primes: &Vec<Ciphertext<E>>,
         r_primes: &Vec<E::Exp>,
         perm: &Vec<usize>,
-        label: &Vec<u8>
+        label: &Vec<u8>,
     ) -> ShuffleProof<E> {
-
         // let h_generators = &self.generators[1..];
         let (cs, rs) = self.gen_commitments(&perm, &self.pk.group);
         let perm_data = PermutationData {
             permutation: &perm,
             commitments_c: &cs,
-            commitments_r: &rs
+            commitments_r: &rs,
         };
 
         let transcript = self.gen_proof_ext(es, e_primes, r_primes, &perm_data, label);
@@ -145,7 +142,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         e_primes: &Vec<Ciphertext<E>>,
         r_primes: &Vec<E::Exp>,
         perm_data: &PermutationData<E>,
-        label: &Vec<u8>
+        label: &Vec<u8>,
     ) -> (ShuffleProof<E>, Vec<E::Exp>, E::Exp) {
         let group = &self.pk.group;
 
@@ -168,9 +165,9 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         let (cs, rs) = (perm_data.commitments_c, perm_data.commitments_r);
         let perm = perm_data.permutation;
         //        println!("Commitments {}", now.elapsed().as_millis());
-        
+
         let us = hashing::shuffle_proof_us(&es, &e_primes, &cs, self.hasher, N, label);
-        
+
         let mut u_primes: Vec<&E::Exp> = Vec::with_capacity(N);
         for &i in perm.iter() {
             u_primes.push(&us[i]);
@@ -294,7 +291,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         for i in 0..N {
             let next_s_hat = omega_hats[i].add(&c.mul(&r_hats[i])).modulo(xmod);
             let next_s_prime = omega_primes[i].add(&c.mul(&u_primes[i])).modulo(xmod);
-            
+
             s_hats.push(next_s_hat);
             s_primes.push(next_s_prime);
         }
@@ -318,7 +315,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         proof: &ShuffleProof<E>,
         es: &Vec<Ciphertext<E>>,
         e_primes: &Vec<Ciphertext<E>>,
-        label: &Vec<u8>
+        label: &Vec<u8>,
     ) -> bool {
         let group = &self.pk.group;
 
@@ -334,7 +331,8 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         let gmod = &group.modulus();
         let xmod = &group.exp_modulus();
 
-        let us: Vec<E::Exp> = hashing::shuffle_proof_us(es, e_primes, &proof.cs, self.hasher, N, label);
+        let us: Vec<E::Exp> =
+            hashing::shuffle_proof_us(es, e_primes, &proof.cs, self.hasher, N, label);
 
         let mut c_bar_num: E = E::mul_identity();
         let mut c_bar_den: E = E::mul_identity();
@@ -446,13 +444,9 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         !checks.contains(&false)
     }
 
-    fn gen_commitments(
-        &self,
-        perm: &Vec<usize>,
-        group: &G,
-    ) -> (Vec<E>, Vec<E::Exp>) {
+    fn gen_commitments(&self, perm: &Vec<usize>, group: &G) -> (Vec<E>, Vec<E::Exp>) {
         let generators = &self.generators[1..];
-        
+
         assert!(generators.len() == perm.len());
 
         let rs: Vec<Option<E::Exp>> = vec![None; perm.len()];
@@ -549,7 +543,7 @@ fn gen_permutation(size: usize) -> Vec<usize> {
 #[cfg(test)]
 mod tests {
     use std::fs::File;
-    
+
     use crate::crypto::backend::ristretto_b::*;
     use crate::crypto::backend::rug_b::*;
     use crate::crypto::base::*;
@@ -563,7 +557,7 @@ mod tests {
 
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
-        
+
         let n = 100;
         let mut es = Vec::with_capacity(n);
 
@@ -648,7 +642,7 @@ mod tests {
         let perm_data = PermutationData {
             permutation: &perm,
             commitments_c: &cs,
-            commitments_r: &rs
+            commitments_r: &rs,
         };
         let (e_primes1, rs1) = shuffler.apply_permutation(&perm, &es1);
         let (proof1, _, _) = shuffler.gen_proof_ext(&es1, &e_primes1, &rs1, &perm_data, &vec![]);
@@ -658,7 +652,7 @@ mod tests {
 
         let ok = shuffler.check_proof(&proof1, &es1, &e_primes1, &vec![]);
         assert!(ok == true);
-        
+
         let ok = shuffler.check_proof(&proof2, &es2, &e_primes2, &vec![]);
         assert!(ok == true);
 
@@ -676,13 +670,13 @@ mod tests {
                 mismatch += 1;
             }
         }
-        
+
         // in a parallel shuffle, all ciphertexts must line up
         assert!(mismatch == 0);
 
         let (e_primes2b, rs2b, perm2) = shuffler.gen_shuffle(&es2);
         let proof2b = shuffler.gen_proof(&es2, &e_primes2b, &rs2b, &perm2, &vec![]);
-        
+
         let ok = shuffler.check_proof(&proof2b, &es2, &e_primes2b, &vec![]);
         assert!(ok == true);
 
@@ -710,7 +704,7 @@ mod tests {
         challenge: Vec<String>,
         proof_reply: Vec<Vec<String>>,
         ciphers_in: Vec<Vec<String>>,
-        ciphers_out: Vec<Vec<String>>
+        ciphers_out: Vec<Vec<String>>,
     }
 
     #[test]
@@ -744,24 +738,32 @@ mod tests {
         let perm_data = PermutationData {
             permutation: &perm,
             commitments_c: &cs,
-            commitments_r: &c_rs
+            commitments_r: &c_rs,
         };
         let (proof, us, c) = shuffler.gen_proof_ext(&es, &e_primes, &rs, &perm_data, &vec![]);
         let ok = shuffler.check_proof(&proof, &es, &e_primes, &vec![]);
 
         assert!(ok == true);
 
-        let pk_list = vec![pk.group.generator.to_string_radix(16), pk.value.to_string_radix(16)];
+        let pk_list = vec![
+            pk.group.generator.to_string_radix(16),
+            pk.value.to_string_radix(16),
+        ];
 
-        let hs_list: Vec<String> = hs.iter().map(|h| { h.to_string_radix(16) }).collect();
+        let hs_list: Vec<String> = hs.iter().map(|h| h.to_string_radix(16)).collect();
         let h_list = vec![vec![hs_list[0].clone()], hs_list[1..].to_vec()];
-        
+
         let cs = proof.cs;
-        let cs_list: Vec<String> = cs.iter().map(|c| { c.to_string_radix(16) }).collect();
-    
-        let c_hats: Vec<String> = proof.c_hats.iter().map(|c| { c.to_string_radix(16) }).collect();
+        let cs_list: Vec<String> = cs.iter().map(|c| c.to_string_radix(16)).collect();
+
+        let c_hats: Vec<String> = proof.c_hats.iter().map(|c| c.to_string_radix(16)).collect();
         let t3 = proof.t.t3.to_string_radix(16);
-        let t_hats: Vec<String> = proof.t.t_hats.iter().map(|c| { c.to_string_radix(16) }).collect();
+        let t_hats: Vec<String> = proof
+            .t
+            .t_hats
+            .iter()
+            .map(|c| c.to_string_radix(16))
+            .collect();
         let t1 = proof.t.t1.to_string_radix(16);
         let t2 = proof.t.t2.to_string_radix(16);
         let t4_1 = proof.t.t4_1.to_string_radix(16);
@@ -773,14 +775,14 @@ mod tests {
             t_hats,
             vec![t1],
             vec![t2],
-            vec![t4_1, t4_2]
+            vec![t4_1, t4_2],
         ];
 
-        let ciphers_in_a: Vec<String> = es.iter().map(|c| { c.a.to_string_radix(16) }).collect();
-        let ciphers_in_b: Vec<String> = es.iter().map(|c| { c.b.to_string_radix(16) }).collect();
+        let ciphers_in_a: Vec<String> = es.iter().map(|c| c.a.to_string_radix(16)).collect();
+        let ciphers_in_b: Vec<String> = es.iter().map(|c| c.b.to_string_radix(16)).collect();
 
-        let ciphers_out_a: Vec<String> = e_primes.iter().map(|c| { c.a.to_string_radix(16) }).collect();
-        let ciphers_out_b: Vec<String> = e_primes.iter().map(|c| { c.b.to_string_radix(16) }).collect();
+        let ciphers_out_a: Vec<String> = e_primes.iter().map(|c| c.a.to_string_radix(16)).collect();
+        let ciphers_out_b: Vec<String> = e_primes.iter().map(|c| c.b.to_string_radix(16)).collect();
 
         let ciphers_in = vec![ciphers_in_a, ciphers_in_b];
         let ciphers_out = vec![ciphers_out_a, ciphers_out_b];
@@ -789,22 +791,28 @@ mod tests {
         let s2 = proof.s.s2.to_string_radix(16);
         let s3 = proof.s.s3.to_string_radix(16);
         let s4 = proof.s.s4.to_string_radix(16);
-        let s_hats: Vec<String> = proof.s.s_hats.iter().map(|c| { c.to_string_radix(16) }).collect();
-        let s_primes: Vec<String> = proof.s.s_primes.iter().map(|c| { c.to_string_radix(16) }).collect();
+        let s_hats: Vec<String> = proof
+            .s
+            .s_hats
+            .iter()
+            .map(|c| c.to_string_radix(16))
+            .collect();
+        let s_primes: Vec<String> = proof
+            .s
+            .s_primes
+            .iter()
+            .map(|c| c.to_string_radix(16))
+            .collect();
 
-        let s_list = vec![
-            vec![s3],
-            s_hats,
-            vec![s1],
-            vec![s2],
-            s_primes,
-            vec![s4]
-        ];
+        let s_list = vec![vec![s3], s_hats, vec![s1], vec![s2], s_primes, vec![s4]];
 
-        let us_list: Vec<String> = us.iter().map(|u| { u.to_string_radix(16) }).collect(); 
+        let us_list: Vec<String> = us.iter().map(|u| u.to_string_radix(16)).collect();
         let challenge: Vec<String> = vec![c.to_string_radix(16)];
 
-        let group = vec![group.modulus.to_string_radix(16), group.modulus_exp.to_string_radix(16)];
+        let group = vec![
+            group.modulus.to_string_radix(16),
+            group.modulus_exp.to_string_radix(16),
+        ];
 
         let transcript = CoqVerifierTranscript {
             group: group,
@@ -816,10 +824,10 @@ mod tests {
             challenge: challenge,
             proof_reply: s_list,
             ciphers_in: ciphers_in,
-            ciphers_out: ciphers_out
+            ciphers_out: ciphers_out,
         };
 
-        serde_json::to_writer_pretty(File::create("transcript_braid.json").unwrap(), &transcript).unwrap();
-        
+        serde_json::to_writer_pretty(File::create("transcript_braid.json").unwrap(), &transcript)
+            .unwrap();
     }
 }

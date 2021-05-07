@@ -1,4 +1,3 @@
-
 use serde::Serialize;
 use std::marker::{Send, Sync};
 
@@ -19,14 +18,7 @@ pub trait Element: Clone + Eq + PartialEq + Send + Sync + Serialize + BTree {
 }
 
 pub trait Exponent:
-    Clone
-    + Eq
-    + PartialEq
-    + Send
-    + Sync
-    + Serialize
-    + FromByteTree
-    + BTree
+    Clone + Eq + PartialEq + Send + Sync + Serialize + FromByteTree + BTree
 {
     fn add(&self, other: &Self) -> Self;
     fn sub(&self, other: &Self) -> Self;
@@ -88,7 +80,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
         public2: &E,
         g1: &E,
         g2: &E,
-        label: &Vec<u8>
+        label: &Vec<u8>,
     ) -> ChaumPedersen<E> {
         let r = self.rnd_exp();
         let commitment1 = g1.mod_pow(&r, &self.modulus());
@@ -101,7 +93,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
             &commitment1,
             &commitment2,
             &*self.exp_hasher(),
-            label
+            label,
         );
         let response = r.add(&challenge.mul(secret)).modulo(&self.exp_modulus());
 
@@ -120,7 +112,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
         g1: &E,
         g2: &E,
         proof: &ChaumPedersen<E>,
-        label: &Vec<u8>
+        label: &Vec<u8>,
     ) -> bool {
         let challenge_ = cp_proof_challenge(
             g1,
@@ -130,7 +122,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
             &proof.commitment1,
             &proof.commitment2,
             &*self.exp_hasher(),
-            &label
+            &label,
         );
         let ok1 = challenge_.eq(&proof.challenge);
 

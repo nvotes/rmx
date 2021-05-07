@@ -25,7 +25,7 @@ pub fn read_file_bytes(path: &Path) -> io::Result<Vec<u8>> {
     fs::read(path)
 }
 
-pub fn write_file_bytes(path: &Path, bytes: &Vec<u8>) -> io::Result<()> {
+pub fn write_file_bytes(path: &Path, bytes: &[u8]) -> io::Result<()> {
     fs::write(path, bytes)?;
     Ok(())
 }
@@ -37,28 +37,28 @@ pub fn write_tmp(bytes: Vec<u8>) -> io::Result<NamedTempFile> {
     Ok(tmp_file)
 }
 
-pub fn to_u8_16(input: &Vec<u8>) -> [u8; 16] {
+pub fn to_u8_16(input: &[u8]) -> [u8; 16] {
     assert_eq!(input.len(), 16);
     let mut bytes = [0u8; 16];
     bytes.copy_from_slice(&input);
     bytes
 }
 
-pub fn to_u8_30(input: &Vec<u8>) -> [u8; 30] {
+pub fn to_u8_30(input: &[u8]) -> [u8; 30] {
     assert_eq!(input.len(), 30);
     let mut bytes = [0u8; 30];
     bytes.copy_from_slice(&input);
     bytes
 }
 
-pub fn to_u8_32(input: &Vec<u8>) -> [u8; 32] {
+pub fn to_u8_32(input: &[u8]) -> [u8; 32] {
     assert_eq!(input.len(), 32);
     let mut bytes = [0u8; 32];
     bytes.copy_from_slice(&input);
     bytes
 }
 
-pub fn to_u8_64(input: &Vec<u8>) -> [u8; 64] {
+pub fn to_u8_64(input: &[u8]) -> [u8; 64] {
     assert_eq!(input.len(), 64);
     let mut bytes = [0u8; 64];
     bytes.copy_from_slice(&input);

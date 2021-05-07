@@ -378,7 +378,7 @@ fn load_facts(facts: &Vec<InputFact>, runtime: &mut Crepe) {
     sorted.sort_by(|a, b| a.to_string().partial_cmp(&b.to_string()).unwrap());
     sorted
         .into_iter()
-        .map(|f| {
+        .for_each(|f| {
             // facts.into_iter().map(|f| {
             info!("IFact {:?}", f);
             match f {
@@ -391,7 +391,6 @@ fn load_facts(facts: &Vec<InputFact>, runtime: &mut Crepe) {
                 InputFact::DecryptionSignedBy(x) => runtime.extend(&[x]),
                 InputFact::PlaintextsSignedBy(x) => runtime.extend(&[x]),
             }
-        })
-        .count();
+        });
     info!("\n");
 }

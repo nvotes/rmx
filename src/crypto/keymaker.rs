@@ -48,7 +48,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
 
     pub fn combine_pks(group: &G, pks: Vec<PublicKey<E, G>>) -> PublicKey<E, G> {
         let mut acc: E = pks[0].value.clone();
-        
+
         for pk in pks.iter().skip(1) {
             acc = acc.mul(&pk.value).modulo(&group.modulus());
         }

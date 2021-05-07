@@ -121,7 +121,7 @@ pub fn schnorr_proof_challenge<E: Element>(
     public: &E,
     commitment: &E,
     exp_hasher: &dyn HashTo<E::Exp>,
-    label: &Vec<u8>,
+    label: &[u8],
 ) -> E::Exp {
     let values = [g, public, commitment].to_vec();
 
@@ -140,7 +140,7 @@ pub fn cp_proof_challenge<E: Element>(
     commitment1: &E,
     commitment2: &E,
     exp_hasher: &dyn HashTo<E::Exp>,
-    label: &Vec<u8>,
+    label: &[u8],
 ) -> E::Exp {
     let values = [g1, g2, public1, public2, commitment1, commitment2].to_vec();
 

@@ -47,7 +47,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
     fn elem_hasher(&self) -> Box<dyn HashTo<E>>;
     fn generators(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<E>;
 
-    fn schnorr_prove(&self, secret: &E::Exp, public: &E, g: &E, label: &Vec<u8>) -> Schnorr<E> {
+    fn schnorr_prove(&self, secret: &E::Exp, public: &E, g: &E, label: &[u8]) -> Schnorr<E> {
         let r = self.rnd_exp();
         let commitment = g.mod_pow(&r, &self.modulus());
         let challenge: E::Exp =
@@ -60,7 +60,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
             response,
         }
     }
-    fn schnorr_verify(&self, public: &E, g: &E, proof: &Schnorr<E>, label: &Vec<u8>) -> bool {
+    fn schnorr_verify(&self, public: &E, g: &E, proof: &Schnorr<E>, label: &[u8]) -> bool {
         let challenge_ =
             schnorr_proof_challenge(g, &public, &proof.commitment, &*self.exp_hasher(), label);
         let ok1 = challenge_.eq(&proof.challenge);
@@ -80,7 +80,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
         public2: &E,
         g1: &E,
         g2: &E,
-        label: &Vec<u8>,
+        label: &[u8],
     ) -> ChaumPedersen<E> {
         let r = self.rnd_exp();
         let commitment1 = g1.mod_pow(&r, &self.modulus());
@@ -112,7 +112,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
         g1: &E,
         g2: &E,
         proof: &ChaumPedersen<E>,
-        label: &Vec<u8>,
+        label: &[u8],
     ) -> bool {
         let challenge_ = cp_proof_challenge(
             g1,

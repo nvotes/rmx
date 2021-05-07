@@ -100,7 +100,7 @@ jobs:
         uses: actions/upload-artifact@v1
         with:
           name: code-coverage-report
-          path: coverage-report.xml
+          path: cobertura.xml
       
   # check dependencies
   # based on https://github.com/EmbarkStudios/cargo-deny-action

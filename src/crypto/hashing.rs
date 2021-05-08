@@ -62,12 +62,11 @@ pub fn shuffle_proof_us<E: Element>(
     n: usize,
     label: &[u8],
 ) -> Vec<E::Exp> {
-    
     let trees: Vec<ByteTree> = vec![
         ByteTree::Leaf(ByteBuf::from(label.to_vec())),
         es.to_byte_tree(),
         e_primes.to_byte_tree(),
-        cs.to_byte_tree()
+        cs.to_byte_tree(),
     ];
 
     let prefix_bytes = ByteTree::Tree(trees).to_hashable_bytes();
@@ -81,9 +80,10 @@ pub fn shuffle_proof_us<E: Element>(
     let mut ret = Vec::with_capacity(n);
 
     for i in 0..n {
-        let mut next: Vec<ByteTree> = Vec::with_capacity(2);
-        next.push(Leaf(ByteBuf::from(prefix_hash.clone())));
-        next.push(Leaf(ByteBuf::from(i.to_le_bytes())));
+        let next: Vec<ByteTree> = vec![
+            Leaf(ByteBuf::from(prefix_hash.clone())),
+            Leaf(ByteBuf::from(i.to_le_bytes())),
+        ];
         let bytes = ByteTree::Tree(next).to_hashable_bytes();
 
         let u: E::Exp = exp_hasher.hash_to(&bytes);
@@ -99,21 +99,20 @@ pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(
     exp_hasher: &dyn HashTo<E::Exp>,
     label: &[u8],
 ) -> E::Exp {
-    let mut trees: Vec<ByteTree> = Vec::with_capacity(12);
-    trees.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
-    trees.push(y.es.to_byte_tree());
-    trees.push(y.e_primes.to_byte_tree());
-    trees.push(y.cs.to_byte_tree());
-    trees.push(y.c_hats.to_byte_tree());
-    trees.push(y.pk.value.to_byte_tree());
-
-    trees.push(t.t1.to_byte_tree());
-    trees.push(t.t2.to_byte_tree());
-    trees.push(t.t3.to_byte_tree());
-    trees.push(t.t4_1.to_byte_tree());
-    trees.push(t.t4_2.to_byte_tree());
-    trees.push(t.t_hats.to_byte_tree());
-
+    let trees: Vec<ByteTree> = vec![
+        ByteTree::Leaf(ByteBuf::from(label.to_vec())),
+        y.es.to_byte_tree(),
+        y.e_primes.to_byte_tree(),
+        y.cs.to_byte_tree(),
+        y.c_hats.to_byte_tree(),
+        y.pk.value.to_byte_tree(),
+        t.t1.to_byte_tree(),
+        t.t2.to_byte_tree(),
+        t.t3.to_byte_tree(),
+        t.t4_1.to_byte_tree(),
+        t.t4_2.to_byte_tree(),
+        t.t_hats.to_byte_tree(),
+    ];
     let bytes = ByteTree::Tree(trees).to_hashable_bytes();
 
     exp_hasher.hash_to(&bytes)

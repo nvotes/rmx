@@ -263,11 +263,12 @@ impl FromByteTree for SPublicKey {
 
 impl ToByteTree for RugGroup {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut bytes: Vec<ByteTree> = Vec::with_capacity(4);
-        bytes.push(self.generator.to_byte_tree());
-        bytes.push(self.modulus.to_byte_tree());
-        bytes.push(self.modulus_exp.to_byte_tree());
-        bytes.push(self.co_factor.to_byte_tree());
+        let bytes: Vec<ByteTree> = vec![
+            self.generator.to_byte_tree(),
+            self.modulus.to_byte_tree(),
+            self.modulus_exp.to_byte_tree(),
+            self.co_factor.to_byte_tree(),
+        ];
         ByteTree::Tree(bytes)
     }
 }
@@ -306,9 +307,10 @@ impl FromByteTree for RistrettoGroup {
 
 impl ToByteTree for EncryptedPrivateKey {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
-        trees.push(ByteTree::Leaf(ByteBuf::from(self.bytes.clone())));
-        trees.push(ByteTree::Leaf(ByteBuf::from(self.iv.clone())));
+        let trees: Vec<ByteTree> = vec![
+            ByteTree::Leaf(ByteBuf::from(self.bytes.clone())),
+            ByteTree::Leaf(ByteBuf::from(self.iv.clone())),
+        ];
         ByteTree::Tree(trees)
     }
 }
@@ -326,14 +328,13 @@ impl FromByteTree for EncryptedPrivateKey {
 
 impl<E: ToByteTree, G: ToByteTree> ToByteTree for Config<E, G> {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(5);
-        trees.push(ByteTree::Leaf(ByteBuf::from(self.id.to_vec())));
-        trees.push(self.group.to_byte_tree());
-        trees.push(ByteTree::Leaf(ByteBuf::from(
-            self.contests.to_le_bytes().to_vec(),
-        )));
-        trees.push(self.ballotbox.to_byte_tree());
-        trees.push(self.trustees.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![
+            ByteTree::Leaf(ByteBuf::from(self.id.to_vec())),
+            self.group.to_byte_tree(),
+            ByteTree::Leaf(ByteBuf::from(self.contests.to_le_bytes().to_vec())),
+            self.ballotbox.to_byte_tree(),
+            self.trustees.to_byte_tree(),
+        ];
         ByteTree::Tree(trees)
     }
 }
@@ -362,9 +363,7 @@ impl<E, G: FromByteTree> FromByteTree for Config<E, G> {
 
 impl<E: ToByteTree, G: ToByteTree> ToByteTree for PublicKey<E, G> {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
-        trees.push(self.value.to_byte_tree());
-        trees.push(self.group.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![self.value.to_byte_tree(), self.group.to_byte_tree()];
         ByteTree::Tree(trees)
     }
 }
@@ -385,10 +384,11 @@ where
     E::Exp: ToByteTree,
 {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
-        trees.push(self.value.to_byte_tree());
-        trees.push(self.public_value.to_byte_tree());
-        trees.push(self.group.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![
+            self.value.to_byte_tree(),
+            self.public_value.to_byte_tree(),
+            self.group.to_byte_tree(),
+        ];
         ByteTree::Tree(trees)
     }
 }
@@ -417,10 +417,11 @@ where
     E::Exp: ToByteTree,
 {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
-        trees.push(self.commitment.to_byte_tree());
-        trees.push(self.challenge.to_byte_tree());
-        trees.push(self.response.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![
+            self.commitment.to_byte_tree(),
+            self.challenge.to_byte_tree(),
+            self.response.to_byte_tree(),
+        ];
         ByteTree::Tree(trees)
     }
 }
@@ -450,11 +451,12 @@ where
     E::Exp: ToByteTree,
 {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
-        trees.push(self.commitment1.to_byte_tree());
-        trees.push(self.commitment2.to_byte_tree());
-        trees.push(self.challenge.to_byte_tree());
-        trees.push(self.response.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![
+            self.commitment1.to_byte_tree(),
+            self.commitment2.to_byte_tree(),
+            self.challenge.to_byte_tree(),
+            self.response.to_byte_tree(),
+        ];
         ByteTree::Tree(trees)
     }
 }
@@ -486,10 +488,11 @@ where
     E::Exp: ToByteTree,
 {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
-        trees.push(self.share.to_byte_tree());
-        trees.push(self.proof.to_byte_tree());
-        trees.push(self.encrypted_sk.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![
+            self.share.to_byte_tree(),
+            self.proof.to_byte_tree(),
+            self.encrypted_sk.to_byte_tree(),
+        ];
         ByteTree::Tree(trees)
     }
 }
@@ -516,8 +519,7 @@ where
 
 impl<E: ToByteTree> ToByteTree for Ballots<E> {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(1);
-        trees.push(self.ciphertexts.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![self.ciphertexts.to_byte_tree()];
         ByteTree::Tree(trees)
     }
 }
@@ -535,8 +537,7 @@ impl<E: FromByteTree> FromByteTree for Ballots<E> {
 
 impl<E: ToByteTree> ToByteTree for Plaintexts<E> {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(1);
-        trees.push(self.plaintexts.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![self.plaintexts.to_byte_tree()];
         ByteTree::Tree(trees)
     }
 }
@@ -557,9 +558,8 @@ where
     E::Exp: ToByteTree,
 {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
-        trees.push(self.mixed_ballots.to_byte_tree());
-        trees.push(self.proof.to_byte_tree());
+        let trees: Vec<ByteTree> =
+            vec![self.mixed_ballots.to_byte_tree(), self.proof.to_byte_tree()];
         ByteTree::Tree(trees)
     }
 }
@@ -587,11 +587,12 @@ where
     E::Exp: ToByteTree,
 {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
-        trees.push(self.t.to_byte_tree());
-        trees.push(self.s.to_byte_tree());
-        trees.push(self.cs.to_byte_tree());
-        trees.push(self.c_hats.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![
+            self.t.to_byte_tree(),
+            self.s.to_byte_tree(),
+            self.cs.to_byte_tree(),
+            self.c_hats.to_byte_tree(),
+        ];
 
         ByteTree::Tree(trees)
     }
@@ -619,13 +620,14 @@ where
     E::Exp: ToByteTree,
 {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(6);
-        trees.push(self.t1.to_byte_tree());
-        trees.push(self.t2.to_byte_tree());
-        trees.push(self.t3.to_byte_tree());
-        trees.push(self.t4_1.to_byte_tree());
-        trees.push(self.t4_2.to_byte_tree());
-        trees.push(self.t_hats.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![
+            self.t1.to_byte_tree(),
+            self.t2.to_byte_tree(),
+            self.t3.to_byte_tree(),
+            self.t4_1.to_byte_tree(),
+            self.t4_2.to_byte_tree(),
+            self.t_hats.to_byte_tree(),
+        ];
         ByteTree::Tree(trees)
     }
 }
@@ -661,13 +663,14 @@ where
     E::Exp: ToByteTree,
 {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(6);
-        trees.push(self.s1.to_byte_tree());
-        trees.push(self.s2.to_byte_tree());
-        trees.push(self.s3.to_byte_tree());
-        trees.push(self.s4.to_byte_tree());
-        trees.push(self.s_hats.to_byte_tree());
-        trees.push(self.s_primes.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![
+            self.s1.to_byte_tree(),
+            self.s2.to_byte_tree(),
+            self.s3.to_byte_tree(),
+            self.s4.to_byte_tree(),
+            self.s_hats.to_byte_tree(),
+            self.s_primes.to_byte_tree(),
+        ];
         ByteTree::Tree(trees)
     }
 }
@@ -703,9 +706,7 @@ where
     E::Exp: ToByteTree,
 {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
-        trees.push(self.pd_ballots.to_byte_tree());
-        trees.push(self.proofs.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![self.pd_ballots.to_byte_tree(), self.proofs.to_byte_tree()];
         ByteTree::Tree(trees)
     }
 }
@@ -727,9 +728,7 @@ where
 
 impl<E: ToByteTree> ToByteTree for Ciphertext<E> {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
-        trees.push(self.a.to_byte_tree());
-        trees.push(self.b.to_byte_tree());
+        let trees: Vec<ByteTree> = vec![self.a.to_byte_tree(), self.b.to_byte_tree()];
         ByteTree::Tree(trees)
     }
 }
@@ -789,9 +788,8 @@ impl FromByteTree for Statement {
 
 impl ToByteTree for SignedStatement {
     fn to_byte_tree(&self) -> ByteTree {
-        let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
-        trees.push(self.statement.to_byte_tree());
-        trees.push(self.signature.to_byte_tree());
+        let trees: Vec<ByteTree> =
+            vec![self.statement.to_byte_tree(), self.signature.to_byte_tree()];
         ByteTree::Tree(trees)
     }
 }
@@ -814,83 +812,93 @@ impl ToByteTree for Act {
     fn to_byte_tree(&self) -> ByteTree {
         match self {
             Act::CheckConfig(h) => {
-                let mut trees: Vec<ByteTree> = Vec::with_capacity(2);
-                trees.push(Leaf(ByteBuf::from(vec![1u8])));
-                trees.push(Leaf(ByteBuf::from(h.to_vec())));
+                let trees: Vec<ByteTree> = vec![
+                    Leaf(ByteBuf::from(vec![1u8])),
+                    Leaf(ByteBuf::from(h.to_vec())),
+                ];
                 ByteTree::Tree(trees)
             }
             Act::PostShare(h, i) => {
-                let mut trees: Vec<ByteTree> = Vec::with_capacity(3);
-                trees.push(Leaf(ByteBuf::from(vec![2u8])));
-                trees.push(Leaf(ByteBuf::from(h.to_vec())));
-                trees.push(Leaf(ByteBuf::from(i.to_le_bytes())));
+                let trees: Vec<ByteTree> = vec![
+                    Leaf(ByteBuf::from(vec![2u8])),
+                    Leaf(ByteBuf::from(h.to_vec())),
+                    Leaf(ByteBuf::from(i.to_le_bytes())),
+                ];
                 ByteTree::Tree(trees)
             }
             Act::CombineShares(h, i, s) => {
-                let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
-                trees.push(Leaf(ByteBuf::from(vec![3u8])));
-                trees.push(Leaf(ByteBuf::from(h.to_vec())));
-                trees.push(Leaf(ByteBuf::from(i.to_le_bytes())));
-                trees.push(s.to_vec().to_byte_tree());
+                let trees: Vec<ByteTree> = vec![
+                    Leaf(ByteBuf::from(vec![3u8])),
+                    Leaf(ByteBuf::from(h.to_vec())),
+                    Leaf(ByteBuf::from(i.to_le_bytes())),
+                    s.to_vec().to_byte_tree(),
+                ];
                 ByteTree::Tree(trees)
             }
             Act::CheckPk(h, i, pk, s) => {
-                let mut trees: Vec<ByteTree> = Vec::with_capacity(5);
-                trees.push(Leaf(ByteBuf::from(vec![4u8])));
-                trees.push(Leaf(ByteBuf::from(h.to_vec())));
-                trees.push(Leaf(ByteBuf::from(i.to_le_bytes())));
-                trees.push(Leaf(ByteBuf::from(pk.to_vec())));
-                trees.push(s.to_vec().to_byte_tree());
+                let trees: Vec<ByteTree> = vec![
+                    Leaf(ByteBuf::from(vec![4u8])),
+                    Leaf(ByteBuf::from(h.to_vec())),
+                    Leaf(ByteBuf::from(i.to_le_bytes())),
+                    Leaf(ByteBuf::from(pk.to_vec())),
+                    s.to_vec().to_byte_tree(),
+                ];
                 ByteTree::Tree(trees)
             }
             Act::Mix(h, i, bs, pk_h) => {
-                let mut trees: Vec<ByteTree> = Vec::with_capacity(5);
-                trees.push(Leaf(ByteBuf::from(vec![5u8])));
-                trees.push(Leaf(ByteBuf::from(h.to_vec())));
-                trees.push(Leaf(ByteBuf::from(i.to_le_bytes())));
-                trees.push(Leaf(ByteBuf::from(bs.to_vec())));
-                trees.push(Leaf(ByteBuf::from(pk_h.to_vec())));
+                let trees: Vec<ByteTree> = vec![
+                    Leaf(ByteBuf::from(vec![5u8])),
+                    Leaf(ByteBuf::from(h.to_vec())),
+                    Leaf(ByteBuf::from(i.to_le_bytes())),
+                    Leaf(ByteBuf::from(bs.to_vec())),
+                    Leaf(ByteBuf::from(pk_h.to_vec())),
+                ];
                 ByteTree::Tree(trees)
             }
             Act::CheckMix(h, i, t, m, bs, pk_h) => {
-                let mut trees: Vec<ByteTree> = Vec::with_capacity(7);
-                trees.push(Leaf(ByteBuf::from(vec![6u8])));
-                trees.push(Leaf(ByteBuf::from(h.to_vec())));
-                trees.push(Leaf(ByteBuf::from(i.to_le_bytes())));
-                trees.push(Leaf(ByteBuf::from(t.to_le_bytes())));
-                trees.push(Leaf(ByteBuf::from(m.to_vec())));
-                trees.push(Leaf(ByteBuf::from(bs.to_vec())));
-                trees.push(Leaf(ByteBuf::from(pk_h.to_vec())));
+                let trees: Vec<ByteTree> = vec![
+                    Leaf(ByteBuf::from(vec![6u8])),
+                    Leaf(ByteBuf::from(h.to_vec())),
+                    Leaf(ByteBuf::from(i.to_le_bytes())),
+                    Leaf(ByteBuf::from(t.to_le_bytes())),
+                    Leaf(ByteBuf::from(m.to_vec())),
+                    Leaf(ByteBuf::from(bs.to_vec())),
+                    Leaf(ByteBuf::from(pk_h.to_vec())),
+                ];
                 ByteTree::Tree(trees)
             }
             Act::PartialDecrypt(h, i, bs, share_h) => {
-                let mut trees: Vec<ByteTree> = Vec::with_capacity(5);
-                trees.push(Leaf(ByteBuf::from(vec![7u8])));
-                trees.push(Leaf(ByteBuf::from(h.to_vec())));
-                trees.push(Leaf(ByteBuf::from(i.to_le_bytes())));
-                trees.push(Leaf(ByteBuf::from(bs.to_vec())));
-                trees.push(Leaf(ByteBuf::from(share_h.to_vec())));
+                let trees: Vec<ByteTree> = vec![
+                    Leaf(ByteBuf::from(vec![7u8])),
+                    Leaf(ByteBuf::from(h.to_vec())),
+                    Leaf(ByteBuf::from(i.to_le_bytes())),
+                    Leaf(ByteBuf::from(bs.to_vec())),
+                    Leaf(ByteBuf::from(share_h.to_vec())),
+                ];
                 ByteTree::Tree(trees)
             }
             Act::CombineDecryptions(h, i, ds, mix_h, shares) => {
-                let mut trees: Vec<ByteTree> = Vec::with_capacity(6);
-                trees.push(Leaf(ByteBuf::from(vec![8u8])));
-                trees.push(Leaf(ByteBuf::from(h.to_vec())));
-                trees.push(Leaf(ByteBuf::from(i.to_le_bytes())));
-                trees.push(ds.to_vec().to_byte_tree());
-                trees.push(Leaf(ByteBuf::from(mix_h.to_vec())));
-                trees.push(shares.to_vec().to_byte_tree());
+                let trees: Vec<ByteTree> = vec![
+                    Leaf(ByteBuf::from(vec![8u8])),
+                    Leaf(ByteBuf::from(h.to_vec())),
+                    Leaf(ByteBuf::from(i.to_le_bytes())),
+                    ds.to_vec().to_byte_tree(),
+                    Leaf(ByteBuf::from(mix_h.to_vec())),
+                    shares.to_vec().to_byte_tree(),
+                ];
                 ByteTree::Tree(trees)
             }
             Act::CheckPlaintexts(h, i, p, ds, m, shares) => {
-                let mut trees: Vec<ByteTree> = Vec::with_capacity(7);
-                trees.push(Leaf(ByteBuf::from(vec![9u8])));
-                trees.push(Leaf(ByteBuf::from(h.to_vec())));
-                trees.push(Leaf(ByteBuf::from(i.to_le_bytes())));
-                trees.push(Leaf(ByteBuf::from(p.to_vec())));
-                trees.push(ds.to_vec().to_byte_tree());
-                trees.push(Leaf(ByteBuf::from(m.to_vec())));
-                trees.push(shares.to_vec().to_byte_tree());
+                let trees: Vec<ByteTree> = vec![
+                    Leaf(ByteBuf::from(vec![9u8])),
+                    Leaf(ByteBuf::from(h.to_vec())),
+                    Leaf(ByteBuf::from(i.to_le_bytes())),
+                    Leaf(ByteBuf::from(p.to_vec())),
+                    ds.to_vec().to_byte_tree(),
+                    Leaf(ByteBuf::from(m.to_vec())),
+                    shares.to_vec().to_byte_tree(),
+                ];
+
                 ByteTree::Tree(trees)
             }
         }

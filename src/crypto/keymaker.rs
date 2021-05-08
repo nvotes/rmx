@@ -37,12 +37,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         self.sk.to_encrypted(symmetric)
     }
 
-    pub fn verify_share(
-        group: &G,
-        pk: &PublicKey<E, G>,
-        proof: &Schnorr<E>,
-        label: &[u8],
-    ) -> bool {
+    pub fn verify_share(group: &G, pk: &PublicKey<E, G>, proof: &Schnorr<E>, label: &[u8]) -> bool {
         group.schnorr_verify(&pk.value, &group.generator(), &proof, label)
     }
 

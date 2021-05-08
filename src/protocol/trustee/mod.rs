@@ -226,7 +226,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         }
     }
 
-    fn gen_share(&self, group: &G, label: &Vec<u8>) -> Keyshare<E, G> {
+    fn gen_share(&self, group: &G, label: &[u8]) -> Keyshare<E, G> {
         let keymaker = Keymaker::gen(group);
         let (share, proof) = keymaker.share(label);
         let encrypted_sk = keymaker.get_encrypted_sk(self.symmetric);

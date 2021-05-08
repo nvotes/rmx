@@ -110,7 +110,7 @@ pub trait Ser {
 }
 
 pub trait Deser {
-    fn deser(bytes: &Vec<u8>) -> Result<Self, ByteError>
+    fn deser(bytes: &[u8]) -> Result<Self, ByteError>
     where
         Self: Sized;
 }
@@ -126,9 +126,16 @@ impl<T: ToByteTree> Ser for T {
 }
 
 impl<T: FromByteTree> Deser for T {
-    fn deser(bytes: &Vec<u8>) -> Result<T, ByteError> {
+    fn deser(bytes: &[u8]) -> Result<T, ByteError> {
         let tree: ByteTree = bincode::deserialize(bytes)?;
         T::from_byte_tree(&tree)
+    }
+}
+
+impl<T: ToByteTree> ToByteTree for [T] {
+    fn to_byte_tree(&self) -> ByteTree {
+        let tree = self.iter().map(|e| e.to_byte_tree()).collect();
+        ByteTree::Tree(tree)
     }
 }
 

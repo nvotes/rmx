@@ -24,7 +24,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         Keymaker { sk, pk }
     }
 
-    pub fn share(&self, label: &Vec<u8>) -> (PublicKey<E, G>, Schnorr<E>) {
+    pub fn share(&self, label: &[u8]) -> (PublicKey<E, G>, Schnorr<E>) {
         let group = &self.sk.group;
         let pk = group.pk_from_value(&self.pk.value);
 
@@ -41,7 +41,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         group: &G,
         pk: &PublicKey<E, G>,
         proof: &Schnorr<E>,
-        label: &Vec<u8>,
+        label: &[u8],
     ) -> bool {
         group.schnorr_verify(&pk.value, &group.generator(), &proof, label)
     }
@@ -56,7 +56,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         group.pk_from_value(&acc)
     }
 
-    pub fn decryption_factor(&self, c: &Ciphertext<E>, label: &Vec<u8>) -> (E, ChaumPedersen<E>) {
+    pub fn decryption_factor(&self, c: &Ciphertext<E>, label: &[u8]) -> (E, ChaumPedersen<E>) {
         let group = &self.sk.group;
         let dec_factor = self.sk.decryption_factor(c);
 
@@ -74,8 +74,8 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
 
     pub fn decryption_factor_many(
         &self,
-        cs: &Vec<Ciphertext<E>>,
-        label: &Vec<u8>,
+        cs: &[Ciphertext<E>],
+        label: &[u8],
     ) -> (Vec<E>, Vec<ChaumPedersen<E>>) {
         let decs_proofs: (Vec<E>, Vec<ChaumPedersen<E>>) = cs
             .par_iter()
@@ -96,7 +96,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
         c.a.div(&acc, &group.modulus()).modulo(&group.modulus())
     }
 
-    pub fn joint_dec_many(group: &G, decs: &Vec<Vec<E>>, cs: &Vec<Ciphertext<E>>) -> Vec<E> {
+    pub fn joint_dec_many(group: &G, decs: &[Vec<E>], cs: &[Ciphertext<E>]) -> Vec<E> {
         let modulus = group.modulus();
         let decrypted: Vec<E> = cs
             .par_iter()
@@ -117,10 +117,10 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
     pub fn verify_decryption_factors(
         group: &G,
         pk_value: &E,
-        ciphertexts: &Vec<Ciphertext<E>>,
-        decs: &Vec<E>,
-        proofs: &Vec<ChaumPedersen<E>>,
-        label: &Vec<u8>,
+        ciphertexts: &[Ciphertext<E>],
+        decs: &[E],
+        proofs: &[ChaumPedersen<E>],
+        label: &[u8],
     ) -> bool {
         assert_eq!(decs.len(), proofs.len());
         assert_eq!(decs.len(), ciphertexts.len());

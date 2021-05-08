@@ -1,3 +1,4 @@
+#![allow(clippy::too_many_arguments)]
 use std::marker::{Send, Sync};
 
 use curve25519_dalek::ristretto::RistrettoPoint;
@@ -54,18 +55,20 @@ impl HashTo<Integer> for RugHasher {
 }
 
 pub fn shuffle_proof_us<E: Element>(
-    es: &Vec<Ciphertext<E>>,
-    e_primes: &Vec<Ciphertext<E>>,
-    cs: &Vec<E>,
+    es: &[Ciphertext<E>],
+    e_primes: &[Ciphertext<E>],
+    cs: &[E],
     exp_hasher: &dyn HashTo<E::Exp>,
     n: usize,
-    label: &Vec<u8>,
+    label: &[u8],
 ) -> Vec<E::Exp> {
-    let mut trees: Vec<ByteTree> = Vec::with_capacity(4);
-    trees.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
-    trees.push(es.to_byte_tree());
-    trees.push(e_primes.to_byte_tree());
-    trees.push(cs.to_byte_tree());
+    
+    let trees: Vec<ByteTree> = vec![
+        ByteTree::Leaf(ByteBuf::from(label.to_vec())),
+        es.to_byte_tree(),
+        e_primes.to_byte_tree(),
+        cs.to_byte_tree()
+    ];
 
     let prefix_bytes = ByteTree::Tree(trees).to_hashable_bytes();
 
@@ -94,7 +97,7 @@ pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(
     y: &YChallengeInput<E, G>,
     t: &Commitments<E>,
     exp_hasher: &dyn HashTo<E::Exp>,
-    label: &Vec<u8>,
+    label: &[u8],
 ) -> E::Exp {
     let mut trees: Vec<ByteTree> = Vec::with_capacity(12);
     trees.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));

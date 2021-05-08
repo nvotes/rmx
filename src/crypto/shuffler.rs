@@ -11,10 +11,10 @@ use crate::crypto::hashing;
 use crate::crypto::hashing::HashTo;
 
 pub struct YChallengeInput<'a, E: Element, G: Group<E>> {
-    pub es: &'a Vec<Ciphertext<E>>,
-    pub e_primes: &'a Vec<Ciphertext<E>>,
-    pub cs: &'a Vec<E>,
-    pub c_hats: &'a Vec<E>,
+    pub es: &'a [Ciphertext<E>],
+    pub e_primes: &'a [Ciphertext<E>],
+    pub cs: &'a [E],
+    pub c_hats: &'a [E],
     pub pk: &'a PublicKey<E, G>,
 }
 
@@ -51,9 +51,9 @@ pub struct ShuffleProof<E: Element> {
 }
 
 pub(super) struct PermutationData<'a, E: Element> {
-    permutation: &'a Vec<usize>,
-    commitments_c: &'a Vec<E>,
-    commitments_r: &'a Vec<E::Exp>,
+    permutation: &'a [usize],
+    commitments_c: &'a [E],
+    commitments_r: &'a [E::Exp],
 }
 
 pub struct Shuffler<'a, E: Element, G: Group<E>> {
@@ -65,7 +65,7 @@ pub struct Shuffler<'a, E: Element, G: Group<E>> {
 impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
     pub fn gen_shuffle(
         &self,
-        ciphertexts: &Vec<Ciphertext<E>>,
+        ciphertexts: &[Ciphertext<E>],
     ) -> (Vec<Ciphertext<E>>, Vec<E::Exp>, Vec<usize>) {
         let perm: Vec<usize> = gen_permutation(ciphertexts.len());
 
@@ -76,8 +76,8 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
 
     pub fn apply_permutation(
         &self,
-        perm: &Vec<usize>,
-        ciphertexts: &Vec<Ciphertext<E>>,
+        perm: &[usize],
+        ciphertexts: &[Ciphertext<E>],
     ) -> (Vec<Ciphertext<E>>, Vec<E::Exp>) {
         assert!(perm.len() == ciphertexts.len());
 
@@ -118,11 +118,11 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
 
     pub fn gen_proof(
         &self,
-        es: &Vec<Ciphertext<E>>,
-        e_primes: &Vec<Ciphertext<E>>,
-        r_primes: &Vec<E::Exp>,
-        perm: &Vec<usize>,
-        label: &Vec<u8>,
+        es: &[Ciphertext<E>],
+        e_primes: &[Ciphertext<E>],
+        r_primes: &[E::Exp],
+        perm: &[usize],
+        label: &[u8],
     ) -> ShuffleProof<E> {
         // let h_generators = &self.generators[1..];
         let (cs, rs) = self.gen_commitments(&perm, &self.pk.group);
@@ -138,11 +138,11 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
 
     pub(super) fn gen_proof_ext(
         &self,
-        es: &Vec<Ciphertext<E>>,
-        e_primes: &Vec<Ciphertext<E>>,
-        r_primes: &Vec<E::Exp>,
+        es: &[Ciphertext<E>],
+        e_primes: &[Ciphertext<E>],
+        r_primes: &[E::Exp],
         perm_data: &PermutationData<E>,
-        label: &Vec<u8>,
+        label: &[u8],
     ) -> (ShuffleProof<E>, Vec<E::Exp>, E::Exp) {
         let group = &self.pk.group;
 
@@ -316,9 +316,9 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
     pub fn check_proof(
         &self,
         proof: &ShuffleProof<E>,
-        es: &Vec<Ciphertext<E>>,
-        e_primes: &Vec<Ciphertext<E>>,
-        label: &Vec<u8>,
+        es: &[Ciphertext<E>],
+        e_primes: &[Ciphertext<E>],
+        label: &[u8],
     ) -> bool {
         let group = &self.pk.group;
 
@@ -446,7 +446,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         !checks.contains(&false)
     }
 
-    fn gen_commitments(&self, perm: &Vec<usize>, group: &G) -> (Vec<E>, Vec<E::Exp>) {
+    fn gen_commitments(&self, perm: &[usize], group: &G) -> (Vec<E>, Vec<E::Exp>) {
         let generators = &self.generators[1..];
 
         assert!(generators.len() == perm.len());
@@ -483,7 +483,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
     fn gen_commitment_chain(
         &self,
         initial: &E,
-        us: &Vec<&E::Exp>,
+        us: &[&E::Exp],
         group: &G,
     ) -> (Vec<E>, Vec<E::Exp>) {
         let mut cs: Vec<E> = Vec::with_capacity(us.len());

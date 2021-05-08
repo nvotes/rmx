@@ -373,24 +373,22 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
     }
 }
 
-fn load_facts(facts: &Vec<InputFact>, runtime: &mut Crepe) {
+fn load_facts(facts: &[InputFact], runtime: &mut Crepe) {
     let mut sorted = facts.to_vec();
     sorted.sort_by(|a, b| a.to_string().partial_cmp(&b.to_string()).unwrap());
-    sorted
-        .into_iter()
-        .for_each(|f| {
-            // facts.into_iter().map(|f| {
-            info!("IFact {:?}", f);
-            match f {
-                InputFact::ConfigPresent(x) => runtime.extend(&[x]),
-                InputFact::ConfigSignedBy(x) => runtime.extend(&[x]),
-                InputFact::PkShareSignedBy(x) => runtime.extend(&[x]),
-                InputFact::PkSignedBy(x) => runtime.extend(&[x]),
-                InputFact::BallotsSigned(x) => runtime.extend(&[x]),
-                InputFact::MixSignedBy(x) => runtime.extend(&[x]),
-                InputFact::DecryptionSignedBy(x) => runtime.extend(&[x]),
-                InputFact::PlaintextsSignedBy(x) => runtime.extend(&[x]),
-            }
-        });
+    sorted.into_iter().for_each(|f| {
+        // facts.into_iter().map(|f| {
+        info!("IFact {:?}", f);
+        match f {
+            InputFact::ConfigPresent(x) => runtime.extend(&[x]),
+            InputFact::ConfigSignedBy(x) => runtime.extend(&[x]),
+            InputFact::PkShareSignedBy(x) => runtime.extend(&[x]),
+            InputFact::PkSignedBy(x) => runtime.extend(&[x]),
+            InputFact::BallotsSigned(x) => runtime.extend(&[x]),
+            InputFact::MixSignedBy(x) => runtime.extend(&[x]),
+            InputFact::DecryptionSignedBy(x) => runtime.extend(&[x]),
+            InputFact::PlaintextsSignedBy(x) => runtime.extend(&[x]),
+        }
+    });
     info!("\n");
 }

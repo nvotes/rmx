@@ -21,26 +21,6 @@ stable Rust, to build Braid just execute:
 cargo build
 ```
 
-# Continuous Integration
-
-There are multiple checks executed through the usage of Github Actions to verify
-the health of the code when pushed:
-1. **Compiler warning/errors**: checked using `cargo check` and 
-`cargo check ---tests`. Use `cargo fix` and `cargo fix --tests` to fix the 
-issues that appear.
-2. **Unit tests**: check that all unit tests pass using `cargo test`.
-3. **Code style**: check that the code style follows standard Rust format, using
-`cargo fmt -- --check`. Fix it using `cargo fmt`.
-4. **Code linting**: Lint that checks for common Rust mistakes using 
-`cargo clippy`. You can try to fix automatically most of those mistakes using
-`cargo clippy --fix -Z unstable-options`.
-5. **Code coverage**: Detects code coverage with [grcov] and pushes the 
-information (in master branch) to [codecov].
-6. **Dependencies scan**: Audit dependencies for security vulnerabilities in the
-[RustSec Advisory Database], unmaintained dependencies, incompatible licenses 
-and banned packages using [cargo-deny]. Use `cargo deny fix` or 
-`cargo deny --allow-incompatible` to try to solve the detected issues.
-
 ## Demo
 
 An interactive n-curses demo can be run with
@@ -72,6 +52,26 @@ Other significant dependencies:
 
 We're also looking into [clingo](https://github.com/potassco/clingo-rs) with which it may be possible to prove certain properties of the protocol.
 
+# Continuous Integration
+
+There are multiple checks executed through the usage of Github Actions to verify
+the health of the code when pushed:
+1. **Compiler warning/errors**: checked using `cargo check` and 
+`cargo check ---tests`. Use `cargo fix` and `cargo fix --tests` to fix the 
+issues that appear.
+2. **Unit tests**: check that all unit tests pass using `cargo test`.
+3. **Code style**: check that the code style follows standard Rust format, using
+`cargo fmt -- --check`. Fix it using `cargo fmt`.
+4. **Code linting**: Lint that checks for common Rust mistakes using 
+`cargo clippy`. You can try to fix automatically most of those mistakes using
+`cargo clippy --fix -Z unstable-options`.
+5. **Code coverage**: Detects code coverage with [grcov] and pushes the 
+information (in master branch) to [codecov].
+6. **Dependencies scan**: Audit dependencies for security vulnerabilities in the
+[RustSec Advisory Database], unmaintained dependencies, incompatible licenses 
+and banned packages using [cargo-deny]. Use `cargo deny fix` or 
+`cargo deny --allow-incompatible` to try to solve the detected issues.
+
 ## Papers
 
 Braid uses standard crytpographic techniques, most significantly
@@ -81,6 +81,10 @@ Braid uses standard crytpographic techniques, most significantly
 * [A Commitment-Consistent Proof of a Shuffle](https://eprint.iacr.org/2011/168.pdf)
 
 * [Pseudo-Code Algorithms for Verifiable Re-Encryption Mix-Nets](https://www.ifca.ai/fc17/voting/papers/voting17_HLKD17.pdf)
+
+Shuffle proofs have been independently verified
+
+* [Did you mix me? Formally Verifying Verifiable Mix Nets in Electronic Voting](https://eprint.iacr.org/2020/1114.pdf) using [this](https://github.com/nvotes/secure-e-voting-with-coq/tree/master/OCamlBraid).
 
 [nVotes]: https://nvotes.com
 [Rust]: https://www.rust-lang.org/

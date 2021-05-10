@@ -142,7 +142,9 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             let ballots = board.get_ballots(contest, ballots_or_mix_h).ok()?;
             Some(ballots?.ciphertexts)
         } else {
-            let mix = board.get_mix(contest, mixing_trustee - 1, ballots_or_mix_h).ok()?;
+            let mix = board
+                .get_mix(contest, mixing_trustee - 1, ballots_or_mix_h)
+                .ok()?;
             Some(mix?.mixed_ballots)
         }
     }

@@ -179,7 +179,14 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         };
         let mix_h = hashing::hash(&mix);
 
-        let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_or_mix_h, None, contest, &self.keypair);
+        let ss = SignedStatement::mix(
+            &cfg_h,
+            &mix_h,
+            &ballots_or_mix_h,
+            None,
+            contest,
+            &self.keypair,
+        );
 
         let now_ = std::time::Instant::now();
         let mix_path = self.work_cache.set_mix(&action, mix, &ss)?;

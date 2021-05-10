@@ -136,13 +136,13 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         board: &B,
         contest: u32,
         mixing_trustee: u32,
-        ballots_h: Hash,
+        ballots_or_mix_h: Hash,
     ) -> Option<Vec<Ciphertext<E>>> {
         if mixing_trustee == 0 {
-            let ballots = board.get_ballots(contest, ballots_h).ok()?;
+            let ballots = board.get_ballots(contest, ballots_or_mix_h).ok()?;
             Some(ballots?.ciphertexts)
         } else {
-            let mix = board.get_mix(contest, mixing_trustee - 1, ballots_h).ok()?;
+            let mix = board.get_mix(contest, mixing_trustee - 1, ballots_or_mix_h).ok()?;
             Some(mix?.mixed_ballots)
         }
     }

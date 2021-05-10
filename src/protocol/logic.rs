@@ -115,6 +115,8 @@ crepe! {
         PkSignedBy(config, contest, pk_hash, 0),
         !PkSignedBy(config, contest, pk_hash, self_t);
 
+    // perform mix 0
+    // third parameter of Act::Mix refers to the hash of ballots or hash of mix
     Do(Act::Mix(config, contest, ballots_hash, pk_hash)) <-
         PkOk(config, contest, pk_hash),
         ConfigPresent(config, _, _, 0),
@@ -122,15 +124,17 @@ crepe! {
         BallotsSigned(config, contest, ballots_hash),
         !MixSignedBy(config, contest, _, _, 0, 0);
 
-    Do(Act::Mix(config, contest, mix_ballots_hash, pk_hash)) <-
+    // perform mix n
+    // third parameter of Act::Mix refers to the hash of ballots or hash of mix
+    Do(Act::Mix(config, contest, mix_hash, pk_hash)) <-
         PkOk(config, contest, pk_hash),
         ConfigPresent(config, _, _, self_t),
         ConfigOk(config),
         (self_t > 0),
         // the previous mix was signed by its producer
-        MixSignedBy(config, contest, mix_ballots_hash, _, self_t - 1, self_t - 1),
+        MixSignedBy(config, contest, mix_hash, _, self_t - 1, self_t - 1),
         // we have verified the previous mix
-        MixSignedBy(config, contest, mix_ballots_hash, _, self_t - 1, self_t),
+        MixSignedBy(config, contest, mix_hash, _, self_t - 1, self_t),
         !MixSignedBy(config, contest, _, _, self_t, self_t);
 
     // check mix 0

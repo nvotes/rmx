@@ -132,7 +132,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         self_index: u32,
         cfg_h: Hash,
         contest: u32,
-        ballots_h: Hash,
+        ballots_or_mix_h: Hash,
         pk_h: Hash,
         board: &mut B,
     ) -> Result<(), TrusteeError> {
@@ -144,7 +144,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             .get_config(cfg_h)?
             .ok_or_else(|| TrusteeError::Msg("Could not find cfg".to_string()))?;
         let ciphertexts = self
-            .get_mix_src(board, contest, self_index, ballots_h)
+            .get_mix_src(board, contest, self_index, ballots_or_mix_h)
             .ok_or_else(|| TrusteeError::Msg("Could not find source ciphertexts".to_string()))?;
         let pk = board
             .get_pk(contest, pk_h)?
@@ -179,7 +179,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         };
         let mix_h = hashing::hash(&mix);
 
-        let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_h, None, contest, &self.keypair);
+        let ss = SignedStatement::mix(&cfg_h, &mix_h, &ballots_or_mix_h, None, contest, &self.keypair);
 
         let now_ = std::time::Instant::now();
         let mix_path = self.work_cache.set_mix(&action, mix, &ss)?;
@@ -190,7 +190,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         info!(
             ">> Mix generated {:?} <- {:?}",
             short(&mix_h),
-            short(&ballots_h)
+            short(&ballots_or_mix_h)
         );
 
         Ok(())

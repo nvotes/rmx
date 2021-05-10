@@ -52,7 +52,7 @@ Other significant dependencies:
 
 We're also looking into [clingo](https://github.com/potassco/clingo-rs) with which it may be possible to prove certain properties of the protocol.
 
-# Continuous Integration
+## Continuous Integration
 
 There are multiple checks executed through the usage of Github Actions to verify
 the health of the code when pushed:

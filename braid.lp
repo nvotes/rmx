@@ -12,7 +12,7 @@ def concat2(a, b):
 #end.
 
 #const auths = 2.
-#const horizon = 6.
+#const horizon = 7.
 #const contests = 2.
 
 % in execution mode, A and T will be zero: a(0), t(0)
@@ -59,6 +59,53 @@ do(act_sign_pk(ConfigHash, Contest, PkHash, Hashes), A, T) :-
 	posted(pk_signature(ConfigHash, Contest, PkHash, 0), T),
     not posted(pk_signature(ConfigHash, Contest, PkHash, SelfT), T),
 	a(A).
+
+do(act_mix(ConfigHash, Contest, BallotsHash, PkHash), A, T) :-
+	pk_ok(ConfigHash, Contest, PkHash, T),
+	posted(config(ConfigHash, _, _, 0, A), T),
+	config_ok(ConfigHash, T),
+	posted(ballots(ConfigHash, Contest, BallotsHash), T),
+	not posted(mix_signature(ConfigHash, Contest, _, _, 0, 0), T),
+	a(A).
+
+do(act_mix(ConfigHash, Contest, MixHash, PkHash), A, T) :-
+	pk_ok(ConfigHash, Contest, PkHash, T),
+	posted(config(ConfigHash, _, _, SelfT, A), T),
+	config_ok(ConfigHash, T),
+	SelfT > 0,
+	% the previous mix was signed by its producer
+	posted(mix_signature(ConfigHash, Contest, MixHash, _, SelfT - 1, SelfT - 1), T),
+	% we have verified the previous mix
+	posted(mix_signature(ConfigHash, Contest, MixHash, _, SelfT - 1, SelfT), T),
+	not posted(mix_signature(ConfigHash, Contest, _, _, SelfT, SelfT), T),
+	a(A).
+
+%*
+
+    // check mix 0
+    Do(Act::CheckMix(config, contest, 0, mix_hash, ballots_hash, pk_hash)) <-
+        PkOk(config, contest, pk_hash),
+        ConfigPresent(config, _, _, self_t),
+        ConfigOk(config),
+        // the mix to verify
+        MixSignedBy(config, contest, mix_hash, ballots_hash, 0, 0),
+        // input ballots to mix came from the ballotbox
+        BallotsSigned(config, contest, ballots_hash),
+        !MixSignedBy(config, contest, mix_hash, ballots_hash, 0, self_t);
+
+    // check mix n
+    Do(Act::CheckMix(config, contest, mixer_t, mix_hash, mix_ballots_hash, pk_hash)) <-
+        PkOk(config, contest, pk_hash),
+        ConfigPresent(config, _, _, self_t),
+        ConfigOk(config),
+        // the mix to verify
+        MixSignedBy(config, contest, mix_hash, mix_ballots_hash, mixer_t, _signer_t),
+        (mixer_t > 0),
+        // input ballots to mix came from a previous mix, thus (mixer_t - 1)
+        MixSignedBy(config, contest, mix_ballots_hash, _, mixer_t - 1, _signer_t),
+        !MixSignedBy(config, contest, mix_hash, mix_ballots_hash, mixer_t, self_t);
+
+*%
 
 % input and output facts are shared with execution mode
 
@@ -149,6 +196,6 @@ test(@concat("hello", "world")).
 % #show contest/3.
 % #show config_signed_upto/3.
 % #show config_ok/2.
-% #show do/3.
+#show do/3.
 % #show pk_signed_upto/5.
 #show pk_ok/4.

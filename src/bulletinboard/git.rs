@@ -521,12 +521,34 @@ pub fn test_config() -> GitBulletinBoard {
 
 #[cfg(test)]
 mod tests {
+    use chrono::{DateTime, Utc};
     use serial_test::serial;
     use std::fs;
+    use std::fs::File;
+    use std::fs::OpenOptions;
+    use std::io::Write;
     use std::path::Path;
+    use uuid::Uuid;
 
     use crate::bulletinboard::git::*;
-    use crate::util;
+
+    pub fn create_random_file(dir: &str) -> PathBuf {
+        let mut buff = Uuid::encode_buffer();
+        let id = Uuid::new_v4().to_simple().encode_lower(&mut buff);
+        let target = Path::new(dir).join(Path::new(&id));
+        let mut output = File::create(target.clone()).unwrap();
+        let now: DateTime<Utc> = Utc::now();
+        writeln!(output, "File {} created at {}", id, now).unwrap();
+        target
+    }
+
+    pub fn modify_file(file: &str) {
+        let mut file = OpenOptions::new().append(true).open(file).unwrap();
+
+        let now: DateTime<Utc> = Utc::now();
+
+        writeln!(file, "New line at {}", now).unwrap();
+    }
 
     #[ignore]
     #[test]
@@ -559,7 +581,7 @@ mod tests {
         let mut g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
-        let added = util::create_random_file("/tmp");
+        let added = create_random_file("/tmp");
         let name = Path::new(added.file_name().unwrap().to_str().unwrap());
 
         g.post(vec![(name, &added)], "new file").unwrap();
@@ -584,7 +606,7 @@ mod tests {
         g.open_or_clone().unwrap();
 
         // add new file
-        let added = util::create_random_file("/tmp");
+        let added = create_random_file("/tmp");
         let name = Path::new(added.file_name().unwrap().to_str().unwrap());
         g.post(vec![(name, &added)], "new file").unwrap();
 
@@ -601,7 +623,7 @@ mod tests {
 
         let modify = added.to_str().unwrap();
 
-        util::modify_file(&modify);
+        modify_file(&modify);
         let mut result = g.post(vec![(name, &added)], "file modification");
         // cannot modify upstream in append_only mode
         assert!(result.is_err());
@@ -655,12 +677,12 @@ mod tests {
         g2.open_or_clone().unwrap();
 
         // add new file
-        let added1 = util::create_random_file("/tmp");
+        let added1 = create_random_file("/tmp");
         let name1 = Path::new(added1.file_name().unwrap().to_str().unwrap());
         g.post(vec![(name1, &added1)], "new file").unwrap();
 
         // add new file before refresh to trigger a merge
-        let added = util::create_random_file("/tmp");
+        let added = create_random_file("/tmp");
         let name = Path::new(added.file_name().unwrap().to_str().unwrap());
         g2.__add_commit(&g2.open().unwrap(), name, &added, "add", true)
             .unwrap();
@@ -668,13 +690,13 @@ mod tests {
         g2.list().unwrap();
 
         // modify a file in g1
-        util::modify_file(&added1.to_str().unwrap());
+        modify_file(&added1.to_str().unwrap());
         g.append_only = false;
         g.post(vec![(name1, &added1)], "file modification").unwrap();
 
         // add a new file prior to refreshing to trigger a merge,
         // this time with non-add changes
-        let added = util::create_random_file("/tmp");
+        let added = create_random_file("/tmp");
         let name = Path::new(added.file_name().unwrap().to_str().unwrap());
 
         g2.__add_commit(&g2.open().unwrap(), name, &added, "add", true)
@@ -684,13 +706,13 @@ mod tests {
         g2.list().unwrap();
 
         // modify a file in g1
-        util::modify_file(&added1.to_str().unwrap());
+        modify_file(&added1.to_str().unwrap());
         g.append_only = false;
         g.post(vec![(name1, &added1)], "file modification").unwrap();
 
         // add a new file prior to refreshing to trigger a merge,
         // this time with non-add changes
-        let added = util::create_random_file("/tmp");
+        let added = create_random_file("/tmp");
         let name = Path::new(added.file_name().unwrap().to_str().unwrap());
         g2.__add_commit(&g2.open().unwrap(), name, &added, "add", true)
             .unwrap();

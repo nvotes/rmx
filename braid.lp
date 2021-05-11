@@ -12,7 +12,7 @@ def concat2(a, b):
 #end.
 
 #const auths = 2.
-#const horizon = 7.
+#const horizon = 8.
 #const contests = 2.
 
 % in execution mode, A and T will be zero: a(0), t(0)
@@ -27,7 +27,10 @@ a(0..auths - 1).
 % include an extra 0 in the config predicate
 posted_at(config(config_hash, contests, auths, A, A), -1, 0) :- a(A).
 % once the pk is posted, simulate posting ballots by the ballotbox at T + 1
-posted_at(ballots(ConfigHash, Contest, "ballots_hash"), -1, T + 1) :- pk_ok(ConfigHash, Contest, PkHash, T).
+posted_at(ballots(ConfigHash, Contest, "ballots_hash"), -1, T + 1) :- 
+	pk_ok(ConfigHash, Contest, PkHash, T),
+	not posted_at(ballots(ConfigHash, Contest, _), -1, T).
+
 
 %*******************************************************************************%
 
@@ -80,32 +83,30 @@ do(act_mix(ConfigHash, Contest, MixHash, PkHash), A, T) :-
 	not posted(mix_signature(ConfigHash, Contest, _, _, SelfT, SelfT), T),
 	a(A).
 
-%*
+% check mix 0
+do(act_check_mix(ConfigHash, Contest, 0, MixHash, BallotsHash, PkHash), A, T) :-
+	pk_ok(ConfigHash, Contest, PkHash, T),
+	posted(config(ConfigHash, _, _, SelfT, A), T),
+	config_ok(ConfigHash, T),
+	% the mix to verify
+	posted(mix_signature(ConfigHash, Contest, MixHash, BallotsHash, 0, 0), T),
+	% input ballots to mix came from the ballotbox
+	posted(ballots(ConfigHash, Contest, BallotsHash), T),
+	not posted(mix_signature(ConfigHash, Contest, MixHash, BallotsHash, 0, SelfT), T),
+	a(A).
 
-    // check mix 0
-    Do(Act::CheckMix(config, contest, 0, mix_hash, ballots_hash, pk_hash)) <-
-        PkOk(config, contest, pk_hash),
-        ConfigPresent(config, _, _, self_t),
-        ConfigOk(config),
-        // the mix to verify
-        MixSignedBy(config, contest, mix_hash, ballots_hash, 0, 0),
-        // input ballots to mix came from the ballotbox
-        BallotsSigned(config, contest, ballots_hash),
-        !MixSignedBy(config, contest, mix_hash, ballots_hash, 0, self_t);
-
-    // check mix n
-    Do(Act::CheckMix(config, contest, mixer_t, mix_hash, mix_ballots_hash, pk_hash)) <-
-        PkOk(config, contest, pk_hash),
-        ConfigPresent(config, _, _, self_t),
-        ConfigOk(config),
-        // the mix to verify
-        MixSignedBy(config, contest, mix_hash, mix_ballots_hash, mixer_t, _signer_t),
-        (mixer_t > 0),
-        // input ballots to mix came from a previous mix, thus (mixer_t - 1)
-        MixSignedBy(config, contest, mix_ballots_hash, _, mixer_t - 1, _signer_t),
-        !MixSignedBy(config, contest, mix_hash, mix_ballots_hash, mixer_t, self_t);
-
-*%
+% check mix n
+do(act_check_mix(ConfigHash, Contest, MixerT, MixHash, MixBallotsHash, PkHash), A, T) :-
+	pk_ok(ConfigHash, Contest, PkHash, T),
+	posted(config(ConfigHash, _, _, SelfT, A), T),
+	config_ok(ConfigHash, T),
+	% the mix to verify
+	posted(mix_signature(ConfigHash, Contest, MixHash, MixBallotsHash, MixerT, SignerT), T),
+	MixerT > 0,
+	% input ballots to mix came from a previous mix, thus (mixer_t - 1)
+	posted(mix_signaturey(ConfigHash, Contest, MixBallotsHash, _, MixerT - 1, SignerT), T),
+	not posted(mix_signature(ConfigHash, Contest, MixHash, MixBallotsHash, MixerT, SelfT), T),
+	a(A).
 
 % input and output facts are shared with execution mode
 
@@ -169,6 +170,7 @@ post(config_signature(ConfigHash, A), A, T + 1) :- do(act_sign_config(ConfigHash
 post(pk_share(ConfigHash, Contest, @concat2("share_hash", A), A), A, T + 1) :- do(act_post_share(ConfigHash, Contest), A, T).
 post(pk_signature(ConfigHash, Contest, "pk_hash", A), A, T + 1) :- do(act_combine_shares(ConfigHash, Contest, Hashes), A, T).
 post(pk_signature(ConfigHash, Contest, PkHash, A), A, T + 1) :- do(act_sign_pk(ConfigHash, Contest, PkHash, Hashes), A, T).
+post(mix_signature(ConfigHash, Contest, @concat2("mix_hash_by", A), MixHash, A, A), A, T + 1) :- do(act_mix(ConfigHash, Contest, MixHash, PkHash), A, T).
 
 % first to post on bb at time T wins
 % select winner
@@ -187,15 +189,15 @@ posted(W, T) :- posted_at(W, A, Past), Past <= T, t(T).
 
 test(@concat("hello", "world")).
 
-% 	#show posted_at/3.
+% #show posted_at/3.
 % #show posted/2.
-% #show do/3.
+#show do/3.
 % #show select/2.
 % #show pk_shares_upto/5.
 % #show pk_shares_ok/4.
 % #show contest/3.
 % #show config_signed_upto/3.
 % #show config_ok/2.
-#show do/3.
+% #show do/3.
 % #show pk_signed_upto/5.
-#show pk_ok/4.
+% #show pk_ok/4.

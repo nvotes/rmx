@@ -125,7 +125,7 @@ crepe! {
         !MixSignedBy(config, contest, _, _, 0, 0);
 
     // perform mix n
-    // third parameter of Act::Mix refers to the hash of ballots or hash of mix
+    // third parameter of Act::Mix refers to the hash of ballots or hash of mix with source ballots
     Do(Act::Mix(config, contest, mix_hash, pk_hash)) <-
         PkOk(config, contest, pk_hash),
         ConfigPresent(config, _, _, self_t),

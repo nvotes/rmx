@@ -228,21 +228,23 @@ impl GitBulletinBoard {
         info!("GIT {}: push..", self.fs_path);
         let ret = self.push(&repo);
         match ret {
-            Err(ref git_error) => if git2::ErrorCode::Conflict == git_error.code() {
-                // Conflicts should be very unlikely, as they require an external push to occur
-                // between our refresh and push, which is optimized for low delay by
-                // using prepare_add. 
-                // If a conflict does occur, it should be handled automatically
-                // in the next cycle when calling refresh, as that includes merging
-                // code. The caller can handle the error as it is passed back
-                // from this function. Alternatively we can add retry logic here, eg
-                //
-                // self.refresh(&repo)?;
-                // self.push(&repo);
-                // with some kind of loop
+            Err(ref git_error) => {
+                if git2::ErrorCode::Conflict == git_error.code() {
+                    // Conflicts should be very unlikely, as they require an external push to occur
+                    // between our refresh and push, which is optimized for low delay by
+                    // using prepare_add.
+                    // If a conflict does occur, it should be handled automatically
+                    // in the next cycle when calling refresh, as that includes merging
+                    // code. The caller can handle the error as it is passed back
+                    // from this function. Alternatively we can add retry logic here, eg
+                    //
+                    // self.refresh(&repo)?;
+                    // self.push(&repo);
+                    // with some kind of loop
 
-                warn!("GIT: post: conflict detected");
-            },
+                    warn!("GIT: post: conflict detected");
+                }
+            }
             Ok(()) => (),
         }
         info!("GIT push: [{}ms]", now.elapsed().as_millis());

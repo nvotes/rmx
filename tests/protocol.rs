@@ -70,6 +70,7 @@ fn run<E: Element + std::cmp::PartialEq, G: Group<E>, B: BasicBoard>(
 ) -> Result<(), TrusteeError>
 where
     <E as Element>::Plaintext: std::hash::Hash,
+    <E as Element>::Plaintext: Eq,
 {
     let local1 = "/tmp/local";
     let local2 = "/tmp/local2";

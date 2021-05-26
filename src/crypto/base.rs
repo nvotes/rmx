@@ -5,9 +5,9 @@ use crate::crypto::elgamal::*;
 use crate::crypto::hashing::*;
 use crate::data::bytes::*;
 
-pub trait Element: Clone + Eq + PartialEq + Send + Sync + Serialize + BTree {
+pub trait Element: Clone + Eq + Send + Sync + Serialize + BTree {
     type Exp: Exponent;
-    type Plaintext: Eq + PartialEq + Send + Sync;
+    type Plaintext: Send + Sync;
 
     fn mul(&self, other: &Self) -> Self;
     fn div(&self, other: &Self, modulus: &Self) -> Self;
@@ -17,9 +17,7 @@ pub trait Element: Clone + Eq + PartialEq + Send + Sync + Serialize + BTree {
     fn mul_identity() -> Self;
 }
 
-pub trait Exponent:
-    Clone + Eq + PartialEq + Send + Sync + Serialize + FromByteTree + BTree
-{
+pub trait Exponent: Clone + Eq + Send + Sync + Serialize + FromByteTree + BTree {
     fn add(&self, other: &Self) -> Self;
     fn sub(&self, other: &Self) -> Self;
     fn neg(&self) -> Self;

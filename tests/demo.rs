@@ -59,6 +59,7 @@ struct Demo<E: Element, G, B> {
 impl<E: Element, G: Group<E>, B: BasicBoard> Demo<E, G, B>
 where
     <E as Element>::Plaintext: std::hash::Hash,
+    <E as Element>::Plaintext: Eq,
 {
     fn new(
         sink: cursive::CbSink,
@@ -425,50 +426,40 @@ fn demo() {
     siv.run();
 }
 
-fn step_t<
-    E: 'static + Element + std::cmp::PartialEq,
-    G: 'static + Group<E>,
-    B: 'static + BasicBoard + Send + Sync,
->(
+fn step_t<E: 'static + Element, G: 'static + Group<E>, B: 'static + BasicBoard + Send + Sync>(
     demo_arc: DemoArc<E, G, B>,
     t: u32,
 ) where
     <E as Element>::Plaintext: std::hash::Hash,
+    <E as Element>::Plaintext: Eq,
 {
     std::thread::spawn(move || step(Arc::clone(&demo_arc), t));
 }
 
-fn ballots_t<
-    E: 'static + Element + std::cmp::PartialEq,
-    G: 'static + Group<E>,
-    B: 'static + BasicBoard + Send + Sync,
->(
+fn ballots_t<E: 'static + Element, G: 'static + Group<E>, B: 'static + BasicBoard + Send + Sync>(
     demo_arc: DemoArc<E, G, B>,
     t: u32,
 ) where
     <E as Element>::Plaintext: std::hash::Hash,
+    <E as Element>::Plaintext: Eq,
 {
     std::thread::spawn(move || ballots(Arc::clone(&demo_arc), t));
 }
 
-fn check_t<
-    E: 'static + Element + std::cmp::PartialEq,
-    G: 'static + Group<E>,
-    B: 'static + BasicBoard + Send + Sync,
->(
+fn check_t<E: 'static + Element, G: 'static + Group<E>, B: 'static + BasicBoard + Send + Sync>(
     demo_arc: DemoArc<E, G, B>,
     t: u32,
 ) where
     <E as Element>::Plaintext: std::hash::Hash,
+    <E as Element>::Plaintext: Eq,
 {
     std::thread::spawn(move || check(Arc::clone(&demo_arc), t));
 }
 
-fn step<E: Element + std::cmp::PartialEq, G: Group<E>, B: BasicBoard + Send + Sync>(
-    demo_arc: DemoArc<E, G, B>,
-    t: u32,
-) where
+fn step<E: Element, G: Group<E>, B: BasicBoard + Send + Sync>(demo_arc: DemoArc<E, G, B>, t: u32)
+where
     <E as Element>::Plaintext: std::hash::Hash,
+    <E as Element>::Plaintext: Eq,
 {
     let mut demo = demo_arc.lock().unwrap();
     demo.status(String::from("Working..."));
@@ -480,11 +471,10 @@ fn step<E: Element + std::cmp::PartialEq, G: Group<E>, B: BasicBoard + Send + Sy
     demo.done(t);
 }
 
-fn ballots<E: Element + std::cmp::PartialEq, G: Group<E>, B: BasicBoard + Send + Sync>(
-    demo_arc: DemoArc<E, G, B>,
-    t: u32,
-) where
+fn ballots<E: Element, G: Group<E>, B: BasicBoard + Send + Sync>(demo_arc: DemoArc<E, G, B>, t: u32)
+where
     <E as Element>::Plaintext: std::hash::Hash,
+    <E as Element>::Plaintext: Eq,
 {
     let mut demo = demo_arc.lock().unwrap();
     demo.status(String::from("Working..."));
@@ -493,15 +483,12 @@ fn ballots<E: Element + std::cmp::PartialEq, G: Group<E>, B: BasicBoard + Send +
     demo.done(t);
 }
 
-fn check<
-    E: 'static + Element + std::cmp::PartialEq,
-    G: 'static + Group<E>,
-    B: BasicBoard + Send + Sync,
->(
+fn check<E: 'static + Element, G: 'static + Group<E>, B: BasicBoard + Send + Sync>(
     demo_arc: DemoArc<E, G, B>,
     t: u32,
 ) where
     <E as Element>::Plaintext: std::hash::Hash,
+    <E as Element>::Plaintext: Eq,
 {
     let demo = demo_arc.lock().unwrap();
     demo.status(String::from("Working..."));

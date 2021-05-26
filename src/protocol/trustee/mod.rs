@@ -9,7 +9,7 @@ use rand::rngs::OsRng;
 use crate::data::artifact::*;
 
 use crate::crypto::elgamal::{Ciphertext, PublicKey};
-use crate::protocol::facts::*;
+use crate::protocol::predicates::*;
 
 use crate::crypto::base::Element;
 use crate::crypto::base::Group;

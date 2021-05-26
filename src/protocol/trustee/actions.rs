@@ -14,8 +14,8 @@ use crate::crypto::hashing;
 use crate::crypto::hashing::Hash;
 use crate::crypto::keymaker::Keymaker;
 use crate::crypto::shuffler::*;
-use crate::protocol::facts::Act;
 use crate::protocol::logic::Hashes;
+use crate::protocol::predicates::Act;
 use crate::util::short;
 
 impl<E: Element, G: Group<E>> Trustee<E, G> {

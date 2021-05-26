@@ -7,8 +7,8 @@ use crate::crypto::base::Element;
 use crate::crypto::base::Group;
 use crate::crypto::hashing;
 use crate::crypto::hashing::*;
-use crate::protocol::facts::Act;
-use crate::protocol::facts::{AllFacts, InputFact};
+use crate::protocol::predicates::Act;
+use crate::protocol::predicates::{AllFacts, InputFact};
 use crate::protocol::trustee::Trustee;
 use crate::protocol::trustee::TrusteeError;
 
@@ -280,19 +280,6 @@ crepe! {
         (n > 0);
 }
 
-fn array_make(value: Hash) -> Hashes {
-    let mut ret = [[0u8; 64]; crate::protocol::MAX_TRUSTEES];
-    ret[0] = value;
-
-    ret
-}
-
-fn array_set(mut input: Hashes, index: u32, value: Hash) -> Hashes {
-    input[index as usize] = value;
-
-    input
-}
-
 pub struct Driver<E, G, B> {
     trustee: Trustee<E, G>,
     phantom_b: PhantomData<B>,
@@ -315,7 +302,7 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
                 .iter()
                 .map(|sv| sv.verify(board))
                 .filter(|f| f.is_some())
-                .map(|f| f.unwrap())
+                .flatten()
                 .collect();
 
             let cfg_ = board.get_config_unsafe();
@@ -395,4 +382,17 @@ fn load_facts(facts: &[InputFact], runtime: &mut Crepe) {
         }
     });
     info!("\n");
+}
+
+fn array_make(value: Hash) -> Hashes {
+    let mut ret = [[0u8; 64]; crate::protocol::MAX_TRUSTEES];
+    ret[0] = value;
+
+    ret
+}
+
+fn array_set(mut input: Hashes, index: u32, value: Hash) -> Hashes {
+    input[index as usize] = value;
+
+    input
 }

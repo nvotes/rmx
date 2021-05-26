@@ -241,7 +241,7 @@ pub struct AllFacts {
 }
 
 impl AllFacts {
-    pub(super) fn new(input_facts: Vec<InputFact>, f: DatalogOutput) -> AllFacts {
+    pub(super) fn new(input_facts: Vec<InputFact>, output_facts: DatalogOutput) -> AllFacts {
         let mut all_actions = vec![];
         let mut check_config = vec![];
         let mut post_share = vec![];
@@ -253,7 +253,7 @@ impl AllFacts {
         let mut combine_decryptions = vec![];
         let mut check_plaintexts = vec![];
 
-        let actions = f.0;
+        let actions = output_facts.0;
         for a in actions {
             match a.0 {
                 Act::CheckConfig(..) => check_config.push(a.0),
@@ -269,13 +269,13 @@ impl AllFacts {
             all_actions.push(a.0);
         }
 
-        let config_ok = f.1;
-        let pk_shares_ok = f.2;
-        let pk_ok = f.3;
-        let mixes_ok = f.9;
-        let contest_mixed_ok = f.11;
-        let decryptions_all = f.13;
-        let plaintexts_ok = f.15;
+        let config_ok = output_facts.1;
+        let pk_shares_ok = output_facts.2;
+        let pk_ok = output_facts.3;
+        let mixes_ok = output_facts.9;
+        let contest_mixed_ok = output_facts.11;
+        let decryptions_all = output_facts.13;
+        let plaintexts_ok = output_facts.15;
 
         AllFacts {
             input_facts,

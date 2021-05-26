@@ -15,7 +15,7 @@ use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
 use crate::crypto::shuffler::{Commitments, Responses, ShuffleProof};
 use crate::data::artifact::*;
-use crate::protocol::facts::Act;
+use crate::protocol::predicates::Act;
 use crate::protocol::statement::*;
 use crate::util;
 

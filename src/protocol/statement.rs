@@ -11,9 +11,9 @@ use crate::bulletinboard::*;
 use crate::crypto::base::Element;
 use crate::crypto::base::Group;
 use crate::crypto::hashing;
-use crate::protocol::facts::InputFact;
 use crate::protocol::logic::ContestIndex;
 use crate::protocol::logic::TrusteeIndex;
+use crate::protocol::predicates::InputFact;
 use crate::util;
 
 // a 512 bit hash as a Vector (rather than as a [u8; 64])

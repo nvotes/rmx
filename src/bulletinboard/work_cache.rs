@@ -9,7 +9,7 @@ use crate::crypto::elgamal::PublicKey;
 use crate::crypto::hashing;
 use crate::data::artifact::*;
 use crate::data::bytes::*;
-use crate::protocol::facts::Act;
+use crate::protocol::predicates::Act;
 use crate::protocol::statement::*;
 use crate::util;
 

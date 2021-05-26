@@ -1,5 +1,4 @@
 // Alow this for the clone() function in this file
-#![allow(clippy::should_implement_trait)]
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -70,7 +69,7 @@ impl GitBulletinBoard {
         if Path::new(&self.fs_path).exists() {
             self.open()
         } else {
-            self.clone()
+            self.clone_repo()
         }
     }
 
@@ -79,7 +78,7 @@ impl GitBulletinBoard {
         Repository::open(&self.fs_path)
     }
 
-    pub fn clone(&self) -> Result<Repository, Error> {
+    pub fn clone_repo(&self) -> Result<Repository, Error> {
         info!("GIT {}: clone..", self.fs_path);
         let now = std::time::Instant::now();
         let co = CheckoutBuilder::new();
@@ -234,14 +233,12 @@ impl GitBulletinBoard {
                     // between our refresh and push, which is optimized for low delay by
                     // using prepare_add.
                     // If a conflict does occur, it should be handled automatically
-                    // in the next cycle when calling refresh, as that includes merging
-                    // code. The caller can handle the error as it is passed back
-                    // from this function. Alternatively we can add retry logic here, eg
+                    // in the next cycle when calling refresh, which includes merging
+                    // code. Alternatively we can add retry logic here, eg
                     //
                     // self.refresh(&repo)?;
                     // self.push(&repo);
-                    // with some kind of loop
-
+                    // loop..
                     warn!("GIT: post: conflict detected");
                 }
             }

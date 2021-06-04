@@ -5,7 +5,7 @@ mod tests {
     use ed25519_dalek::{PublicKey, Signer, Verifier};
     use rand::rngs::OsRng;
 
-    use crate::data::bytes::{Deser, Ser};
+    use crate::data::byte_tree::{Deser, Ser};
 
     #[test]
     fn test_signature() {

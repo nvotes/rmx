@@ -3,7 +3,7 @@ use std::marker::{Send, Sync};
 
 use crate::crypto::elgamal::*;
 use crate::crypto::hashing::*;
-use crate::data::bytes::*;
+use crate::data::byte_tree::*;
 
 pub trait Element: Clone + Eq + Send + Sync + Serialize + BTree {
     type Exp: Exponent;

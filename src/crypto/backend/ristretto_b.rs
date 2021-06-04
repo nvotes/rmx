@@ -177,7 +177,7 @@ mod tests {
     use crate::crypto::shuffler::*;
     use crate::crypto::symmetric;
     use crate::data::artifact::*;
-    use crate::data::bytes::*;
+    use crate::data::byte_tree::*;
     use crate::util;
 
     #[test]

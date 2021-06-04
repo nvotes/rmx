@@ -223,12 +223,6 @@ impl Group<Integer> for RugGroup {
         let secret = self.rnd_exp();
         PrivateKey::from(&secret, self)
     }
-    fn pk_from_value(&self, value: &Integer) -> PublicKey<Integer, Self> {
-        PublicKey {
-            value: value.clone(),
-            group: self.clone(),
-        }
-    }
 
     fn exp_hasher(&self) -> Box<dyn HashTo<Integer>> {
         Box::new(RugHasher(self.modulus_exp.clone()))

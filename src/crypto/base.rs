@@ -38,7 +38,6 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
     fn rnd_plaintext(&self) -> E::Plaintext;
     fn exp_modulus(&self) -> E::Exp;
     fn gen_key(&self) -> PrivateKey<E, Self>;
-    fn pk_from_value(&self, value: &E) -> PublicKey<E, Self>;
     fn encode(&self, plaintext: &E::Plaintext) -> E;
     fn decode(&self, element: &E) -> E::Plaintext;
     fn exp_hasher(&self) -> Box<dyn HashTo<E::Exp>>;

@@ -133,9 +133,6 @@ impl Group<RistrettoPoint> for RistrettoGroup {
         let secret = self.rnd_exp();
         PrivateKey::from(&secret, self)
     }
-    fn pk_from_value(&self, value: &RistrettoPoint) -> PublicKey<RistrettoPoint, Self> {
-        PublicKey::from(&value, &self.clone())
-    }
 
     fn exp_hasher(&self) -> Box<dyn HashTo<Scalar>> {
         Box::new(RistrettoHasher)

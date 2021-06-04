@@ -1,2 +1,2 @@
 pub mod artifact;
-pub mod bytes;
+pub mod byte_tree;

@@ -67,7 +67,7 @@ mod tests {
 
     use crate::crypto::backend::rug_b::*;
     use crate::data::artifact::*;
-    use crate::data::bytes::*;
+    use crate::data::byte_tree::*;
 
     #[test]
     fn test_config_serde() {

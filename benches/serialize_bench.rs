@@ -4,7 +4,7 @@ use braid::crypto::base::*;
 use braid::crypto::elgamal::*;
 use braid::crypto::shuffler::*;
 use braid::data::artifact::*;
-use braid::data::bytes::*;
+use braid::data::byte_tree::*;
 use rug::Integer;
 
 use curve25519_dalek::ristretto::RistrettoPoint;

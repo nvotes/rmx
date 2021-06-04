@@ -13,7 +13,7 @@ use crate::bulletinboard::basic::BasicBoard;
 use crate::bulletinboard::BBError;
 use crate::crypto::hashing;
 use crate::crypto::hashing::Hash;
-use crate::data::bytes::*;
+use crate::data::byte_tree::*;
 use crate::util;
 
 const MAX_ATTEMPTS: i32 = 5;

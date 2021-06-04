@@ -24,7 +24,7 @@ use braid::bulletinboard::basic::*;
 use braid::bulletinboard::generic::*;
 use braid::bulletinboard::*;
 use braid::crypto::backend::ristretto_b::*;
-use braid::data::bytes::*;
+use braid::data::byte_tree::*;
 use braid::protocol::logic::Driver;
 use braid::protocol::predicates::AllFacts;
 use braid::protocol::trustee::Trustee;

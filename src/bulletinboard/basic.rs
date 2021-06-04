@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::bulletinboard::BBError;
 use crate::crypto::hashing;
 use crate::crypto::hashing::Hash;
-use crate::data::bytes::*;
+use crate::data::byte_tree::*;
 use crate::util;
 
 pub trait BasicBoard {

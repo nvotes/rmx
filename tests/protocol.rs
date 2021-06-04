@@ -21,7 +21,7 @@ use braid::crypto::base::Group;
 use braid::crypto::elgamal::PublicKey;
 use braid::crypto::hashing;
 use braid::data::artifact::*;
-use braid::data::bytes::*;
+use braid::data::byte_tree::*;
 use braid::protocol::logic::Driver;
 use braid::protocol::statement::SignedStatement;
 use braid::protocol::trustee::Trustee;

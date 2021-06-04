@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use crate::crypto::base::*;
 use crate::crypto::symmetric;
 use crate::data::artifact::*;
-use crate::data::byte_tree::*;
+use crate::data::bytes::*;
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Ciphertext<E> {

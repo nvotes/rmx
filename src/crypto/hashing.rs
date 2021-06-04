@@ -10,9 +10,9 @@ use sha2::{Digest, Sha256, Sha512};
 use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
 use crate::crypto::shuffler::{Commitments, YChallengeInput};
-use crate::data::byte_tree::ByteTree;
-use crate::data::byte_tree::ByteTree::Leaf;
-use crate::data::byte_tree::ToByteTree;
+use crate::data::bytes::ByteTree;
+use crate::data::bytes::ByteTree::Leaf;
+use crate::data::bytes::ToByteTree;
 use crate::util;
 
 pub type Hash = [u8; 64];

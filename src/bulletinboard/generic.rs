@@ -9,7 +9,7 @@ use crate::crypto::base::Group;
 use crate::crypto::elgamal::PublicKey;
 use crate::crypto::hashing::Hash;
 use crate::data::artifact::*;
-use crate::data::byte_tree::*;
+use crate::data::bytes::*;
 
 use crate::bulletinboard::basic::BasicBoard;
 use crate::bulletinboard::BBError;

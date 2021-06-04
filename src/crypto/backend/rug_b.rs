@@ -130,7 +130,8 @@ impl RugGroup {
     // https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf A.2.3
     fn generators_fips(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<Integer> {
         let mut ret = Vec::with_capacity(size);
-        let hasher = self.elem_hasher();
+        // let hasher = self.elem_hasher();
+        let hasher = RugHasher(self.modulus.clone());
         let two = Integer::from(2);
 
         let mut prefix = seed.to_vec();
@@ -181,14 +182,17 @@ impl Group<Integer> for RugGroup {
     fn generator(&self) -> Integer {
         self.generator.clone()
     }
+    fn modulus(&self) -> Integer {
+        self.modulus.clone()
+    }
+    fn exp_modulus(&self) -> Integer {
+        self.modulus_exp.clone()
+    }
     fn rnd(&self) -> Integer {
         let mut gen = OsRandgen(OsRng);
         let mut state = RandState::new_custom(&mut gen);
 
         self.encode(&self.modulus_exp.clone().random_below(&mut state))
-    }
-    fn modulus(&self) -> Integer {
-        self.modulus.clone()
     }
     fn rnd_exp(&self) -> Integer {
         let mut gen = OsRandgen(OsRng);
@@ -198,9 +202,6 @@ impl Group<Integer> for RugGroup {
     }
     fn rnd_plaintext(&self) -> Integer {
         self.rnd_exp()
-    }
-    fn exp_modulus(&self) -> Integer {
-        self.modulus_exp.clone()
     }
     fn encode(&self, plaintext: &Integer) -> Integer {
         assert!(plaintext < &(self.modulus_exp.clone() - 1));
@@ -224,14 +225,14 @@ impl Group<Integer> for RugGroup {
         PrivateKey::from(&secret, self)
     }
 
-    fn exp_hasher(&self) -> Box<dyn HashTo<Integer>> {
+    fn challenger(&self) -> Box<dyn HashTo<Integer>> {
         Box::new(RugHasher(self.modulus_exp.clone()))
     }
-
-    fn elem_hasher(&self) -> Box<dyn HashTo<Integer>> {
-        Box::new(RugHasher(self.modulus.clone()))
-    }
-
+    /*
+        fn elem_hasher(&self) -> Box<dyn HashTo<Integer>> {
+            Box::new(RugHasher(self.modulus.clone()))
+        }
+    */
     fn generators(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<Integer> {
         self.generators_fips(size, contest, seed)
     }
@@ -484,7 +485,7 @@ mod tests {
     #[test]
     fn test_rug_shuffle_serde() {
         let group = RugGroup::default();
-        let exp_hasher = &*group.exp_hasher();
+        let challenger = &*group.challenger();
 
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
@@ -496,7 +497,7 @@ mod tests {
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
-            hasher: exp_hasher,
+            hasher: challenger,
         };
         let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
         let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
@@ -519,7 +520,7 @@ mod tests {
         let shuffler_d = Shuffler {
             pk: &pk_d,
             generators: &hs,
-            hasher: exp_hasher,
+            hasher: challenger,
         };
         let ok_d = shuffler_d.check_proof(&mix_d.proof, &es_d, &mix_d.mixed_ballots, &vec![]);
 

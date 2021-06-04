@@ -58,7 +58,7 @@ pub fn shuffle_proof_us<E: Element>(
     es: &[Ciphertext<E>],
     e_primes: &[Ciphertext<E>],
     cs: &[E],
-    exp_hasher: &dyn HashTo<E::Exp>,
+    challenger: &dyn HashTo<E::Exp>,
     n: usize,
     label: &[u8],
 ) -> Vec<E::Exp> {
@@ -86,7 +86,7 @@ pub fn shuffle_proof_us<E: Element>(
         ];
         let bytes = ByteTree::Tree(next).to_hashable_bytes();
 
-        let u: E::Exp = exp_hasher.hash_to(&bytes);
+        let u: E::Exp = challenger.hash_to(&bytes);
         ret.push(u);
     }
 
@@ -96,7 +96,7 @@ pub fn shuffle_proof_us<E: Element>(
 pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(
     y: &YChallengeInput<E, G>,
     t: &Commitments<E>,
-    exp_hasher: &dyn HashTo<E::Exp>,
+    challenger: &dyn HashTo<E::Exp>,
     label: &[u8],
 ) -> E::Exp {
     let trees: Vec<ByteTree> = vec![
@@ -115,14 +115,14 @@ pub fn shuffle_proof_challenge<E: Element, G: Group<E>>(
     ];
     let bytes = ByteTree::Tree(trees).to_hashable_bytes();
 
-    exp_hasher.hash_to(&bytes)
+    challenger.hash_to(&bytes)
 }
 
 pub fn schnorr_proof_challenge<E: Element>(
     g: &E,
     public: &E,
     commitment: &E,
-    exp_hasher: &dyn HashTo<E::Exp>,
+    challenger: &dyn HashTo<E::Exp>,
     label: &[u8],
 ) -> E::Exp {
     let values = [g, public, commitment].to_vec();
@@ -131,7 +131,7 @@ pub fn schnorr_proof_challenge<E: Element>(
     tree.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
     let bytes = ByteTree::Tree(tree).to_hashable_bytes();
 
-    exp_hasher.hash_to(&bytes)
+    challenger.hash_to(&bytes)
 }
 
 pub fn cp_proof_challenge<E: Element>(
@@ -141,7 +141,7 @@ pub fn cp_proof_challenge<E: Element>(
     public2: &E,
     commitment1: &E,
     commitment2: &E,
-    exp_hasher: &dyn HashTo<E::Exp>,
+    challenger: &dyn HashTo<E::Exp>,
     label: &[u8],
 ) -> E::Exp {
     let values = [g1, g2, public1, public2, commitment1, commitment2].to_vec();
@@ -150,7 +150,7 @@ pub fn cp_proof_challenge<E: Element>(
     tree.push(ByteTree::Leaf(ByteBuf::from(label.to_vec())));
     let bytes = ByteTree::Tree(tree).to_hashable_bytes();
 
-    exp_hasher.hash_to(&bytes)
+    challenger.hash_to(&bytes)
 }
 
 pub fn hash<T: ToByteTree>(data: &T) -> [u8; 64] {

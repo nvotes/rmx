@@ -555,7 +555,7 @@ mod tests {
     #[test]
     fn test_ristretto_shuffle() {
         let group = RistrettoGroup;
-        let exp_hasher = &*group.exp_hasher();
+        let challenger = &*group.challenger();
 
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
@@ -573,7 +573,7 @@ mod tests {
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
-            hasher: exp_hasher,
+            hasher: challenger,
         };
 
         let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
@@ -586,7 +586,7 @@ mod tests {
     #[test]
     fn test_rug_shuffle() {
         let group = RugGroup::default();
-        let exp_hasher = &*group.exp_hasher();
+        let challenger = &*group.challenger();
 
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
@@ -603,7 +603,7 @@ mod tests {
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
-            hasher: exp_hasher,
+            hasher: challenger,
         };
 
         let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
@@ -617,7 +617,7 @@ mod tests {
     #[test]
     fn test_rug_par_shuffle() {
         let group = RugGroup::default();
-        let exp_hasher = &*group.exp_hasher();
+        let challenger = &*group.challenger();
 
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
@@ -637,7 +637,7 @@ mod tests {
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
-            hasher: exp_hasher,
+            hasher: challenger,
         };
         let perm: Vec<usize> = gen_permutation(n);
         let (cs, rs) = shuffler.gen_commitments(&perm, &pk.group);
@@ -712,7 +712,7 @@ mod tests {
     #[test]
     fn test_gen_coq_data() {
         let group = RugGroup::default();
-        let exp_hasher = &*group.exp_hasher();
+        let challenger = &*group.challenger();
 
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
@@ -731,7 +731,7 @@ mod tests {
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
-            hasher: exp_hasher,
+            hasher: challenger,
         };
 
         let perm: Vec<usize> = gen_permutation(n);

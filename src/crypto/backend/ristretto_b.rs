@@ -87,12 +87,15 @@ impl Group<RistrettoPoint> for RistrettoGroup {
     fn generator(&self) -> RistrettoPoint {
         RISTRETTO_BASEPOINT_POINT
     }
+    fn modulus(&self) -> RistrettoPoint {
+        RistrettoPoint::default()
+    }
+    fn exp_modulus(&self) -> Scalar {
+        Scalar::default()
+    }
     fn rnd(&self) -> RistrettoPoint {
         let mut rng = OsRng;
         RistrettoPoint::random(&mut rng)
-    }
-    fn modulus(&self) -> RistrettoPoint {
-        RistrettoPoint::default()
     }
     fn rnd_exp(&self) -> Scalar {
         let mut rng = OsRng;
@@ -104,9 +107,6 @@ impl Group<RistrettoPoint> for RistrettoGroup {
         csprng.fill_bytes(&mut value);
 
         value
-    }
-    fn exp_modulus(&self) -> Scalar {
-        Scalar::default()
     }
 
     // see https://github.com/ruescasd/braid-mg/issues/4
@@ -134,14 +134,14 @@ impl Group<RistrettoPoint> for RistrettoGroup {
         PrivateKey::from(&secret, self)
     }
 
-    fn exp_hasher(&self) -> Box<dyn HashTo<Scalar>> {
+    fn challenger(&self) -> Box<dyn HashTo<Scalar>> {
         Box::new(RistrettoHasher)
     }
-
-    fn elem_hasher(&self) -> Box<dyn HashTo<RistrettoPoint>> {
-        Box::new(RistrettoHasher)
-    }
-
+    /*
+        fn elem_hasher(&self) -> Box<dyn HashTo<RistrettoPoint>> {
+            Box::new(RistrettoHasher)
+        }
+    */
     // FIXME not kosher
     fn generators(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<RistrettoPoint> {
         let mut seed_ = seed.to_vec();
@@ -490,7 +490,7 @@ mod tests {
     #[test]
     fn test_ristretto_shuffle_serde() {
         let group = RistrettoGroup;
-        let exp_hasher = &*group.exp_hasher();
+        let challenger = &*group.challenger();
 
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
@@ -501,7 +501,7 @@ mod tests {
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
-            hasher: exp_hasher,
+            hasher: challenger,
         };
         let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
         let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
@@ -525,7 +525,7 @@ mod tests {
         let shuffler_d = Shuffler {
             pk: &pk_d,
             generators: &hs,
-            hasher: exp_hasher,
+            hasher: challenger,
         };
         let ok_d = shuffler_d.check_proof(&mix_d.proof, &es_d, &mix_d.mixed_ballots, &vec![]);
 

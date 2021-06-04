@@ -153,11 +153,11 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let group = &cfg.group;
         let hs = generators(ciphertexts.len() + 1, group, contest, cfg.id.to_vec());
 
-        let exp_hasher = &*group.exp_hasher();
+        let challenger = &*group.challenger();
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
-            hasher: exp_hasher,
+            hasher: challenger,
         };
 
         let now_ = std::time::Instant::now();
@@ -237,11 +237,11 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let group = &cfg.group;
 
         let hs = generators(ciphertexts.len() + 1, group, contest, cfg.id.to_vec());
-        let exp_hasher = &*group.exp_hasher();
+        let challenger = &*group.challenger();
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
-            hasher: exp_hasher,
+            hasher: challenger,
         };
         let proof = mix.proof;
         info!(

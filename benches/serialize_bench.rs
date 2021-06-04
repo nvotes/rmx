@@ -14,7 +14,7 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 
 pub fn shuffle_ristretto(n: usize) -> Mix<RistrettoPoint> {
     let group = RistrettoGroup;
-    let exp_hasher = &*group.exp_hasher();
+    let challenger = &*group.challenger();
 
     let sk = group.gen_key();
     let pk = PublicKey::from(&sk.public_value, &group);
@@ -31,7 +31,7 @@ pub fn shuffle_ristretto(n: usize) -> Mix<RistrettoPoint> {
     let shuffler = Shuffler {
         pk: &pk,
         generators: &hs,
-        hasher: exp_hasher,
+        hasher: challenger,
     };
     let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
     let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
@@ -43,7 +43,7 @@ pub fn shuffle_ristretto(n: usize) -> Mix<RistrettoPoint> {
 
 pub fn shuffle_rug(n: usize) -> Mix<Integer> {
     let group = RugGroup::default();
-    let exp_hasher = &*group.exp_hasher();
+    let challenger = &*group.challenger();
 
     let sk = group.gen_key();
     let pk = PublicKey::from(&sk.public_value, &group);
@@ -60,7 +60,7 @@ pub fn shuffle_rug(n: usize) -> Mix<Integer> {
     let shuffler = Shuffler {
         pk: &pk,
         generators: &hs,
-        hasher: exp_hasher,
+        hasher: challenger,
     };
     let (e_primes, rs, perm) = shuffler.gen_shuffle(&es);
     let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);

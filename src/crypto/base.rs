@@ -32,23 +32,25 @@ pub trait Exponent: Clone + Eq + Send + Sync + Serialize + FromByteTree + BTree 
 
 pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
     fn generator(&self) -> E;
-    fn rnd(&self) -> E;
     fn modulus(&self) -> E;
+    fn exp_modulus(&self) -> E::Exp;
+
+    fn rnd(&self) -> E;
     fn rnd_exp(&self) -> E::Exp;
     fn rnd_plaintext(&self) -> E::Plaintext;
-    fn exp_modulus(&self) -> E::Exp;
+
     fn gen_key(&self) -> PrivateKey<E, Self>;
     fn encode(&self, plaintext: &E::Plaintext) -> E;
     fn decode(&self, element: &E) -> E::Plaintext;
-    fn exp_hasher(&self) -> Box<dyn HashTo<E::Exp>>;
-    fn elem_hasher(&self) -> Box<dyn HashTo<E>>;
+    fn challenger(&self) -> Box<dyn HashTo<E::Exp>>;
+    // fn elem_hasher(&self) -> Box<dyn HashTo<E>>;
     fn generators(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<E>;
 
     fn schnorr_prove(&self, secret: &E::Exp, public: &E, g: &E, label: &[u8]) -> Schnorr<E> {
         let r = self.rnd_exp();
         let commitment = g.mod_pow(&r, &self.modulus());
         let challenge: E::Exp =
-            schnorr_proof_challenge(g, public, &commitment, &*self.exp_hasher(), label);
+            schnorr_proof_challenge(g, public, &commitment, &*self.challenger(), label);
         let response = r.add(&challenge.mul(secret)).modulo(&self.exp_modulus());
 
         Schnorr {
@@ -59,7 +61,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
     }
     fn schnorr_verify(&self, public: &E, g: &E, proof: &Schnorr<E>, label: &[u8]) -> bool {
         let challenge_ =
-            schnorr_proof_challenge(g, &public, &proof.commitment, &*self.exp_hasher(), label);
+            schnorr_proof_challenge(g, &public, &proof.commitment, &*self.challenger(), label);
         let ok1 = challenge_.eq(&proof.challenge);
         let lhs = g.mod_pow(&proof.response, &self.modulus());
         let rhs = proof
@@ -89,7 +91,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
             public2,
             &commitment1,
             &commitment2,
-            &*self.exp_hasher(),
+            &*self.challenger(),
             label,
         );
         let response = r.add(&challenge.mul(secret)).modulo(&self.exp_modulus());
@@ -118,7 +120,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
             public2,
             &proof.commitment1,
             &proof.commitment2,
-            &*self.exp_hasher(),
+            &*self.challenger(),
             &label,
         );
         let ok1 = challenge_.eq(&proof.challenge);

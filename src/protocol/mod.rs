@@ -4,4 +4,3 @@ pub mod logic;
 pub mod predicates;
 pub mod statement;
 pub mod trustee;
-// pub mod clingo;

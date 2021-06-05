@@ -2,20 +2,21 @@
 use log::info;
 
 use crate::bulletinboard::bulletinboard::BulletinBoard;
-use crate::crypto::group::Element;
-use crate::crypto::group::Group;
 use crate::data::artifact::*;
+use crate::protocol::logic::Hashes;
+use crate::protocol::predicates::Act;
 use crate::protocol::statement::*;
 use crate::protocol::trustee::trustee::Trustee;
 use crate::protocol::trustee::trustee::TrusteeError;
 
 use crate::crypto::elgamal::PrivateKey;
+use crate::crypto::group::Element;
+use crate::crypto::group::Group;
 use crate::crypto::hashing;
 use crate::crypto::hashing::Hash;
 use crate::crypto::keymaker::Keymaker;
 use crate::crypto::shuffler::*;
-use crate::protocol::logic::Hashes;
-use crate::protocol::predicates::Act;
+
 use crate::util::short;
 
 impl<E: Element, G: Group<E>> Trustee<E, G> {

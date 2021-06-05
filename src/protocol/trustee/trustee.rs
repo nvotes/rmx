@@ -5,18 +5,17 @@ use log::info;
 use rand::rngs::OsRng;
 
 use crate::data::artifact::*;
-
-use crate::crypto::elgamal::{Ciphertext, PublicKey};
 use crate::protocol::predicates::*;
 
+use crate::crypto::elgamal::{Ciphertext, PublicKey};
 use crate::crypto::group::Element;
 use crate::crypto::group::Group;
+use crate::crypto::hashing::*;
 use crate::crypto::keymaker::Keymaker;
 use crate::crypto::symmetric;
 
 use crate::bulletinboard::bulletinboard::*;
 use crate::bulletinboard::work_cache::WorkCache;
-use crate::crypto::hashing::*;
 
 quick_error! {
     #[derive(Debug)]

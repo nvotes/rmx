@@ -1,0 +1,8 @@
+@startuml main_loop
+BulletinBoard -> StatementVerifier: Statements
+StatementVerifier -> Datalog: InputPredicates
+Datalog --> Trustee: ActionPredicates
+BulletinBoard --> Trustee: InputArtifacts
+WorkCache <-- Trustee: OutputArtifacts
+BulletinBoard <-- WorkCache: OutputArtifacts
+@enduml

@@ -1,4 +1,4 @@
-// pub mod memory_bb;
+#![allow(clippy::module_inception)]
 pub mod basic;
 pub mod bulletinboard;
 pub mod generic;

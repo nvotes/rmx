@@ -7,9 +7,9 @@ use ed25519_dalek::{Keypair, Signer};
 use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 
-use crate::bulletinboard::*;
-use crate::crypto::base::Element;
-use crate::crypto::base::Group;
+use crate::bulletinboard::bulletinboard::*;
+use crate::crypto::group::Element;
+use crate::crypto::group::Group;
 use crate::crypto::hashing;
 use crate::protocol::logic::ContestIndex;
 use crate::protocol::logic::TrusteeIndex;

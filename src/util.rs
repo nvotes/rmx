@@ -11,9 +11,9 @@ use tempfile::NamedTempFile;
 
 use crate::crypto::backend::ristretto_b::RistrettoGroup;
 use crate::crypto::backend::rug_b::RugGroup;
-use crate::crypto::base::Element;
-use crate::crypto::base::Group;
 use crate::crypto::elgamal::*;
+use crate::crypto::group::Element;
+use crate::crypto::group::Group;
 use crate::data::artifact::*;
 
 pub fn read_file_bytes(path: &Path) -> io::Result<Vec<u8>> {

@@ -1,13 +1,13 @@
 #![allow(clippy::too_many_arguments)]
 use log::info;
 
-use crate::bulletinboard::BulletinBoard;
-use crate::crypto::base::Element;
-use crate::crypto::base::Group;
+use crate::bulletinboard::bulletinboard::BulletinBoard;
+use crate::crypto::group::Element;
+use crate::crypto::group::Group;
 use crate::data::artifact::*;
 use crate::protocol::statement::*;
-use crate::protocol::trustee::Trustee;
-use crate::protocol::trustee::TrusteeError;
+use crate::protocol::trustee::trustee::Trustee;
+use crate::protocol::trustee::trustee::TrusteeError;
 
 use crate::crypto::elgamal::PrivateKey;
 use crate::crypto::hashing;

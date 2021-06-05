@@ -2,10 +2,10 @@ use std::io::Result;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 
-use crate::bulletinboard::*;
-use crate::crypto::base::Element;
-use crate::crypto::base::Group;
+use crate::bulletinboard::bulletinboard::*;
 use crate::crypto::elgamal::PublicKey;
+use crate::crypto::group::Element;
+use crate::crypto::group::Group;
 use crate::crypto::hashing;
 use crate::data::artifact::*;
 use crate::data::byte_tree::*;

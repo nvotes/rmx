@@ -3,16 +3,14 @@ use std::path::Path;
 
 use log::info;
 
-use crate::bulletinboard::*;
-use crate::crypto::base::Element;
-use crate::crypto::base::Group;
+use crate::bulletinboard::basic::BasicBoard;
+use crate::bulletinboard::bulletinboard::*;
 use crate::crypto::elgamal::PublicKey;
+use crate::crypto::group::Element;
+use crate::crypto::group::Group;
 use crate::crypto::hashing::Hash;
 use crate::data::artifact::*;
 use crate::data::byte_tree::*;
-
-use crate::bulletinboard::basic::BasicBoard;
-use crate::bulletinboard::BBError;
 use crate::protocol::statement::SignedStatement;
 use crate::protocol::statement::StatementVerifier;
 

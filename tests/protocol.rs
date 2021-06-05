@@ -11,21 +11,21 @@ use rand::rngs::OsRng;
 use uuid::Uuid;
 
 use braid::bulletinboard::basic::*;
+use braid::bulletinboard::bulletinboard::*;
 use braid::bulletinboard::generic::*;
 use braid::bulletinboard::git;
-use braid::bulletinboard::*;
 use braid::crypto::backend::ristretto_b::*;
 use braid::crypto::backend::rug_b::*;
-use braid::crypto::base::Element;
-use braid::crypto::base::Group;
 use braid::crypto::elgamal::PublicKey;
+use braid::crypto::group::Element;
+use braid::crypto::group::Group;
 use braid::crypto::hashing;
 use braid::data::artifact::*;
 use braid::data::byte_tree::*;
 use braid::protocol::logic::Driver;
 use braid::protocol::statement::SignedStatement;
-use braid::protocol::trustee::Trustee;
-use braid::protocol::trustee::TrusteeError;
+use braid::protocol::trustee::trustee::Trustee;
+use braid::protocol::trustee::trustee::TrusteeError;
 use braid::util;
 
 use simplelog::*;

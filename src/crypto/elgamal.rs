@@ -1,7 +1,7 @@
 use generic_array::{typenum::U32, GenericArray};
 use serde::{Deserialize, Serialize};
 
-use crate::crypto::base::*;
+use crate::crypto::group::*;
 use crate::crypto::symmetric;
 use crate::data::artifact::*;
 use crate::data::byte_tree::*;

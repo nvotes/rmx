@@ -5,8 +5,8 @@ use std::sync::Mutex;
 use rayon::prelude::*;
 use serde::Serialize;
 
-use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
+use crate::crypto::group::*;
 use crate::crypto::hashing;
 use crate::crypto::hashing::HashTo;
 
@@ -548,7 +548,7 @@ mod tests {
 
     use crate::crypto::backend::ristretto_b::*;
     use crate::crypto::backend::rug_b::*;
-    use crate::crypto::base::*;
+    use crate::crypto::group::*;
     use crate::crypto::shuffler::*;
     use rug::Integer;
 

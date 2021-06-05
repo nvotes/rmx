@@ -43,7 +43,6 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
     fn encode(&self, plaintext: &E::Plaintext) -> E;
     fn decode(&self, element: &E) -> E::Plaintext;
     fn challenger(&self) -> Box<dyn HashTo<E::Exp>>;
-    // fn elem_hasher(&self) -> Box<dyn HashTo<E>>;
     fn generators(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<E>;
 
     fn schnorr_prove(&self, secret: &E::Exp, public: &E, g: &E, label: &[u8]) -> Schnorr<E> {

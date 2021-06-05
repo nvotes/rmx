@@ -1,6 +1,6 @@
 pub mod backend;
-pub mod base;
 pub mod elgamal;
+pub mod group;
 pub mod hashing;
 pub mod keymaker;
 pub mod shuffler;

@@ -3,8 +3,8 @@ use std::marker::PhantomData;
 use ed25519_dalek::PublicKey as SPublicKey;
 use serde::Serialize;
 
-use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
+use crate::crypto::group::*;
 use crate::crypto::shuffler::*;
 
 #[derive(Serialize, Eq, PartialEq, Debug)]

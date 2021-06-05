@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::bulletinboard::BBError;
+use crate::bulletinboard::bulletinboard::BBError;
 use crate::crypto::hashing;
 use crate::crypto::hashing::Hash;
 use crate::data::byte_tree::*;

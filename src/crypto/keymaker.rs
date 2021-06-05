@@ -1,8 +1,8 @@
 use generic_array::{typenum::U32, GenericArray};
 use rayon::prelude::*;
 
-use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
+use crate::crypto::group::*;
 use crate::data::artifact::*;
 
 pub struct Keymaker<E: Element, G> {

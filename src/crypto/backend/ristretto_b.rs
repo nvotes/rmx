@@ -9,8 +9,8 @@ use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::Identity;
 
-use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
+use crate::crypto::group::*;
 use crate::crypto::hashing::{hash_bytes_256, HashTo, RistrettoHasher};
 use crate::util;
 

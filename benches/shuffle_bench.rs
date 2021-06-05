@@ -1,7 +1,7 @@
 use braid::crypto::backend::ristretto_b::*;
 use braid::crypto::backend::rug_b::*;
-use braid::crypto::base::*;
 use braid::crypto::elgamal::*;
+use braid::crypto::group::*;
 use braid::crypto::shuffler::*;
 use rug::Integer;
 use std::time::Duration;

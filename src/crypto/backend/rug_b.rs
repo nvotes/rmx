@@ -9,8 +9,8 @@ use rand::RngCore;
 use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 
-use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
+use crate::crypto::group::*;
 use crate::crypto::hashing::{hash_bytes_256, HashTo, RugHasher};
 
 impl Element for Integer {

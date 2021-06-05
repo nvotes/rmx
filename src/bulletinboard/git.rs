@@ -10,7 +10,7 @@ use tempfile::NamedTempFile;
 use walkdir::{DirEntry, WalkDir};
 
 use crate::bulletinboard::basic::BasicBoard;
-use crate::bulletinboard::BBError;
+use crate::bulletinboard::bulletinboard::BBError;
 use crate::crypto::hashing;
 use crate::crypto::hashing::Hash;
 use crate::data::byte_tree::*;

@@ -11,8 +11,8 @@ use serde_bytes::ByteBuf;
 
 use crate::crypto::backend::ristretto_b::*;
 use crate::crypto::backend::rug_b::*;
-use crate::crypto::base::*;
 use crate::crypto::elgamal::*;
+use crate::crypto::group::*;
 use crate::crypto::shuffler::{Commitments, Responses, ShuffleProof};
 use crate::data::artifact::*;
 use crate::protocol::predicates::Act;

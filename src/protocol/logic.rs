@@ -322,7 +322,12 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
                 let hash = hashing::hash(&cfg);
                 let contests = cfg.contests;
 
-                let f = InputPredicate::config_present(hash, contests, trustees as u32, self_pos as u32);
+                let f = InputPredicate::config_present(
+                    hash,
+                    contests,
+                    trustees as u32,
+                    self_pos as u32,
+                );
                 facts.push(f);
             };
             info!("Input facts derived in [{}ms]", now.elapsed().as_millis());

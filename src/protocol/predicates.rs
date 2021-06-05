@@ -240,7 +240,10 @@ pub struct AllPredicates {
 }
 
 impl AllPredicates {
-    pub(super) fn new(input_facts: Vec<InputPredicate>, output_facts: DatalogOutput) -> AllPredicates {
+    pub(super) fn new(
+        input_facts: Vec<InputPredicate>,
+        output_facts: DatalogOutput,
+    ) -> AllPredicates {
         let mut all_actions = vec![];
         let mut check_config = vec![];
         let mut post_share = vec![];

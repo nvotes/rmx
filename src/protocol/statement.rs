@@ -309,14 +309,24 @@ impl StatementVerifier {
             StatementType::PDecryption => {
                 let pdecryptions_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
-                    InputPredicate::decryption_signed_by(config_h, self.contest, pdecryptions_h, self_t),
+                    InputPredicate::decryption_signed_by(
+                        config_h,
+                        self.contest,
+                        pdecryptions_h,
+                        self_t,
+                    ),
                     verified.is_ok() && (self.artifact_name == DECRYPTION),
                 )
             }
             StatementType::Plaintexts => {
                 let plaintexts_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
-                    InputPredicate::plaintexts_signed_by(config_h, self.contest, plaintexts_h, self_t),
+                    InputPredicate::plaintexts_signed_by(
+                        config_h,
+                        self.contest,
+                        plaintexts_h,
+                        self_t,
+                    ),
                     verified.is_ok() && (self.artifact_name == PLAINTEXTS),
                 )
             }

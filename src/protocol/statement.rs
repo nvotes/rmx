@@ -13,7 +13,7 @@ use crate::crypto::group::Group;
 use crate::crypto::hashing;
 use crate::protocol::logic::ContestIndex;
 use crate::protocol::logic::TrusteeIndex;
-use crate::protocol::predicates::InputFact;
+use crate::protocol::predicates::InputPredicate;
 use crate::util;
 
 // a 512 bit hash as a Vector (rather than as a [u8; 64])
@@ -235,7 +235,7 @@ impl StatementVerifier {
     pub(super) fn verify<E: Element, G: Group<E>, B: BulletinBoard<E, G>>(
         &self,
         board: &B,
-    ) -> Option<InputFact> {
+    ) -> Option<InputPredicate> {
         let statement = &self.statement.statement;
         let config_opt = board.get_config_unsafe().ok()?;
         let config = config_opt?;
@@ -262,27 +262,27 @@ impl StatementVerifier {
 
         match statement.stype {
             StatementType::Config => self.ret(
-                InputFact::config_signed_by(config_h, self_t),
+                InputPredicate::config_signed_by(config_h, self_t),
                 verified.is_ok() && (self.artifact_name == CONFIG),
             ),
             StatementType::Keyshare => {
                 let share_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
-                    InputFact::share_signed_by(config_h, self.contest, share_h, self_t),
+                    InputPredicate::share_signed_by(config_h, self.contest, share_h, self_t),
                     verified.is_ok() && (self.artifact_name == SHARE),
                 )
             }
             StatementType::PublicKey => {
                 let pk_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
-                    InputFact::pk_signed_by(config_h, self.contest, pk_h, self_t),
+                    InputPredicate::pk_signed_by(config_h, self.contest, pk_h, self_t),
                     verified.is_ok() && (self.artifact_name == PUBLIC_KEY),
                 )
             }
             StatementType::Ballots => {
                 let ballots_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
-                    InputFact::ballots_signed(config_h, self.contest, ballots_h),
+                    InputPredicate::ballots_signed(config_h, self.contest, ballots_h),
                     verified.is_ok() && (self.artifact_name == BALLOTS),
                 )
             }
@@ -295,7 +295,7 @@ impl StatementVerifier {
                     std::format!("{}.{}", MIX, mixer_t)
                 };
                 self.ret(
-                    InputFact::mix_signed_by(
+                    InputPredicate::mix_signed_by(
                         config_h,
                         self.contest,
                         mix_h,
@@ -309,21 +309,21 @@ impl StatementVerifier {
             StatementType::PDecryption => {
                 let pdecryptions_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
-                    InputFact::decryption_signed_by(config_h, self.contest, pdecryptions_h, self_t),
+                    InputPredicate::decryption_signed_by(config_h, self.contest, pdecryptions_h, self_t),
                     verified.is_ok() && (self.artifact_name == DECRYPTION),
                 )
             }
             StatementType::Plaintexts => {
                 let plaintexts_h = util::to_u8_64(&statement.hashes[1]);
                 self.ret(
-                    InputFact::plaintexts_signed_by(config_h, self.contest, plaintexts_h, self_t),
+                    InputPredicate::plaintexts_signed_by(config_h, self.contest, plaintexts_h, self_t),
                     verified.is_ok() && (self.artifact_name == PLAINTEXTS),
                 )
             }
         }
     }
 
-    fn ret(&self, fact: InputFact, verified: bool) -> Option<InputFact> {
+    fn ret(&self, fact: InputPredicate, verified: bool) -> Option<InputPredicate> {
         if verified {
             Some(fact)
         } else {

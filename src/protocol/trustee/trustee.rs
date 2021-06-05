@@ -56,7 +56,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
 
     pub fn run<B: BulletinBoard<E, G>>(
         &self,
-        facts: AllFacts,
+        facts: AllPredicates,
         board: &mut B,
     ) -> Result<u32, TrusteeError> {
         let self_index = facts.get_self_index();

@@ -26,7 +26,7 @@ use braid::bulletinboard::generic::*;
 use braid::crypto::backend::ristretto_b::*;
 use braid::data::byte_tree::*;
 use braid::protocol::logic::Driver;
-use braid::protocol::predicates::AllFacts;
+use braid::protocol::predicates::AllPredicates;
 use braid::protocol::trustee::trustee::Trustee;
 use braid::protocol::trustee::trustee::TrusteeError;
 use braid::util;
@@ -150,7 +150,7 @@ where
             }
         }
     }
-    fn process_facts(&mut self, t: usize) -> AllFacts {
+    fn process_facts(&mut self, t: usize) -> AllPredicates {
         let trustee = &self.trustees[t];
         if self.boards.len() > 1 {
             trustee.process_facts(&mut self.boards[t])
@@ -158,7 +158,7 @@ where
             trustee.process_facts(&mut self.boards[0])
         }
     }
-    fn run(&mut self, facts: AllFacts, t: usize) -> Result<u32, TrusteeError> {
+    fn run(&mut self, facts: AllPredicates, t: usize) -> Result<u32, TrusteeError> {
         let trustee = &self.trustees[t];
         if self.boards.len() > 1 {
             trustee.run(facts, &mut self.boards[t])

@@ -8,7 +8,7 @@ use crate::crypto::group::Group;
 use crate::crypto::hashing;
 use crate::crypto::hashing::*;
 use crate::protocol::predicates::Act;
-use crate::protocol::predicates::{AllFacts, InputFact};
+use crate::protocol::predicates::{AllPredicates, InputPredicate};
 use crate::protocol::trustee::trustee::Trustee;
 use crate::protocol::trustee::trustee::TrusteeError;
 
@@ -293,12 +293,12 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
         }
     }
 
-    fn get_facts(&self, board: &B) -> Vec<InputFact> {
+    fn get_facts(&self, board: &B) -> Vec<InputPredicate> {
         let self_pk = self.trustee.keypair.public;
         let now = std::time::Instant::now();
         let maybe_svs = board.get_statements();
         if let Ok(svs) = maybe_svs {
-            let mut facts: Vec<InputFact> = svs
+            let mut facts: Vec<InputPredicate> = svs
                 .iter()
                 .map(|sv| sv.verify(board))
                 .filter(|f| f.is_some())
@@ -322,7 +322,7 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
                 let hash = hashing::hash(&cfg);
                 let contests = cfg.contests;
 
-                let f = InputFact::config_present(hash, contests, trustees as u32, self_pos as u32);
+                let f = InputPredicate::config_present(hash, contests, trustees as u32, self_pos as u32);
                 facts.push(f);
             };
             info!("Input facts derived in [{}ms]", now.elapsed().as_millis());
@@ -334,7 +334,7 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
         }
     }
 
-    pub fn process_facts(&self, board: &B) -> AllFacts {
+    pub fn process_facts(&self, board: &B) -> AllPredicates {
         let mut runtime = Crepe::new();
         let input_facts = self.get_facts(board);
         load_facts(&input_facts, &mut runtime);
@@ -344,7 +344,7 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
         let done = now.elapsed().as_millis();
         let actions = output.0.len();
 
-        let ret = AllFacts::new(input_facts, output);
+        let ret = AllPredicates::new(input_facts, output);
 
         ret.log();
         info!("");
@@ -353,7 +353,7 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
         ret
     }
 
-    pub fn run(&self, facts: AllFacts, board: &mut B) -> Result<u32, TrusteeError> {
+    pub fn run(&self, facts: AllPredicates, board: &mut B) -> Result<u32, TrusteeError> {
         self.trustee.run(facts, board)
     }
 
@@ -364,21 +364,21 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
     }
 }
 
-fn load_facts(facts: &[InputFact], runtime: &mut Crepe) {
+fn load_facts(facts: &[InputPredicate], runtime: &mut Crepe) {
     let mut sorted = facts.to_vec();
     sorted.sort_by(|a, b| a.to_string().partial_cmp(&b.to_string()).unwrap());
     sorted.into_iter().for_each(|f| {
         // facts.into_iter().map(|f| {
         info!("IFact {:?}", f);
         match f {
-            InputFact::ConfigPresent(x) => runtime.extend(&[x]),
-            InputFact::ConfigSignedBy(x) => runtime.extend(&[x]),
-            InputFact::PkShareSignedBy(x) => runtime.extend(&[x]),
-            InputFact::PkSignedBy(x) => runtime.extend(&[x]),
-            InputFact::BallotsSigned(x) => runtime.extend(&[x]),
-            InputFact::MixSignedBy(x) => runtime.extend(&[x]),
-            InputFact::DecryptionSignedBy(x) => runtime.extend(&[x]),
-            InputFact::PlaintextsSignedBy(x) => runtime.extend(&[x]),
+            InputPredicate::ConfigPresent(x) => runtime.extend(&[x]),
+            InputPredicate::ConfigSignedBy(x) => runtime.extend(&[x]),
+            InputPredicate::PkShareSignedBy(x) => runtime.extend(&[x]),
+            InputPredicate::PkSignedBy(x) => runtime.extend(&[x]),
+            InputPredicate::BallotsSigned(x) => runtime.extend(&[x]),
+            InputPredicate::MixSignedBy(x) => runtime.extend(&[x]),
+            InputPredicate::DecryptionSignedBy(x) => runtime.extend(&[x]),
+            InputPredicate::PlaintextsSignedBy(x) => runtime.extend(&[x]),
         }
     });
     info!("\n");

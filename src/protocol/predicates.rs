@@ -8,7 +8,7 @@ use crate::protocol::logic::*;
 use crate::util::{short, shortm};
 
 #[derive(Copy, Clone, Display)]
-pub(super) enum InputFact {
+pub(super) enum InputPredicate {
     ConfigPresent(ConfigPresent),
     ConfigSignedBy(ConfigSignedBy),
     PkShareSignedBy(PkShareSignedBy),
@@ -18,40 +18,40 @@ pub(super) enum InputFact {
     DecryptionSignedBy(DecryptionSignedBy),
     PlaintextsSignedBy(PlaintextsSignedBy),
 }
-impl InputFact {
+impl InputPredicate {
     pub(super) fn config_present(
         c: ConfigHash,
         cn: ContestIndex,
         trustees: TrusteeIndex,
         self_index: TrusteeIndex,
-    ) -> InputFact {
-        InputFact::ConfigPresent(ConfigPresent(c, cn, trustees, self_index))
+    ) -> InputPredicate {
+        InputPredicate::ConfigPresent(ConfigPresent(c, cn, trustees, self_index))
     }
-    pub(super) fn config_signed_by(c: ConfigHash, trustee: TrusteeIndex) -> InputFact {
-        InputFact::ConfigSignedBy(ConfigSignedBy(c, trustee))
+    pub(super) fn config_signed_by(c: ConfigHash, trustee: TrusteeIndex) -> InputPredicate {
+        InputPredicate::ConfigSignedBy(ConfigSignedBy(c, trustee))
     }
     pub(super) fn share_signed_by(
         c: ConfigHash,
         contest: ContestIndex,
         share: ShareHash,
         trustee: TrusteeIndex,
-    ) -> InputFact {
-        InputFact::PkShareSignedBy(PkShareSignedBy(c, contest, share, trustee))
+    ) -> InputPredicate {
+        InputPredicate::PkShareSignedBy(PkShareSignedBy(c, contest, share, trustee))
     }
     pub(super) fn pk_signed_by(
         c: ConfigHash,
         contest: ContestIndex,
         pk: PkHash,
         trustee: TrusteeIndex,
-    ) -> InputFact {
-        InputFact::PkSignedBy(PkSignedBy(c, contest, pk, trustee))
+    ) -> InputPredicate {
+        InputPredicate::PkSignedBy(PkSignedBy(c, contest, pk, trustee))
     }
     pub(super) fn ballots_signed(
         c: ConfigHash,
         contest: ContestIndex,
         ballots: BallotsHash,
-    ) -> InputFact {
-        InputFact::BallotsSigned(BallotsSigned(c, contest, ballots))
+    ) -> InputPredicate {
+        InputPredicate::BallotsSigned(BallotsSigned(c, contest, ballots))
     }
     pub(super) fn mix_signed_by(
         c: ConfigHash,
@@ -60,31 +60,31 @@ impl InputFact {
         ballots: BallotsHash,
         mixer_t: TrusteeIndex,
         signer_t: TrusteeIndex,
-    ) -> InputFact {
-        InputFact::MixSignedBy(MixSignedBy(c, contest, mix, ballots, mixer_t, signer_t))
+    ) -> InputPredicate {
+        InputPredicate::MixSignedBy(MixSignedBy(c, contest, mix, ballots, mixer_t, signer_t))
     }
     pub(super) fn decryption_signed_by(
         c: ConfigHash,
         contest: ContestIndex,
         decryption: DecryptionHash,
         trustee: TrusteeIndex,
-    ) -> InputFact {
-        InputFact::DecryptionSignedBy(DecryptionSignedBy(c, contest, decryption, trustee))
+    ) -> InputPredicate {
+        InputPredicate::DecryptionSignedBy(DecryptionSignedBy(c, contest, decryption, trustee))
     }
     pub(super) fn plaintexts_signed_by(
         c: ConfigHash,
         contest: ContestIndex,
         plaintexts: PlaintextsHash,
         trustee: TrusteeIndex,
-    ) -> InputFact {
-        InputFact::PlaintextsSignedBy(PlaintextsSignedBy(c, contest, plaintexts, trustee))
+    ) -> InputPredicate {
+        InputPredicate::PlaintextsSignedBy(PlaintextsSignedBy(c, contest, plaintexts, trustee))
     }
 }
 
-impl fmt::Debug for InputFact {
+impl fmt::Debug for InputPredicate {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            InputFact::ConfigPresent(x) => write!(
+            InputPredicate::ConfigPresent(x) => write!(
                 f,
                 "ConfigPresent: [contests={} trustees={} self={}] {:?}",
                 x.1,
@@ -92,17 +92,17 @@ impl fmt::Debug for InputFact {
                 x.3,
                 short(&x.0)
             ),
-            InputFact::ConfigSignedBy(x) => {
+            InputPredicate::ConfigSignedBy(x) => {
                 write!(f, "ConfigSignedBy: [{}] cfg: {:?}", x.1, short(&x.0))
             }
-            InputFact::PkShareSignedBy(x) => write!(
+            InputPredicate::PkShareSignedBy(x) => write!(
                 f,
                 "PkShareSignedBy [cn={} tr={}] share: {:?}",
                 x.1,
                 x.3,
                 short(&x.2)
             ),
-            InputFact::PkSignedBy(x) => write!(
+            InputPredicate::PkSignedBy(x) => write!(
                 f,
                 "PkSignedBy [cn={} tr={}] for pk: {:?}",
                 x.1,
@@ -110,10 +110,10 @@ impl fmt::Debug for InputFact {
                 short(&x.2)
             ),
 
-            InputFact::BallotsSigned(x) => {
+            InputPredicate::BallotsSigned(x) => {
                 write!(f, "BallotsSigned [cn={}] [ballots={:?}]", x.1, short(&x.2))
             }
-            InputFact::MixSignedBy(x) => write!(
+            InputPredicate::MixSignedBy(x) => write!(
                 f,
                 "MixSignedBy [cn={}] {:?} <- {:?}, [mxr={}, signer={}]",
                 x.1,
@@ -122,14 +122,14 @@ impl fmt::Debug for InputFact {
                 x.4,
                 x.5
             ),
-            InputFact::DecryptionSignedBy(x) => write!(
+            InputPredicate::DecryptionSignedBy(x) => write!(
                 f,
                 "DecryptionSignedBy [cn={}] [signer={}] {:?}",
                 x.1,
                 x.3,
                 short(&x.0)
             ),
-            InputFact::PlaintextsSignedBy(x) => {
+            InputPredicate::PlaintextsSignedBy(x) => {
                 write!(f, "PlaintextsSignedBy [cn={}] {:?}", x.1, short(&x.0))
             }
         }
@@ -218,8 +218,8 @@ type DatalogOutput = (
     HashSet<PlaintextsOk>,
 );
 
-pub struct AllFacts {
-    pub(self) input_facts: Vec<InputFact>,
+pub struct AllPredicates {
+    pub(self) input_facts: Vec<InputPredicate>,
     pub all_actions: Vec<Act>,
     pub check_config: Vec<Act>,
     pub post_share: Vec<Act>,
@@ -239,8 +239,8 @@ pub struct AllFacts {
     plaintexts_ok: HashSet<PlaintextsOk>,
 }
 
-impl AllFacts {
-    pub(super) fn new(input_facts: Vec<InputFact>, output_facts: DatalogOutput) -> AllFacts {
+impl AllPredicates {
+    pub(super) fn new(input_facts: Vec<InputPredicate>, output_facts: DatalogOutput) -> AllPredicates {
         let mut all_actions = vec![];
         let mut check_config = vec![];
         let mut post_share = vec![];
@@ -276,7 +276,7 @@ impl AllFacts {
         let decryptions_all = output_facts.13;
         let plaintexts_ok = output_facts.15;
 
-        AllFacts {
+        AllPredicates {
             input_facts,
             all_actions,
             check_config,
@@ -353,7 +353,7 @@ impl AllFacts {
         self.config_ok.len() == 1
     }
     pub fn get_self_index(&self) -> Option<u32> {
-        if let Some(InputFact::ConfigPresent(ConfigPresent(_, _, _, self_t))) =
+        if let Some(InputPredicate::ConfigPresent(ConfigPresent(_, _, _, self_t))) =
             self.get_config_present()
         {
             Some(self_t)
@@ -362,7 +362,7 @@ impl AllFacts {
         }
     }
     pub fn get_trustee_count(&self) -> Option<u32> {
-        if let Some(InputFact::ConfigPresent(ConfigPresent(_, _, trustees, _))) =
+        if let Some(InputPredicate::ConfigPresent(ConfigPresent(_, _, trustees, _))) =
             self.get_config_present()
         {
             Some(trustees)
@@ -370,7 +370,7 @@ impl AllFacts {
             None
         }
     }
-    fn get_config_present(&self) -> Option<InputFact> {
+    fn get_config_present(&self) -> Option<InputPredicate> {
         if !self.input_facts.is_empty() {
             Some(self.input_facts[self.input_facts.len() - 1])
         } else {

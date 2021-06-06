@@ -48,7 +48,6 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
             acc = acc.mul(&pk.value).modulo(&group.modulus());
         }
 
-        // group.pk_from_value(&acc)
         PublicKey::<E, G>::from(&acc, group)
     }
 

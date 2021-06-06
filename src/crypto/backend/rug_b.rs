@@ -228,11 +228,7 @@ impl Group<Integer> for RugGroup {
     fn challenger(&self) -> Box<dyn HashTo<Integer>> {
         Box::new(RugHasher(self.modulus_exp.clone()))
     }
-    /*
-        fn elem_hasher(&self) -> Box<dyn HashTo<Integer>> {
-            Box::new(RugHasher(self.modulus.clone()))
-        }
-    */
+
     fn generators(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<Integer> {
         self.generators_fips(size, contest, seed)
     }

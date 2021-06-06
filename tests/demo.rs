@@ -217,13 +217,14 @@ fn demo() {
     let mut trustee_pks = Vec::new();
     let mut drivers = Vec::new();
 
+    // Memory BB
     let basic = MBasic::default();
     let board = GenericBulletinBoard::<RistrettoPoint, RistrettoGroup, MBasic>::new(basic);
     bbs.push(board);
 
     for i in 0..trustees {
         /*
-        GIT
+        Git BB
 
         let basic = git_board(i);
         fs::remove_dir_all(&basic.fs_path).ok();
@@ -245,12 +246,13 @@ fn demo() {
         trustee_pks.push(trustee.keypair.public);
 
         /*
-        GIT
+        Git BB
 
         let driver: Driver<RistrettoPoint, RistrettoGroup, GenericBulletinBoard<RistrettoPoint, RistrettoGroup, GitBulletinBoard>>
             = Driver::new(trustee);
         drivers.push(driver);*/
 
+        // Memory BB
         let driver: Driver<
             RistrettoPoint,
             RistrettoGroup,
@@ -285,7 +287,7 @@ fn demo() {
         WriteLogger::new(
             LevelFilter::Warn,
             simplelog::Config::default(),
-            File::create("/tmp/my.log").unwrap(),
+            File::create("/tmp/braid_demo.log").unwrap(),
         ),
         WriteLogger::new(
             LevelFilter::Info,

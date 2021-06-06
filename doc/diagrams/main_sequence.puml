@@ -1,8 +1,16 @@
 @startuml main_loop
-BulletinBoard -> StatementVerifier: Statements
-StatementVerifier -> Datalog: InputPredicates
-Datalog --> Trustee: ActionPredicates
-BulletinBoard --> Trustee: InputArtifacts
-WorkCache <-- Trustee: OutputArtifacts
-BulletinBoard <-- WorkCache: OutputArtifacts
+title Main loop
+skinparam responseMessageBelowArrow true
+participant Driver as Driver
+queue BulletinBoard as BulletinBoard
+Driver -> BulletinBoard: get statements
+Driver <- BulletinBoard: statements
+Driver -> StatementVerifier: statements
+Driver <- StatementVerifier: input predicates
+Driver -> LogicEngine: input predicates
+Driver <- LogicEngine: action predicates
+Driver -> Trustee: actions
+Trustee -> WorkCache: artifacts
+Trustee <- WorkCache: artifact bytes
+Trustee -> BulletinBoard: artifact bytes
 @enduml

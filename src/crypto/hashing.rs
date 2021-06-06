@@ -174,7 +174,6 @@ pub fn hash_bytes_256(bytes: Vec<u8>) -> [u8; 32] {
 
 #[cfg(test)]
 mod tests {
-    // use hex_literal::hex;
     use rand::rngs::OsRng;
     use rand::RngCore;
     use rug::{integer::Order, Integer};

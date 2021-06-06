@@ -137,11 +137,7 @@ impl Group<RistrettoPoint> for RistrettoGroup {
     fn challenger(&self) -> Box<dyn HashTo<Scalar>> {
         Box::new(RistrettoHasher)
     }
-    /*
-        fn elem_hasher(&self) -> Box<dyn HashTo<RistrettoPoint>> {
-            Box::new(RistrettoHasher)
-        }
-    */
+
     // FIXME not kosher
     fn generators(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<RistrettoPoint> {
         let mut seed_ = seed.to_vec();

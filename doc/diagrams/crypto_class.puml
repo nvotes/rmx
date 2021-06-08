@@ -1,0 +1,31 @@
+@startuml crypto
+skinparam groupInheritance 1
+package "crypto" {
+    interface GroupInterfaces {
+        Group
+        Element
+        Exponent
+    }
+    
+    class PublicKey
+    class PrivateKey
+    class Keymaker
+    class Shuffler
+    
+    package "ristretto" {
+        class RistrettoGroup
+        class RistrettoPoint
+    }
+    package "rug" {
+        class RugGroup
+        class Integer
+    }
+    
+    PublicKey --> GroupInterfaces
+    PrivateKey --> GroupInterfaces
+    Keymaker --> GroupInterfaces
+    Shuffler --> GroupInterfaces
+    GroupInterfaces <|-- "ristretto"
+    GroupInterfaces <|-- "rug"
+}
+@enduml

@@ -283,7 +283,6 @@ fn demo() {
     );
 
     CombinedLogger::init(vec![
-        // TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed),
         WriteLogger::new(
             LevelFilter::Warn,
             simplelog::Config::default(),

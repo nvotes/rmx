@@ -1,0 +1,12 @@
+@startuml bulletinboard
+package "bulletinboard" {
+    interface BulletinBoard
+    interface BasicBoard
+    class GenericBulletinBoard
+    class GitBulletinBoard
+    
+    BulletinBoard <|-- GenericBulletinBoard
+    BasicBoard <-- GenericBulletinBoard 
+    BasicBoard <|-- GitBulletinBoard
+}
+@enduml

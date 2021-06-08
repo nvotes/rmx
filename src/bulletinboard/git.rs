@@ -1,4 +1,3 @@
-// Alow this for the clone() function in this file
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -141,8 +140,9 @@ impl GitBulletinBoard {
         }
     }
 
-    // refreshes the local copy with remote updates,
-    // preserving local commits, uncommitted changes are discarded.
+    // refreshes the local copy with remote updates
+    // preserving local commits (merging if required)
+    // uncommitted changes are discarded.
     fn refresh(&self, repo: &Repository) -> Result<bool, Error> {
         info!("GIT {}: refresh..", self.fs_path);
         let now = std::time::Instant::now();
@@ -609,12 +609,6 @@ mod tests {
     #[test]
     #[serial]
     fn test_append_only() {
-        /*CombinedLogger::init(
-            vec![
-                TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed),
-            ]
-        ).unwrap();*/
-
         let mut g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
@@ -675,12 +669,6 @@ mod tests {
     #[test]
     #[serial]
     fn test_divergent() {
-        /* CombinedLogger::init(
-            vec![
-                TermLogger::new(LevelFilter::Info, simplelog::Config::default(), TerminalMode::Mixed),
-            ]
-        ).unwrap();*/
-
         let mut g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();

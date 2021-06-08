@@ -15,7 +15,7 @@ use crate::crypto::keymaker::Keymaker;
 use crate::crypto::symmetric;
 
 use crate::bulletinboard::bulletinboard::*;
-use crate::bulletinboard::work_cache::WorkCache;
+use crate::bulletinboard::staging::Staging;
 
 quick_error! {
     #[derive(Debug)]
@@ -35,14 +35,14 @@ quick_error! {
 
 pub struct Trustee<E, G> {
     pub keypair: Keypair,
-    pub work_cache: WorkCache<E, G>,
+    pub work_cache: Staging<E, G>,
     pub symmetric: GenericArray<u8, U32>,
 }
 
 impl<E: Element, G: Group<E>> Trustee<E, G> {
     pub fn new(local_store: String) -> Trustee<E, G> {
         let mut csprng = OsRng;
-        let work_cache = WorkCache::new(local_store);
+        let work_cache = Staging::new(local_store);
         let keypair = Keypair::generate(&mut csprng);
         let symmetric = symmetric::gen_key();
 

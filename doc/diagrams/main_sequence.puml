@@ -1,5 +1,4 @@
-@startuml main_loop
-title Main loop
+@startuml main_sequence
 skinparam responseMessageBelowArrow true
 participant Driver as Driver
 queue BulletinBoard as BulletinBoard
@@ -10,7 +9,5 @@ Driver <- StatementVerifier: input predicates
 Driver -> LogicEngine: input predicates
 Driver <- LogicEngine: action predicates
 Driver -> Trustee: actions
-Trustee -> WorkCache: artifacts
-Trustee <- WorkCache: artifact bytes
-Trustee -> BulletinBoard: artifact bytes
+Trustee -> BulletinBoard: artifacts
 @enduml

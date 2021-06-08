@@ -13,17 +13,17 @@ use crate::protocol::predicates::Act;
 use crate::protocol::statement::*;
 use crate::util;
 
-pub struct WorkCache<E, G> {
+pub struct Staging<E, G> {
     pub fs_path: PathBuf,
     phantom_e: PhantomData<E>,
     phantom_g: PhantomData<G>,
 }
 
-impl<E: Element, G: Group<E>> WorkCache<E, G> {
-    pub fn new(fs_path: String) -> WorkCache<E, G> {
+impl<E: Element, G: Group<E>> Staging<E, G> {
+    pub fn new(fs_path: String) -> Staging<E, G> {
         let target = Path::new(&fs_path);
         assert!(target.exists() && target.is_dir());
-        WorkCache {
+        Staging {
             fs_path: target.to_path_buf(),
             phantom_e: PhantomData,
             phantom_g: PhantomData,
@@ -166,6 +166,7 @@ impl<E: Element, G: Group<E>> WorkCache<E, G> {
 
         for (i, item) in work.iter().enumerate() {
             let with_ext = target.with_extension(i.to_string());
+            // FIXME this will blow up since we are not using the caching logic yet
             assert!(!with_ext.exists());
             util::write_file_bytes(&with_ext, item)?;
             ret.push(with_ext);

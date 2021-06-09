@@ -1,4 +1,4 @@
-#![allow(dead_code)]
+/* #![allow(dead_code)]
 
 use std::collections::HashSet;
 use std::fs;
@@ -239,3 +239,4 @@ fn setup_log() {
         .unwrap();
     });
 }
+*/

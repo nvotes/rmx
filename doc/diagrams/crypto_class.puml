@@ -1,5 +1,4 @@
 @startuml crypto
-skinparam groupInheritance 1
 package "crypto" {
     interface GroupInterfaces {
         Group

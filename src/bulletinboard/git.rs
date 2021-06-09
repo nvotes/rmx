@@ -323,8 +323,9 @@ impl GitBulletinBoard {
         repo.reset(&object, git2::ResetType::Hard, None)
     }
 
+    // testing only
     // clears the repository index of any files, and pushes
-    pub fn __clear(&self) -> Result<(), Error> {
+    pub(crate) fn __clear(&self) -> Result<(), Error> {
         let repo = self.open_or_clone()?;
         let mut index = repo.index()?;
         index.clear()?;

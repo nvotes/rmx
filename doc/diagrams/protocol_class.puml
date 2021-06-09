@@ -1,0 +1,20 @@
+@startuml crypto
+package "crypto" {
+    class Keymaker
+    class Shuffler
+}
+package "bulletinboard" {
+    interface BulletinBoard
+}
+package protocol {
+
+class Driver
+class Trustee
+class Crepe
+
+Driver -> Trustee
+Driver -down-> Crepe
+Trustee -> crypto
+Trustee -down-> bulletinboard
+}
+@enduml

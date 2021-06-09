@@ -1,0 +1,34 @@
+@startuml
+skinparam linestyle ortho
+package "-" as bbp {
+    queue "BulletinBoard" as bb
+    component "Serde" as serde
+    artifact "ByteTree" as bt
+    artifact "Artifact" as ar
+}
+
+component "DalekSignature" as sig
+component "Crepe" as cr
+artifact "Statement" as stmt
+artifact "InputPredicate" as ip
+artifact "Action" as act
+
+
+rectangle "StatementVerifier" as sv
+rectangle "Trustee" as tr
+
+
+bb <-up-> serde: bytes
+serde <-right-> bt: deser
+bt <-down-> ar: deser
+bbp -right-> stmt
+bbp -down-> tr: input
+stmt -right-> sv
+sv -down-> sig
+sig -down-> ip: verify
+ip -left-> cr
+cr -left-> act: inference
+act -left-> tr
+tr -down-> bbp: output
+
+@enduml

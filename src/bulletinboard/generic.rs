@@ -41,9 +41,8 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard>
     ) -> Result<Option<A>, BBError> {
         self.basic.get(target, hash)
     }
-    pub fn get_unsafe(&self, target: String) -> Result<Option<Vec<u8>>, BBError> {
-        self.basic.get_unsafe(&target)
-    }
+
+    // Artifact keys
 
     fn config_stmt(auth: u32) -> String {
         format!("{}/{}.stmt", auth, CONFIG)
@@ -96,6 +95,11 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard>
 
     fn auth_error(auth: u32) -> String {
         format!("{}/error", auth)
+    }
+
+    // testing only
+    pub(crate) fn __get_unsafe(&self, target: String) -> Result<Option<Vec<u8>>, BBError> {
+        self.basic.get_unsafe(&target)
     }
 }
 

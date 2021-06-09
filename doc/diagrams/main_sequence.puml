@@ -1,13 +1,12 @@
 @startuml main_sequence
 skinparam responseMessageBelowArrow true
-participant Driver as Driver
+control Driver as driver
 queue BulletinBoard as BulletinBoard
-Driver -> BulletinBoard: get statements
-Driver <- BulletinBoard: statements
-Driver -> StatementVerifier: statements
-Driver <- StatementVerifier: input predicates
-Driver -> LogicEngine: input predicates
-Driver <- LogicEngine: action predicates
-Driver -> Trustee: actions
-Trustee -> BulletinBoard: artifacts
+participant Crepe as crepe
+driver -> BulletinBoard: update
+BulletinBoard -> crepe: input predicate
+crepe -> Trustee: action predicate
+BulletinBoard <-> Trustee: input artifact
+Trustee <-> crypto
+Trustee -> BulletinBoard: output artifact
 @enduml

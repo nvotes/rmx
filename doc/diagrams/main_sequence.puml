@@ -3,10 +3,10 @@ skinparam responseMessageBelowArrow true
 control Driver as driver
 queue BulletinBoard as BulletinBoard
 participant Crepe as crepe
-driver -> BulletinBoard: update
-BulletinBoard -> crepe: input predicate
+driver <-> BulletinBoard: update
+driver -> crepe: input predicate
 crepe -> Trustee: action predicate
-BulletinBoard <-> Trustee: input artifact
+BulletinBoard <-> Trustee: get input artifact
 Trustee <-> crypto
-Trustee -> BulletinBoard: output artifact
+Trustee -> BulletinBoard: post artifact
 @enduml

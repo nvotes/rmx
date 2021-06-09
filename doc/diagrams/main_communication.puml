@@ -21,14 +21,13 @@ rectangle "Trustee" as tr
 bb <-up-> serde: bytes
 serde <-right-> bt: deser
 bt <-down-> ar: deser
-bbp -right-> stmt
-bbp -down-> tr: input
-stmt -right-> sv
+ar -> stmt
+ar <-down-> tr
+stmt -> sv
 sv -down-> sig
 sig -down-> ip: verify
 ip -left-> cr
 cr -left-> act: inference
 act -left-> tr
-tr -down-> bbp: output
 
 @enduml

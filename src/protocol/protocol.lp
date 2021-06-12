@@ -264,9 +264,9 @@ a(0..auths - 1).
 %
 % In execution mode, it is sufficient to set active(0, 0).
 %
-active(0..auths - 1, 0..horizon).
+active(0..auths - 1, 0..horizon) :- not model_check(non_completion).
 % represents a missing authority
-% active(0..auths - 2, 0..horizon).
+active(0..auths - 2, 0..horizon) :- model_check(non_completion).
 
 % Bootstrap protocol by adding config
 %
@@ -295,7 +295,7 @@ posted_at(ballots(ConfigHash, Contest, "ballots_hash"), -1, T + 1) :-
 % 3) A has to successfully send work to BB
 %
 % NOTE: "Block pushing" of commits may not correspond to the current implementation
-% if commits are pushed individually.
+% if commits are pushed individually (See GitBulletinBoard.auto_push).
 %
 pending(config_signature(ConfigHash, A), A, T + 1) :- do(act_sign_config(ConfigHash), A, T).
 pending(pk_share(ConfigHash, Contest, @concat2("share_hash_by", A), A), A, T + 1) :- do(act_post_share(ConfigHash, Contest), A, T).
@@ -318,8 +318,8 @@ pending(W, A, T + 1) :- not posted_at(W, A, T), pending(W, A, T), active(A, T + 
 % 2) Work completion
 % 3) Sending to BB
 %
-%  Additionally, only 1 post can occur on the BB hashchain at a certain point,
-%  meaning posts will have to be retried (by the losers) if there is a conflict.
+% Additionally, only 1 post can occur on the BB hashchain at a certain point,
+% meaning posts will have to be retried (by the losers).
 % 
 % A choice is used to model this set of concurrent events
 % such that a serial sequence of posts results
@@ -353,17 +353,39 @@ ok(T) :- plaintexts_ok(config_hash, 0..contests, _, T).
 model_check(check).
 
 % COMPLETION
-% Remove solutions that complete at some point
+% Remove solutions that complete
 % If the problem is unsatisfiable it means completion is guaranteed at t=horizon
-:- ok(0..horizon), model_check(completion).
+:- ok(horizon), model_check(completion).
 
 % NON-COMPLETION
 % Remove solutions that have not completed by the horizon
 % If the problem is unsatisfiable it means completion is impossible
 :- not ok(horizon), model_check(non_completion).
 
+% PRIVACY
+% clingo protocol.lp -c check=privacy -c auths=3 -c contests=5 -c horizon=20 -e cautious --parallel-mode 8 -q
+% It should be impossible for the partial decrypt action to be scheduled if the ballots have
+% not been mixed by each trustee
+requires(mix_output(ConfigHash, Contest, MixHash, auths - 1)) :- do(act_partial_decrypt(ConfigHash, Contest, MixHash, Share), _, _).
+
+provides(mix_output(ConfigHash, Contest, MixHash, OtherT)) :- posted_at(mix_signature(ConfigHash, Contest, MixHash, BallotsHash, OtherT, SelfT), _, _).
+
+requires(mix_output(ConfigHash, Contest, BallotsHash, OtherT - 1)) :- 
+	posted_at(mix_signature(ConfigHash, Contest, MixHash, BallotsHash, OtherT, SelfT), _, _),
+	requires(mix_output(ConfigHash, Contest, MixHash, OtherT)).
+
+provides(mix_output(ConfigHash, Contest, BallotsHash, -1)) :- posted_at(ballots(ConfigHash, Contest, BallotsHash), -1, _).
+
+% privacy is unsatisfied if any requirement is not met
+unsatisfied() :- requires(Req), not provides(Req).
+
+% Remove solutions that satisfy privacy (solutions that have no unsatisfied() result)
+% If the problem is unsatisfiable it means privacy cannot be violated
+:- not unsatisfied(), model_check(privacy).
+
 % #show.
 #show ok/1.
+% #show unsatisfied/0.
 % #show posted_at/3.
 % #show pending/3.
 % #show do/3.

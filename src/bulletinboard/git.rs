@@ -5,7 +5,6 @@ use git2::build::{CheckoutBuilder, RepoBuilder};
 use git2::*;
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
-use tempfile::NamedTempFile;
 use walkdir::{DirEntry, WalkDir};
 
 use crate::bulletinboard::basic::BasicBoard;
@@ -23,6 +22,7 @@ pub struct GitBulletinBoard {
     pub url: String,
     pub fs_path: String,
     pub append_only: bool,
+    pub auto_push: bool,
 }
 
 impl BasicBoard for GitBulletinBoard {
@@ -33,7 +33,16 @@ impl BasicBoard for GitBulletinBoard {
         self.get_object(Path::new(&target), hash)
     }
     fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError> {
-        Ok(self.post(entries, "GitBulletinBoard: put")?)
+        // Ok(self.post(entries, "GitBulletinBoard: put")?)
+        self.add_and_commit(entries, "GitBulletinBoard: put")?;
+        if self.auto_push {
+            self.post()?;
+        }
+        Ok(())
+    }
+    fn flush(&self) -> Result<(), BBError> {
+        self.post()?;
+        Ok(())
     }
     fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError> {
         let target_file = Path::new(&self.fs_path).join(target);
@@ -219,11 +228,11 @@ impl GitBulletinBoard {
         }
     }
 
-    fn post(&mut self, files: Vec<(&Path, &Path)>, message: &str) -> Result<(), Error> {
+    /* fn post(&mut self, files: Vec<(&Path, &Path)>, message: &str) -> Result<(), Error> {
         let now = std::time::Instant::now();
         let repo = self.open_or_clone()?;
-        // includes refresh before commit
-        self.add_commit_many(&repo, files, message, self.append_only)?;
+
+        self.add_and_commit(&repo, files, message, self.append_only)?;
         info!("GIT {}: push..", self.fs_path);
         let ret = self.push(&repo);
         match ret {
@@ -246,51 +255,46 @@ impl GitBulletinBoard {
         }
         info!("GIT push: [{}ms]", now.elapsed().as_millis());
         ret
-    }
+    }*/
 
-    fn add_commit_many(
-        &self,
-        repo: &Repository,
-        files: Vec<(&Path, &Path)>,
-        message: &str,
-        append_only: bool,
-    ) -> Result<bool, Error> {
+    fn add_and_commit(&self, files: Vec<(&Path, &Path)>, message: &str) -> Result<(), Error> {
         let mut entries = vec![];
         for (target, source) in files {
             let next = self.prepare_add(target, source);
             entries.push(next);
         }
-        // refresh right before commiting
-        self.refresh(&repo)?;
-        // adding to repo index uses relative path
-        add_and_commit(&repo, entries, message, append_only)
-    }
 
-    fn add_commit(
-        &self,
-        repo: &Repository,
-        target: &Path,
-        source: &Path,
-        message: &str,
-        append_only: bool,
-    ) -> Result<bool, Error> {
-        self.add_commit_many(repo, vec![(target, source)], message, append_only)
+        let repo = self.open_or_clone()?;
+        // adding to repo index uses relative path
+        add_and_commit(&repo, entries, message, self.append_only)
     }
 
     fn prepare_add(&self, target_path: &Path, source: &Path) -> GitAddEntry {
         let target_file = Path::new(&self.fs_path).join(target_path);
+        info!("GIT add: {:?} -> {:?}", source, target_file);
+        let parent = target_file.parent().unwrap();
+        if !parent.exists() {
+            info!("GIT: create directory at {:?}", parent);
+            fs::create_dir_all(parent).unwrap();
+        }
+
         if target_file.is_file() && target_file.exists() {
             fs::remove_file(&target_file).unwrap();
         }
-        let tmp_file = NamedTempFile::new().unwrap();
-        let tmp_file_path = tmp_file.path();
-        fs::copy(source, tmp_file_path).unwrap();
+        // let tmp_file = NamedTempFile::new().unwrap();
+        // let tmp_file_path = tmp_file.path();
+        // fs::copy(source, tmp_file_path).unwrap();
+        fs::copy(source, &target_file).unwrap();
 
         GitAddEntry {
-            tmp_file,
             fs_path: target_file,
             repo_path: target_path.to_path_buf(),
         }
+    }
+
+    fn post(&self) -> Result<(), Error> {
+        let repo = self.open()?;
+        self.push(&repo)
     }
 
     fn push(&self, repo: &Repository) -> Result<(), Error> {
@@ -324,6 +328,7 @@ impl GitBulletinBoard {
     }
 
     // testing only
+
     // clears the repository index of any files, and pushes
     pub(crate) fn __clear(&self) -> Result<(), Error> {
         let repo = self.open_or_clone()?;
@@ -356,7 +361,7 @@ impl GitBulletinBoard {
         source: &Path,
         message: &str,
         append_only: bool,
-    ) -> Result<bool, Error> {
+    ) -> Result<(), Error> {
         let entry = self.prepare_add(target, source);
         // adding to repo index uses relative path
         add_and_commit(&repo, vec![entry], message, append_only)
@@ -364,7 +369,6 @@ impl GitBulletinBoard {
 }
 
 struct GitAddEntry {
-    tmp_file: NamedTempFile,
     fs_path: PathBuf,
     repo_path: PathBuf,
 }
@@ -458,17 +462,17 @@ fn add_and_commit(
     entries: Vec<GitAddEntry>,
     message: &str,
     append_only: bool,
-) -> Result<bool, Error> {
+) -> Result<(), Error> {
     let mut index = repo.index()?;
     for e in entries {
-        info!("GIT add: {:?} -> {:?}", e.tmp_file.path(), e.fs_path);
-        let parent = e.fs_path.parent().unwrap();
+        info!("GIT add: {:?} ", e.fs_path);
+        /* let parent = e.fs_path.parent().unwrap();
         if !parent.exists() {
             info!("GIT: create directory at {:?}", parent);
             fs::create_dir_all(parent).unwrap();
-        }
+        }*/
         // replaces target if it exists, although prepare_add already removed target
-        fs::rename(e.tmp_file.path(), &e.fs_path).unwrap();
+        // fs::rename(e.tmp_file.path(), &e.fs_path).unwrap();
         index.add_path(&e.repo_path)?;
     }
     let oid = index.write_tree()?;
@@ -501,7 +505,7 @@ fn add_and_commit(
         &[&parent_commit],
     )?;
 
-    Ok(true)
+    Ok(())
 }
 
 fn remote_callbacks(ssh_path: &str) -> RemoteCallbacks {
@@ -593,13 +597,14 @@ mod tests {
     #[test]
     #[serial]
     fn test_post() {
-        let mut g = test_config();
+        let g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
         let added = create_random_file("/tmp");
         let name = Path::new(added.file_name().unwrap().to_str().unwrap());
 
-        g.post(vec![(name, &added)], "new file").unwrap();
+        g.add_and_commit(vec![(name, &added)], "new file").unwrap();
+        g.post().unwrap();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
         let files = g.list().unwrap();
@@ -617,7 +622,8 @@ mod tests {
         // add new file
         let added = create_random_file("/tmp");
         let name = Path::new(added.file_name().unwrap().to_str().unwrap());
-        g.post(vec![(name, &added)], "new file").unwrap();
+        g.add_and_commit(vec![(name, &added)], "new file").unwrap();
+        g.post().unwrap();
 
         // create 2nd repo after creating file but before making modification
         let mut g2 = test_config();
@@ -633,12 +639,14 @@ mod tests {
         let modify = added.to_str().unwrap();
 
         modify_file(&modify);
-        let mut result = g.post(vec![(name, &added)], "file modification");
+
+        let result = g.add_and_commit(vec![(name, &added)], "file modification");
         // cannot modify upstream in append_only mode
         assert!(result.is_err());
 
         g.append_only = false;
-        result = g.post(vec![(name, &added)], "file modification");
+        let result = g.add_and_commit(vec![(name, &added)], "file modification");
+        g.post().unwrap();
         assert!(result.is_ok());
 
         g2.append_only = true;
@@ -682,7 +690,9 @@ mod tests {
         // add new file
         let added1 = create_random_file("/tmp");
         let name1 = Path::new(added1.file_name().unwrap().to_str().unwrap());
-        g.post(vec![(name1, &added1)], "new file").unwrap();
+        g.add_and_commit(vec![(name1, &added1)], "new file")
+            .unwrap();
+        g.post().unwrap();
 
         // add new file before refresh to trigger a merge
         let added = create_random_file("/tmp");
@@ -695,7 +705,9 @@ mod tests {
         // modify a file in g1
         modify_file(&added1.to_str().unwrap());
         g.append_only = false;
-        g.post(vec![(name1, &added1)], "file modification").unwrap();
+        g.add_and_commit(vec![(name1, &added1)], "file modification")
+            .unwrap();
+        g.post().unwrap();
 
         // add a new file prior to refreshing to trigger a merge,
         // this time with non-add changes
@@ -711,7 +723,9 @@ mod tests {
         // modify a file in g1
         modify_file(&added1.to_str().unwrap());
         g.append_only = false;
-        g.post(vec![(name1, &added1)], "file modification").unwrap();
+        g.add_and_commit(vec![(name1, &added1)], "file modification")
+            .unwrap();
+        g.post().unwrap();
 
         // add a new file prior to refreshing to trigger a merge,
         // this time with non-add changes

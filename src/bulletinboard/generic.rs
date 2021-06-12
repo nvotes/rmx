@@ -277,6 +277,10 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
 
         Ok(ret)
     }
+
+    fn flush(&self) -> Result<(), BBError> {
+        self.basic.flush()
+    }
 }
 
 #[cfg(test)]

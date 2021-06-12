@@ -16,6 +16,7 @@ mod tests {
     use curve25519_dalek::ristretto::RistrettoPoint;
     use ed25519_dalek::{Keypair, PublicKey as SPublicKey};
     use rand::rngs::OsRng;
+    use serial_test::serial;
     use uuid::Uuid;
 
     use crate::bulletinboard::basic::*;
@@ -55,6 +56,7 @@ mod tests {
 
     #[ignore]
     #[test]
+    #[serial]
     fn run_rug_git() {
         // setup_log();
         let group = RugGroup::default();
@@ -65,6 +67,7 @@ mod tests {
 
     #[ignore]
     #[test]
+    #[serial]
     fn run_ristretto_git() {
         // setup_log();
         let group = RistrettoGroup;
@@ -110,6 +113,7 @@ mod tests {
         let tmp_file = util::write_tmp(cfg_b)?;
 
         bb.add_config(&ConfigPath(tmp_file.path().to_path_buf()))?;
+        bb.flush()?;
 
         let prot1: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee1);
         let prot2: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee2);
@@ -164,6 +168,7 @@ mod tests {
                 &BallotsPath(f1.path().to_path_buf(), f2.path().to_path_buf()),
                 i,
             )?;
+            bb.flush()?;
         }
         println!("===============================================");
 
@@ -314,6 +319,7 @@ mod tests {
                             i,
                         )
                         .unwrap();
+                    self.boards[0].flush().unwrap();
                     info!(">> OK");
                 } else {
                     info!(
@@ -417,14 +423,14 @@ mod tests {
         let mut trustee_pks = Vec::new();
         let mut drivers = Vec::new();
 
-        // Memory BB
+        // Memory BB - bb object is shared
         let basic = MBasic::default();
         let board = GenericBulletinBoard::<RistrettoPoint, RistrettoGroup, MBasic>::new(basic);
         bbs.push(board);
 
         for i in 0..trustees {
             /*
-            Git BB
+            Git BB - each bb has its own repository on disk
 
             let basic = git_board(i);
             fs::remove_dir_all(&basic.fs_path).ok();
@@ -468,9 +474,11 @@ mod tests {
         let cfg_b = cfg.ser();
         let tmp_file = util::write_tmp(cfg_b).unwrap();
         println!("Adding config..");
+        // enough to push to any bb if we're using multiples ones (GIT)
         bbs[0]
             .add_config(&ConfigPath(tmp_file.path().to_path_buf()))
             .unwrap();
+        bbs[0].flush().unwrap();
 
         let mut siv = cursive::default();
         let demo = Demo::new(

@@ -11,6 +11,7 @@ pub trait BasicBoard {
     fn list(&self) -> Result<Vec<String>, BBError>;
     fn get<A: ToByteTree + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError>;
     fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError>;
+    fn flush(&self) -> Result<(), BBError>;
     fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError>;
 }
 
@@ -60,6 +61,9 @@ impl BasicBoard for MBasic {
             self.data.insert(key, bytes);
         }
 
+        Ok(())
+    }
+    fn flush(&self) -> Result<(), BBError> {
         Ok(())
     }
     fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError> {

@@ -30,9 +30,9 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard>
             phantom_g: PhantomData,
         }
     }
-    fn put(&mut self, entries: Vec<(&str, &Path)>) -> Result<(), BBError> {
+    fn put(&mut self, entries: Vec<(&str, &Path)>, message: String) -> Result<(), BBError> {
         let entries_ = entries.iter().map(|(a, b)| (Path::new(a), *b)).collect();
-        self.basic.put(entries_)
+        self.basic.put(entries_, message)
     }
     fn get<A: ToByteTree + FromByteTree>(
         &self,
@@ -111,7 +111,7 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
     }
 
     fn add_config(&mut self, path: &ConfigPath) -> Result<(), BBError> {
-        self.put(vec![(CONFIG, &path.0)])
+        self.put(vec![(CONFIG, &path.0)], String::from("add_config"))
     }
     fn get_config_unsafe(&self) -> Result<Option<Config<E, G>>, BBError> {
         let bytes_option = self.basic.get_unsafe(CONFIG)?;
@@ -128,7 +128,10 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
         self.get(CONFIG.to_string(), hash)
     }
     fn add_config_stmt(&mut self, path: &ConfigStmtPath, trustee: u32) -> Result<(), BBError> {
-        self.put(vec![(&Self::config_stmt(trustee), &path.0)])
+        self.put(
+            vec![(&Self::config_stmt(trustee), &path.0)],
+            String::from("add_config_stmt"),
+        )
     }
 
     fn add_share(
@@ -137,10 +140,13 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
         contest: u32,
         trustee: u32,
     ) -> Result<(), BBError> {
-        self.put(vec![
-            (&Self::share(contest, trustee), &path.0),
-            (&Self::share_stmt(contest, trustee), &path.1),
-        ])
+        self.put(
+            vec![
+                (&Self::share(contest, trustee), &path.0),
+                (&Self::share_stmt(contest, trustee), &path.1),
+            ],
+            String::from("add_share"),
+        )
     }
     fn get_share(
         &self,
@@ -154,10 +160,13 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
 
     fn set_pk(&mut self, path: &PkPath, contest: u32) -> Result<(), BBError> {
         // 0: trustee 0 combines shares into pk
-        self.put(vec![
-            (&Self::public_key(contest, 0), &path.0),
-            (&Self::public_key_stmt(contest, 0), &path.1),
-        ])
+        self.put(
+            vec![
+                (&Self::public_key(contest, 0), &path.0),
+                (&Self::public_key_stmt(contest, 0), &path.1),
+            ],
+            String::from("set_pk"),
+        )
     }
     fn set_pk_stmt(
         &mut self,
@@ -165,7 +174,10 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
         contest: u32,
         trustee: u32,
     ) -> Result<(), BBError> {
-        self.put(vec![(&Self::public_key_stmt(contest, trustee), &path.0)])
+        self.put(
+            vec![(&Self::public_key_stmt(contest, trustee), &path.0)],
+            String::from("set_pk_stmt"),
+        )
     }
     fn get_pk(&mut self, contest: u32, hash: Hash) -> Result<Option<PublicKey<E, G>>, BBError> {
         // 0: trustee 0 combines shares into pk
@@ -174,10 +186,13 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
     }
 
     fn add_ballots(&mut self, path: &BallotsPath, contest: u32) -> Result<(), BBError> {
-        self.put(vec![
-            (&Self::ballots(contest), &path.0),
-            (&Self::ballots_stmt(contest), &path.1),
-        ])
+        self.put(
+            vec![
+                (&Self::ballots(contest), &path.0),
+                (&Self::ballots_stmt(contest), &path.1),
+            ],
+            String::from("add_ballots"),
+        )
     }
     fn get_ballots(&self, contest: u32, hash: Hash) -> Result<Option<Ballots<E>>, BBError> {
         let key = Self::ballots(contest);
@@ -185,10 +200,13 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
     }
 
     fn add_mix(&mut self, path: &MixPath, contest: u32, trustee: u32) -> Result<(), BBError> {
-        self.put(vec![
-            (&Self::mix(contest, trustee), &path.0),
-            (&Self::mix_stmt(contest, trustee), &path.1),
-        ])
+        self.put(
+            vec![
+                (&Self::mix(contest, trustee), &path.0),
+                (&Self::mix_stmt(contest, trustee), &path.1),
+            ],
+            String::from("add_mix"),
+        )
     }
     fn add_mix_stmt(
         &mut self,
@@ -197,10 +215,10 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
         trustee: u32,
         other_t: u32,
     ) -> Result<(), BBError> {
-        self.put(vec![(
-            &Self::mix_stmt_other(contest, trustee, other_t),
-            &path.0,
-        )])
+        self.put(
+            vec![(&Self::mix_stmt_other(contest, trustee, other_t), &path.0)],
+            String::from("add_mix_stmt"),
+        )
     }
     fn get_mix(&self, contest: u32, trustee: u32, hash: Hash) -> Result<Option<Mix<E>>, BBError> {
         let key = Self::mix(contest, trustee);
@@ -217,10 +235,13 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
         contest: u32,
         trustee: u32,
     ) -> Result<(), BBError> {
-        self.put(vec![
-            (&Self::decryption(contest, trustee), &path.0),
-            (&Self::decryption_stmt(contest, trustee), &path.1),
-        ])
+        self.put(
+            vec![
+                (&Self::decryption(contest, trustee), &path.0),
+                (&Self::decryption_stmt(contest, trustee), &path.1),
+            ],
+            String::from("add_decryption"),
+        )
     }
     fn get_decryption(
         &self,
@@ -234,10 +255,13 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
 
     fn set_plaintexts(&mut self, path: &PlaintextsPath, contest: u32) -> Result<(), BBError> {
         // 0: trustee 0 combines shares into pk
-        self.put(vec![
-            (&Self::plaintexts(contest, 0), &path.0),
-            (&Self::plaintexts_stmt(contest, 0), &path.1),
-        ])
+        self.put(
+            vec![
+                (&Self::plaintexts(contest, 0), &path.0),
+                (&Self::plaintexts_stmt(contest, 0), &path.1),
+            ],
+            String::from("set_plaintexts"),
+        )
     }
     fn set_plaintexts_stmt(
         &mut self,
@@ -245,7 +269,10 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard> Bulle
         contest: u32,
         trustee: u32,
     ) -> Result<(), BBError> {
-        self.put(vec![(&Self::plaintexts_stmt(contest, trustee), &path.0)])
+        self.put(
+            vec![(&Self::plaintexts_stmt(contest, trustee), &path.0)],
+            String::from("set_plaintexts_stmt"),
+        )
     }
     fn get_plaintexts(&self, contest: u32, hash: Hash) -> Result<Option<Plaintexts<E>>, BBError> {
         // 0: trustee 0 combines shares into pk
@@ -329,7 +356,7 @@ mod tests {
         let target = "test";
         let path = tmp_file.path();
         std::fs::write(path, &cfg_b).unwrap();
-        bb.put(vec![("test", path)]).unwrap();
+        bb.put(vec![("test", path)], String::from("test")).unwrap();
 
         let hash = hashing::hash(&cfg);
         let mut cfg_result = bb.get::<Config<Integer, RugGroup>>(target.to_string(), hash);

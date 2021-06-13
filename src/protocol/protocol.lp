@@ -6,7 +6,7 @@
 %
 % 2) Simulation: specified at the trustee group level to simulate joint
 % execution of all trustee nodes, each executing the protocol individually 
-% as defined in Execution.
+% as defined in Execution. Model checking is part of simulation.
 %
 
 %*******************************************************************************%
@@ -265,7 +265,7 @@ a(0..auths - 1).
 % In execution mode, it is sufficient to set active(0, 0).
 %
 active(0..auths - 1, 0..horizon) :- not model_check(non_completion).
-% represents a missing authority
+% A missing authority, used as an example of testing non completion
 active(0..auths - 2, 0..horizon) :- model_check(non_completion).
 
 % Bootstrap protocol by adding config
@@ -285,7 +285,7 @@ posted_at(ballots(ConfigHash, Contest, "ballots_hash"), -1, T + 1) :-
 
 %********** Work **********%
 
-% In simulation, do predicates (actions) lead to pending predicates
+% In simulation, do-predicates (actions) lead to pending-predicates
 % Pending work is work required by authority A when BB is at time T,
 % according to conditions expressed in execution.
 % Pending work does not lead to post instantaneously, since
@@ -307,15 +307,15 @@ pending(decryption(ConfigHash, Contest, @concat2("decryption_hash_by", A), A), A
 pending(plaintexts_signature(ConfigHash, Contest, @concat("combined", Decryptions), A), A, T + 1) :- do(act_combine_decryptions(ConfigHash, Contest, Decryptions, MixHash, Shares), A, T).
 pending(plaintexts_signature(ConfigHash, Contest, PlaintextsHash, A), A, T + 1) :- do(check_plaintexts(ConfigHash, Contest, PlaintextsHash, Decryptions, MixHash, Shares), A, T).
 
-% pending work that has not been posted is still pending
+% Pending work that has not been posted is still pending
 pending(W, A, T + 1) :- not posted_at(W, A, T), pending(W, A, T), active(A, T + 1), t(T).
 
-%********** Advance time step **********%
+%********** Time step **********%
 
 % Posting occurs non-deterministically, modeling 3 operations
 %
 % 1) Synchronizing from BB
-% 2) Work completion
+% 2) Computing work
 % 3) Sending to BB
 %
 % Additionally, only 1 post can occur on the BB hashchain at a certain point,
@@ -328,36 +328,30 @@ pending(W, A, T + 1) :- not posted_at(W, A, T), pending(W, A, T), active(A, T + 
 % only select an authority that has pending work
 :- select(A, T), not pending(_, A, T).
 
-% work posting: chosen pending predicate is converted into a posted_at predicate
+% Work posting: chosen pending predicate is converted into a posted_at predicate
 posted_at(W, A, T) :- pending(W, A, T), select(A, T).
-
-% Integrity constraint: ensure that there is a successful post for each T at which 
-% there is at least one post attempt. The last predicate is included to prevent 
-% unsatisfiability in case the horizon does not reach the posted_at time
-% UPDATE superseded by ":- select(A, T), not pending(_, A, T)" above
-% :- not posted_at(_, _, T), pending(_, _, T), t(T).
 
 % Work W was posted by time T if it was posted at T or earlier
 % When running in execution mode, input facts must generate posted() predicates 
 % with time 0 and auth 0: posted(W, 0, 0)
 posted(W, T) :- posted_at(W, A, Past), Past <= T, t(T).
 
-
 %************* Model checking *************%
-% completion
-ok(T) :- plaintexts_ok(config_hash, 0..contests, _, T).
 
-% allows setting via command line, eg
-% clingo protocol.lp -c check=completion -c auths=2 -c contests=10 -c horizon=17 -e cautious --parallel-mode 8 -q
 #const check = none.
 model_check(check).
 
+% Completion
+ok(T) :- plaintexts_ok(config_hash, 0..contests, _, T).
+
 % COMPLETION
+% clingo protocol.lp -c check=completion -c auths=2 -c contests=5 -c horizon=18 -e cautious --parallel-mode 8 -q
 % Remove solutions that complete
 % If the problem is unsatisfiable it means completion is guaranteed at t=horizon
 :- ok(horizon), model_check(completion).
 
 % NON-COMPLETION
+% clingo protocol.lp -c check=non_completion -c auths=2 -c contests=5 -c horizon=18 -e cautious --parallel-mode 8 -q
 % Remove solutions that have not completed by the horizon
 % If the problem is unsatisfiable it means completion is impossible
 :- not ok(horizon), model_check(non_completion).
@@ -383,8 +377,12 @@ unsatisfied() :- requires(Req), not provides(Req).
 % If the problem is unsatisfiable it means privacy cannot be violated
 :- not unsatisfied(), model_check(privacy).
 
+%*******************************************%
+
 % #show.
 #show ok/1.
+#show select/2.
+% #show requires/1.
 % #show unsatisfied/0.
 % #show posted_at/3.
 % #show pending/3.

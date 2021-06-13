@@ -195,6 +195,9 @@ mod tests {
         // combine decryptions
         prot1.step(&mut bb)?;
 
+        // check plaintexts
+        prot2.step(&mut bb)?;
+
         for i in 0..contests {
             let decrypted_b = bb
                 .__get_unsafe(GenericBulletinBoard::<E, G, B>::plaintexts(i, 0))

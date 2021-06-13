@@ -32,9 +32,9 @@ impl BasicBoard for GitBulletinBoard {
     fn get<A: ToByteTree + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError> {
         self.get_object(Path::new(&target), hash)
     }
-    fn put(&mut self, entries: Vec<(&Path, &Path)>) -> Result<(), BBError> {
+    fn put(&mut self, entries: Vec<(&Path, &Path)>, message: String) -> Result<(), BBError> {
         // Ok(self.post(entries, "GitBulletinBoard: put")?)
-        self.add_and_commit(entries, "GitBulletinBoard: put")?;
+        self.add_and_commit(entries, &message)?;
         if self.auto_push {
             self.post()?;
         }
@@ -345,7 +345,7 @@ impl GitBulletinBoard {
             Some("HEAD"),
             &signature,
             &signature,
-            "reset",
+            "Reset",
             &tree,
             &[&parent_commit],
         )?;

@@ -341,15 +341,15 @@ impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
 
     pub fn process_facts(&self, board: &B) -> AllPredicates {
         let mut runtime = Crepe::new();
-        let input_facts = self.get_facts(board);
-        load_facts(&input_facts, &mut runtime);
+        let input_predicates = self.get_facts(board);
+        load_facts(&input_predicates, &mut runtime);
 
         let now = std::time::Instant::now();
-        let output = runtime.run();
+        let output_predicates = runtime.run();
         let done = now.elapsed().as_millis();
-        let actions = output.0.len();
+        let actions = output_predicates.0.len();
 
-        let ret = AllPredicates::new(input_facts, output);
+        let ret = AllPredicates::new(input_predicates, output_predicates);
 
         ret.log();
         info!("");

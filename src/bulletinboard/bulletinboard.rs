@@ -115,7 +115,7 @@ pub trait BulletinBoard<E: Element, G: Group<E>> {
         (name, trustee, contest)
     }
 
-    fn flush(&self) -> Result<(), BBError>;
+    fn post(&self) -> Result<(), BBError>;
 }
 
 pub struct ConfigPath(pub PathBuf);

@@ -381,9 +381,9 @@ unsatisfied() :- requires(Req), not provides(Req).
 
 % #show.
 #show ok/1.
-#show select/2.
+% #show select/2.
 % #show requires/1.
 % #show unsatisfied/0.
-% #show posted_at/3.
+#show posted_at/3.
 % #show pending/3.
 % #show do/3.

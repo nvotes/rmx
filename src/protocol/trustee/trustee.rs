@@ -119,7 +119,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                 }
             }
         }
-        board.flush()?;
+        board.post()?;
 
         info!(
             ">>>> Trustee::run finished in [{}ms]",

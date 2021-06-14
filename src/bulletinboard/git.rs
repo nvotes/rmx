@@ -33,16 +33,15 @@ impl BasicBoard for GitBulletinBoard {
         self.get_object(Path::new(&target), hash)
     }
     fn put(&mut self, entries: Vec<(&Path, &Path)>, message: String) -> Result<(), BBError> {
-        // Ok(self.post(entries, "GitBulletinBoard: put")?)
         self.add_and_commit(entries, &message)?;
         if self.auto_push {
             self.post()?;
         }
         Ok(())
     }
-    fn flush(&self) -> Result<(), BBError> {
-        self.post()?;
-        Ok(())
+    fn post(&self) -> Result<(), BBError> {
+        let repo = self.open()?;
+        self.push(&repo).map_err(BBError::from)
     }
     fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError> {
         let target_file = Path::new(&self.fs_path).join(target);
@@ -290,11 +289,6 @@ impl GitBulletinBoard {
             fs_path: target_file,
             repo_path: target_path.to_path_buf(),
         }
-    }
-
-    fn post(&self) -> Result<(), Error> {
-        let repo = self.open()?;
-        self.push(&repo)
     }
 
     fn push(&self, repo: &Repository) -> Result<(), Error> {

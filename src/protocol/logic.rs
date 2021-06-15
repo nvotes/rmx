@@ -12,7 +12,6 @@ use crate::protocol::predicates::{AllPredicates, InputPredicate};
 use crate::protocol::trustee::trustee::Trustee;
 use crate::protocol::trustee::trustee::TrusteeError;
 
-type TrusteeTotal = u32;
 pub(super) type TrusteeIndex = u32;
 pub(super) type ContestIndex = u32;
 pub(super) type ConfigHash = Hash;

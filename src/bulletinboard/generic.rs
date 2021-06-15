@@ -93,10 +93,6 @@ impl<E: Element + FromByteTree, G: Group<E> + FromByteTree, B: BasicBoard>
         format!("{}/{}/{}.stmt", auth, contest, PLAINTEXTS)
     }
 
-    fn auth_error(auth: u32) -> String {
-        format!("{}/error", auth)
-    }
-
     // testing only
     pub(crate) fn __get_unsafe(&self, target: String) -> Result<Option<Vec<u8>>, BBError> {
         self.basic.get_unsafe(&target)

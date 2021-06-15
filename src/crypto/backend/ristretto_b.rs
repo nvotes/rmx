@@ -67,7 +67,7 @@ impl Exponent for Scalar {
 pub struct RistrettoGroup;
 
 impl RistrettoGroup {
-    fn encode_test(&self, data: [u8; 30]) -> (RistrettoPoint, usize) {
+    /* fn encode_test(&self, data: [u8; 30]) -> (RistrettoPoint, usize) {
         let mut bytes = [0u8; 32];
         bytes[1..1 + data.len()].copy_from_slice(&data);
         for j in 0..64 {
@@ -80,7 +80,7 @@ impl RistrettoGroup {
             }
         }
         panic!("a very unlikely event occurred");
-    }
+    }*/
 }
 
 impl Group<RistrettoPoint> for RistrettoGroup {
@@ -156,9 +156,6 @@ impl Group<RistrettoPoint> for RistrettoGroup {
 
 #[cfg(test)]
 mod tests {
-    extern crate textplots;
-    use textplots::{utils, Chart, Plot, Shape};
-
     use rand::rngs::OsRng;
     use rand::RngCore;
 
@@ -223,40 +220,6 @@ mod tests {
         let recovered_ = String::from_utf8(d_.compress().as_bytes().to_vec());
 
         assert_eq!(text, recovered_.unwrap());
-    }
-
-    #[test]
-    fn test_ristretto_prob_encoding() {
-        let mut csprng = OsRng;
-        let mut bytes = [00u8; 30];
-        let group = RistrettoGroup;
-
-        let iterations = 10000;
-        println!(
-            "test_r_encoding: running {} encode iterations..",
-            iterations
-        );
-
-        let v: Vec<(f32, f32)> = (0..iterations)
-            .map(|i| {
-                csprng.fill_bytes(&mut bytes);
-                let fixed = util::to_u8_30(&bytes.to_vec());
-
-                (i as f32, group.encode_test(fixed).1 as f32)
-            })
-            .collect();
-
-        let size: f32 = v.len() as f32;
-        let values: Vec<u32> = v.iter().map(|x| x.1 as u32).collect();
-        let sum: f32 = v.iter().map(|x| x.1).fold(0f32, |a, b| a + b);
-        let sum_f = sum as f32;
-        println!("test_r_encoding: average {}", sum_f / size);
-        println!("test_r_encoding: max is {}", values.iter().max().unwrap());
-
-        let hist = utils::histogram(&v, 0.0, 30.0, 30);
-        Chart::new(380, 100, 0.0, 30.0)
-            .lineplot(&Shape::Bars(&hist))
-            .nice();
     }
 
     #[test]

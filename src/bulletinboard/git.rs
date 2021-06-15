@@ -14,8 +14,6 @@ use crate::crypto::hashing::Hash;
 use crate::data::byte_tree::*;
 use crate::util;
 
-const MAX_ATTEMPTS: i32 = 5;
-
 #[derive(Serialize, Deserialize)]
 pub struct GitBulletinBoard {
     pub ssh_key_path: String,
@@ -227,35 +225,6 @@ impl GitBulletinBoard {
         }
     }
 
-    /* fn post(&mut self, files: Vec<(&Path, &Path)>, message: &str) -> Result<(), Error> {
-        let now = std::time::Instant::now();
-        let repo = self.open_or_clone()?;
-
-        self.add_and_commit(&repo, files, message, self.append_only)?;
-        info!("GIT {}: push..", self.fs_path);
-        let ret = self.push(&repo);
-        match ret {
-            Err(ref git_error) => {
-                if git2::ErrorCode::Conflict == git_error.code() {
-                    // Conflicts should be very unlikely, as they require an external push to occur
-                    // between our refresh and push, which is optimized for low delay by
-                    // using prepare_add.
-                    // If a conflict does occur, it should be handled automatically
-                    // in the next cycle when calling refresh, which includes merging
-                    // code. Alternatively we can add retry logic here, eg
-                    //
-                    // self.refresh(&repo)?;
-                    // self.push(&repo);
-                    // loop..
-                    warn!("GIT: post: conflict detected");
-                }
-            }
-            Ok(()) => (),
-        }
-        info!("GIT push: [{}ms]", now.elapsed().as_millis());
-        ret
-    }*/
-
     fn add_and_commit(&self, files: Vec<(&Path, &Path)>, message: &str) -> Result<(), Error> {
         let mut entries = vec![];
         for (target, source) in files {
@@ -305,22 +274,6 @@ impl GitBulletinBoard {
         remote.push(&["refs/heads/master:refs/heads/master"], Some(&mut options))
     }
 
-    // syncs the working copy to match that of the remote
-    // local commits and working copy are discarded
-    // ignore or untracked files are not affected
-    fn sync_down(&self, repo: &Repository) -> Result<(), Error> {
-        let mut remote = repo.find_remote("origin")?;
-        let mut fo = FetchOptions::new();
-        fo.remote_callbacks(remote_callbacks(&self.ssh_key_path));
-        fo.download_tags(git2::AutotagOption::All);
-        remote.fetch(&["master"], Some(&mut fo), None)?;
-        let fetch_head = repo.find_reference("FETCH_HEAD")?;
-        let commit = repo.reference_to_annotated_commit(&fetch_head)?;
-        let object = repo.find_object(commit.id(), None)?;
-
-        repo.reset(&object, git2::ResetType::Hard, None)
-    }
-
     // testing only
 
     // clears the repository index of any files, and pushes
@@ -347,7 +300,7 @@ impl GitBulletinBoard {
         self.push(&repo)
     }
 
-    // only used to simulate conflicts (divergent repository)
+    // simulate conflicts (divergent repository)
     fn __add_commit(
         &self,
         repo: &Repository,
@@ -590,7 +543,7 @@ mod tests {
     #[ignore]
     #[test]
     #[serial]
-    fn test_post() {
+    fn test_post() {      
         let g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();

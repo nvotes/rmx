@@ -57,10 +57,10 @@ mod tests {
     #[ignore]
     #[test]
     #[serial]
-    fn run_rug_git() {
+    fn run_rug_remote() {
         // setup_log();
         let group = RugGroup::default();
-        let bb = git::test_config();
+        let bb = git_board(0);
         bb.__clear().unwrap();
         run(group, bb).unwrap();
     }
@@ -68,10 +68,10 @@ mod tests {
     #[ignore]
     #[test]
     #[serial]
-    fn run_ristretto_git() {
-        // setup_log();
+    fn run_ristretto_remote() {
+        setup_log();
         let group = RistrettoGroup;
-        let bb = git::test_config();
+        let bb = git_board(1);
         bb.__clear().unwrap();
         run(group, bb).unwrap();
     }
@@ -113,7 +113,7 @@ mod tests {
         let tmp_file = util::write_tmp(cfg_b)?;
 
         bb.add_config(&ConfigPath(tmp_file.path().to_path_buf()))?;
-        bb.flush()?;
+        bb.post()?;
 
         let prot1: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee1);
         let prot2: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee2);
@@ -168,7 +168,7 @@ mod tests {
                 &BallotsPath(f1.path().to_path_buf(), f2.path().to_path_buf()),
                 i,
             )?;
-            bb.flush()?;
+            bb.post()?;
         }
         println!("===============================================");
 
@@ -322,7 +322,7 @@ mod tests {
                             i,
                         )
                         .unwrap();
-                    self.boards[0].flush().unwrap();
+                    self.boards[0].post().unwrap();
                     info!(">> OK");
                 } else {
                     info!(
@@ -481,7 +481,7 @@ mod tests {
         bbs[0]
             .add_config(&ConfigPath(tmp_file.path().to_path_buf()))
             .unwrap();
-        bbs[0].flush().unwrap();
+        bbs[0].post().unwrap();
 
         let mut siv = cursive::default();
         let demo = Demo::new(

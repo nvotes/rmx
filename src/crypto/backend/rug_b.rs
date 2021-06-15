@@ -6,12 +6,11 @@ use rug::{
 use rand::rngs::OsRng;
 use rand::rngs::StdRng;
 use rand::RngCore;
-use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 
 use crate::crypto::elgamal::*;
 use crate::crypto::group::*;
-use crate::crypto::hashing::{hash_bytes_256, HashTo, RugHasher};
+use crate::crypto::hashing::{HashTo, RugHasher};
 
 impl Element for Integer {
     type Exp = Integer;
@@ -155,23 +154,6 @@ impl RugGroup {
                     break;
                 }
             }
-        }
-
-        ret
-    }
-
-    fn generators_rnd(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<Integer> {
-        let mut seed_ = seed.to_vec();
-        seed_.extend(&contest.to_le_bytes());
-        let hashed = hash_bytes_256(seed_);
-        let csprng: StdRng = SeedableRng::from_seed(hashed);
-        let mut gen = StdRandgen(csprng);
-        let mut state = RandState::new_custom(&mut gen);
-
-        let mut ret: Vec<Integer> = Vec::with_capacity(size);
-        for _ in 0..size {
-            let g = self.encode(&self.modulus_exp.clone().random_below(&mut state));
-            ret.push(g);
         }
 
         ret

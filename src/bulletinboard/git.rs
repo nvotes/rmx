@@ -543,7 +543,7 @@ mod tests {
     #[ignore]
     #[test]
     #[serial]
-    fn test_post() {      
+    fn test_post() {
         let g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();

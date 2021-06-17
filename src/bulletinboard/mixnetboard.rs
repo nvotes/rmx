@@ -7,6 +7,7 @@ use crate::crypto::group::Group;
 use crate::crypto::hashing::Hash;
 use crate::data::artifact::*;
 use crate::data::byte_tree::ByteError;
+use crate::protocol::statement::SignedStatement;
 use crate::protocol::statement::StatementVerifier;
 
 quick_error! {
@@ -28,17 +29,22 @@ quick_error! {
     }
 }
 
-pub trait BulletinBoard<E: Element, G: Group<E>> {
+pub trait MixnetBoard<E: Element, G: Group<E>> {
     fn list(&self) -> Result<Vec<String>, BBError>;
 
-    fn add_config(&mut self, config: &ConfigPath) -> Result<(), BBError>;
+    fn add_config(&mut self, config: &Config<E, G>) -> Result<(), BBError>;
     fn get_config_unsafe(&self) -> Result<Option<Config<E, G>>, BBError>;
 
-    fn add_config_stmt(&mut self, stmt: &ConfigStmtPath, trustee: u32) -> Result<(), BBError>;
+    fn add_config_stmt(&mut self, stmt: &SignedStatement, trustee: u32) -> Result<(), BBError>;
     fn get_config(&self, hash: Hash) -> Result<Option<Config<E, G>>, BBError>;
 
-    fn add_share(&mut self, path: &KeysharePath, contest: u32, trustee: u32)
-        -> Result<(), BBError>;
+    fn add_share(
+        &mut self,
+        share: &Keyshare<E, G>,
+        stmt: &SignedStatement,
+        contest: u32,
+        trustee: u32,
+    ) -> Result<(), BBError>;
     fn get_share(
         &self,
         contest: u32,
@@ -46,18 +52,38 @@ pub trait BulletinBoard<E: Element, G: Group<E>> {
         hash: Hash,
     ) -> Result<Option<Keyshare<E, G>>, BBError>;
 
-    fn set_pk(&mut self, path: &PkPath, contest: u32) -> Result<(), BBError>;
-    fn set_pk_stmt(&mut self, path: &PkStmtPath, contest: u32, trustee: u32)
-        -> Result<(), BBError>;
+    fn set_pk(
+        &mut self,
+        pk: &PublicKey<E, G>,
+        stmt: &SignedStatement,
+        contest: u32,
+    ) -> Result<(), BBError>;
+    fn set_pk_stmt(
+        &mut self,
+        stmt: &SignedStatement,
+        contest: u32,
+        trustee: u32,
+    ) -> Result<(), BBError>;
     fn get_pk(&mut self, contest: u32, hash: Hash) -> Result<Option<PublicKey<E, G>>, BBError>;
 
-    fn add_ballots(&mut self, path: &BallotsPath, contest: u32) -> Result<(), BBError>;
+    fn add_ballots(
+        &mut self,
+        ballots: &Ballots<E>,
+        stmt: &SignedStatement,
+        contest: u32,
+    ) -> Result<(), BBError>;
     fn get_ballots(&self, contest: u32, hash: Hash) -> Result<Option<Ballots<E>>, BBError>;
 
-    fn add_mix(&mut self, path: &MixPath, contest: u32, trustee: u32) -> Result<(), BBError>;
+    fn add_mix(
+        &mut self,
+        mix: &Mix<E>,
+        stmt: &SignedStatement,
+        contest: u32,
+        trustee: u32,
+    ) -> Result<(), BBError>;
     fn add_mix_stmt(
         &mut self,
-        path: &MixStmtPath,
+        stmt: &SignedStatement,
         contest: u32,
         trustee: u32,
         other_t: u32,
@@ -66,7 +92,8 @@ pub trait BulletinBoard<E: Element, G: Group<E>> {
 
     fn add_decryption(
         &mut self,
-        path: &PDecryptionsPath,
+        pdecryptions: &PartialDecryption<E>,
+        stmt: &SignedStatement,
         contest: u32,
         trustee: u32,
     ) -> Result<(), BBError>;
@@ -77,17 +104,22 @@ pub trait BulletinBoard<E: Element, G: Group<E>> {
         hash: Hash,
     ) -> Result<Option<PartialDecryption<E>>, BBError>;
 
-    fn set_plaintexts(&mut self, path: &PlaintextsPath, contest: u32) -> Result<(), BBError>;
+    fn set_plaintexts(
+        &mut self,
+        plaintexts: &Plaintexts<E>,
+        stmt: &SignedStatement,
+        contest: u32,
+    ) -> Result<(), BBError>;
     fn set_plaintexts_stmt(
         &mut self,
-        path: &PlaintextsStmtPath,
+        stmt: &SignedStatement,
         contest: u32,
         trustee: u32,
     ) -> Result<(), BBError>;
     fn get_plaintexts(&self, contest: u32, hash: Hash) -> Result<Option<Plaintexts<E>>, BBError>;
 
     fn get_statements(&self) -> Result<Vec<StatementVerifier>, BBError>;
-    fn get_stmts(&self) -> Result<Vec<String>, BBError> {
+    fn get_statements_abstract(&self) -> Result<Vec<String>, BBError> {
         let items = self.list()?;
         let ret = items.into_iter().filter(|s| s.ends_with(".stmt")).collect();
 
@@ -139,5 +171,3 @@ pub const BALLOTS: &str = "ballots";
 pub const MIX: &str = "mix";
 pub const DECRYPTION: &str = "decryption";
 pub const PLAINTEXTS: &str = "plaintexts";
-pub const PAUSE: &str = "pause";
-pub const ERROR: &str = "error";

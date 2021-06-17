@@ -2,15 +2,9 @@ use std::fs;
 use std::io;
 use std::path::Path;
 
-use curve25519_dalek::ristretto::RistrettoPoint;
-use rand::rngs::OsRng;
-use rand::RngCore;
 use rayon::prelude::*;
-use rug::Integer;
 use tempfile::NamedTempFile;
 
-use crate::crypto::backend::ristretto_b::RistrettoGroup;
-use crate::crypto::backend::rug_b::RugGroup;
 use crate::crypto::elgamal::*;
 use crate::crypto::group::Element;
 use crate::crypto::group::Group;
@@ -60,10 +54,7 @@ pub fn to_u8_64(input: &[u8]) -> [u8; 64] {
     bytes
 }
 
-pub fn random_ristretto_ballots<G: Group<RistrettoPoint>>(
-    n: usize,
-    group: &G,
-) -> Ballots<RistrettoPoint> {
+pub fn random_ballots<E: Element, G: Group<E>>(n: usize, group: &G) -> Ballots<E> {
     let cs = (0..n)
         .into_par_iter()
         .map(|_| Ciphertext {
@@ -73,54 +64,6 @@ pub fn random_ristretto_ballots<G: Group<RistrettoPoint>>(
         .collect();
 
     Ballots { ciphertexts: cs }
-}
-
-pub fn random_rug_ballots<G: Group<Integer>>(n: usize, group: &G) -> Ballots<Integer> {
-    let cs = (0..n)
-        .into_par_iter()
-        .map(|_| Ciphertext {
-            a: group.encode(&group.rnd_exp()),
-            b: group.encode(&group.rnd_exp()),
-        })
-        .collect();
-
-    Ballots { ciphertexts: cs }
-}
-
-pub fn random_ristretto_encrypt_ballots(
-    n: usize,
-    pk: &PublicKey<RistrettoPoint, RistrettoGroup>,
-) -> (Vec<[u8; 30]>, Vec<Ciphertext<RistrettoPoint>>) {
-    let (plaintexts, cs) = (0..n)
-        .into_par_iter()
-        .map(|_| {
-            let mut csprng = OsRng;
-            let mut value = [0u8; 30];
-            csprng.fill_bytes(&mut value);
-            let encoded = pk.group.encode(&value);
-            let encrypted = pk.encrypt(&encoded);
-            (value, encrypted)
-        })
-        .unzip();
-
-    (plaintexts, cs)
-}
-
-pub fn random_rug_encrypt_ballots(
-    n: usize,
-    pk: &PublicKey<Integer, RugGroup>,
-) -> (Vec<Integer>, Vec<Ciphertext<Integer>>) {
-    let (plaintexts, cs) = (0..n)
-        .into_par_iter()
-        .map(|_| {
-            let value = pk.group.rnd_exp();
-            let encoded = pk.group.encode(&value);
-            let encrypted = pk.encrypt(&encoded);
-            (value, encrypted)
-        })
-        .unzip();
-
-    (plaintexts, cs)
 }
 
 pub fn random_encrypt_ballots<E: Element, G: Group<E>>(

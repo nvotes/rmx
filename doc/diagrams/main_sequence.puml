@@ -1,12 +1,12 @@
 @startuml main_sequence
 skinparam responseMessageBelowArrow true
 control Driver as driver
-queue BulletinBoard as BulletinBoard
+queue MixnetBoard as MixnetBoard
 participant Crepe as crepe
-driver <-> BulletinBoard: update
+driver <-> MixnetBoard: update
 driver -> crepe: input predicate
 crepe -> Trustee: action predicate
-BulletinBoard <-> Trustee: get input artifact
+MixnetBoard <-> Trustee: get input artifact
 Trustee <-> crypto
-Trustee -> BulletinBoard: post artifact
+Trustee -> MixnetBoard: post artifact
 @enduml

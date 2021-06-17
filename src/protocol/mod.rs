@@ -19,10 +19,10 @@ mod tests {
     use serial_test::serial;
     use uuid::Uuid;
 
-    use crate::bulletinboard::basic::*;
-    use crate::bulletinboard::bulletinboard::*;
-    use crate::bulletinboard::generic::*;
-    use crate::bulletinboard::git;
+    use crate::bulletinboard::board::*;
+    use crate::bulletinboard::gitboard;
+    use crate::bulletinboard::mixnetboard::*;
+    use crate::bulletinboard::compositeboard::*;
     use crate::crypto::backend::ristretto_b::*;
     use crate::crypto::backend::rug_b::*;
     use crate::crypto::elgamal::PublicKey;
@@ -44,14 +44,14 @@ mod tests {
     fn run_rug_mem() {
         // setup_log();
         let group = RugGroup::default();
-        run(group, MBasic::default()).unwrap();
+        run(group, MBoard::default()).unwrap();
     }
 
     #[test]
     fn run_ristretto_mem() {
         // setup_log();
         let group = RistrettoGroup;
-        run(group, MBasic::default()).unwrap();
+        run(group, MBoard::default()).unwrap();
     }
 
     #[ignore]
@@ -76,7 +76,7 @@ mod tests {
         run(group, bb).unwrap();
     }
 
-    fn run<E: Element + std::cmp::PartialEq, G: Group<E>, B: BasicBoard>(
+    fn run<E: Element + std::cmp::PartialEq, G: Group<E>, B: Board>(
         group: G,
         basic: B,
     ) -> Result<(), TrusteeError>
@@ -99,7 +99,7 @@ mod tests {
         let mut csprng = OsRng;
         let bb_keypair = Keypair::generate(&mut csprng);
 
-        let mut bb = GenericBulletinBoard::<E, G, B>::new(basic);
+        let mut bb = CompositeBoard::<E, G, B>::new(basic);
 
         let mut trustee_pks = Vec::new();
         trustee_pks.push(trustee1.keypair.public);
@@ -108,15 +108,12 @@ mod tests {
         let contests = 3;
         let ballots = 200;
         let cfg = gen_config(&group, contests, trustee_pks, bb_keypair.public);
-        let cfg_b = cfg.ser();
 
-        let tmp_file = util::write_tmp(cfg_b)?;
-
-        bb.add_config(&ConfigPath(tmp_file.path().to_path_buf()))?;
+        bb.add_config(&cfg)?;
         bb.post()?;
 
-        let prot1: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee1);
-        let prot2: Driver<E, G, GenericBulletinBoard<E, G, B>> = Driver::new(trustee2);
+        let prot1: Driver<E, G, CompositeBoard<E, G, B>> = Driver::new(trustee1);
+        let prot2: Driver<E, G, CompositeBoard<E, G, B>> = Driver::new(trustee2);
 
         // mix position 0
         prot1.step(&mut bb)?;
@@ -146,7 +143,7 @@ mod tests {
         println!("=================== ballots ===================");
         for i in 0..contests {
             let pk_b = bb
-                .__get_unsafe(GenericBulletinBoard::<E, G, B>::public_key(i, 0))
+                .__get_unsafe(key_public_key(i, 0))
                 .unwrap()
                 .unwrap();
             let pk = PublicKey::<E, G>::deser(&pk_b).unwrap();
@@ -154,18 +151,13 @@ mod tests {
             let (plaintexts, ciphertexts) = util::random_encrypt_ballots(ballots, &pk);
             all_plaintexts.push(plaintexts);
             let ballots = Ballots { ciphertexts };
-            let ballots_b = ballots.ser();
             let ballots_h = hashing::hash(&ballots);
             let cfg_h = hashing::hash(&cfg);
             let ss = SignedStatement::ballots(&cfg_h, &ballots_h, i, &bb_keypair);
 
-            let ss_b = ss.ser();
-
-            let f1 = util::write_tmp(ballots_b).unwrap();
-            let f2 = util::write_tmp(ss_b).unwrap();
             println!(">> Adding {} ballots", ballots.ciphertexts.len());
             bb.add_ballots(
-                &BallotsPath(f1.path().to_path_buf(), f2.path().to_path_buf()),
+                &ballots, &ss,
                 i,
             )?;
             bb.post()?;
@@ -200,7 +192,7 @@ mod tests {
 
         for i in 0..contests {
             let decrypted_b = bb
-                .__get_unsafe(GenericBulletinBoard::<E, G, B>::plaintexts(i, 0))
+                .__get_unsafe(key_plaintexts(i, 0))
                 .unwrap()
                 .unwrap();
             let decrypted = Plaintexts::<E>::deser(&decrypted_b).unwrap();
@@ -256,23 +248,23 @@ mod tests {
 
     struct Demo<E: Element, G, B> {
         pub cb_sink: cursive::CbSink,
-        trustees: Vec<Driver<E, G, GenericBulletinBoard<E, G, B>>>,
+        trustees: Vec<Driver<E, G, CompositeBoard<E, G, B>>>,
         bb_keypair: Keypair,
         config: crate::data::artifact::Config<E, G>,
         all_plaintexts: Vec<Vec<E::Plaintext>>,
         ballots: u32,
-        boards: Vec<GenericBulletinBoard<E, G, B>>,
+        boards: Vec<CompositeBoard<E, G, B>>,
     }
 
-    impl<E: Element, G: Group<E>, B: BasicBoard> Demo<E, G, B>
+    impl<E: Element, G: Group<E>, B: Board> Demo<E, G, B>
     where
         <E as Element>::Plaintext: std::hash::Hash,
         <E as Element>::Plaintext: Eq,
     {
         fn new(
             sink: cursive::CbSink,
-            trustees: Vec<Driver<E, G, GenericBulletinBoard<E, G, B>>>,
-            boards: Vec<GenericBulletinBoard<E, G, B>>,
+            trustees: Vec<Driver<E, G, CompositeBoard<E, G, B>>>,
+            boards: Vec<CompositeBoard<E, G, B>>,
             bb_keypair: Keypair,
             ballots: u32,
             cfg: crate::data::artifact::Config<E, G>,
@@ -292,10 +284,10 @@ mod tests {
         fn add_ballots(&mut self) {
             for i in 0..self.config.contests {
                 let pk_b = self.boards[0]
-                    .__get_unsafe(GenericBulletinBoard::<E, G, B>::public_key(i, 0))
+                    .__get_unsafe(key_public_key(i, 0))
                     .unwrap();
                 let ballots_b = self.boards[0]
-                    .__get_unsafe(GenericBulletinBoard::<E, G, B>::ballots(i))
+                    .__get_unsafe(key_ballots(i))
                     .unwrap();
                 if pk_b.is_some() && ballots_b.is_none() {
                     info!(">> Adding {} ballots..", self.ballots);
@@ -306,19 +298,13 @@ mod tests {
                     self.all_plaintexts.push(plaintexts);
 
                     let ballots = Ballots { ciphertexts };
-                    let ballots_b = ballots.ser();
                     let ballots_h = hashing::hash(&ballots);
                     let cfg_h = hashing::hash(&self.config);
                     let ss = SignedStatement::ballots(&cfg_h, &ballots_h, i, &self.bb_keypair);
 
-                    let ss_b = ss.ser();
-
-                    let f1 = util::write_tmp(ballots_b).unwrap();
-                    let f2 = util::write_tmp(ss_b).unwrap();
-
                     self.boards[0]
                         .add_ballots(
-                            &BallotsPath(f1.path().to_path_buf(), f2.path().to_path_buf()),
+                            &ballots, &ss,
                             i,
                         )
                         .unwrap();
@@ -335,7 +321,7 @@ mod tests {
         fn check_plaintexts(&self) {
             for i in 0..self.config.contests {
                 if let Some(decrypted_b) = self.boards[0]
-                    .__get_unsafe(GenericBulletinBoard::<E, G, B>::plaintexts(i, 0))
+                    .__get_unsafe(key_plaintexts(i, 0))
                     .unwrap()
                 {
                     let decrypted = Plaintexts::<E>::deser(&decrypted_b).unwrap();
@@ -427,8 +413,8 @@ mod tests {
         let mut drivers = Vec::new();
 
         // Memory BB - bb object is shared
-        let basic = MBasic::default();
-        let board = GenericBulletinBoard::<RistrettoPoint, RistrettoGroup, MBasic>::new(basic);
+        let basic = MBoard::default();
+        let board = CompositeBoard::<RistrettoPoint, RistrettoGroup, MBoard>::new(basic);
         bbs.push(board);
 
         for i in 0..trustees {
@@ -443,7 +429,7 @@ mod tests {
                 basic.__clear().unwrap();
             }
 
-            let bb = GenericBulletinBoard::<RistrettoPoint, RistrettoGroup, GitBulletinBoard>::new(basic);
+            let bb = CompositeBoard::<RistrettoPoint, RistrettoGroup, GitBoard>::new(basic);
             bbs.push(bb);*/
 
             let local = format!("/tmp/local{}", i);
@@ -457,7 +443,7 @@ mod tests {
             /*
             Git BB
 
-            let driver: Driver<RistrettoPoint, RistrettoGroup, GenericBulletinBoard<RistrettoPoint, RistrettoGroup, GitBulletinBoard>>
+            let driver: Driver<RistrettoPoint, RistrettoGroup, CompositeBoard<RistrettoPoint, RistrettoGroup, GitBoard>>
                 = Driver::new(trustee);
             drivers.push(driver);*/
 
@@ -465,7 +451,7 @@ mod tests {
             let driver: Driver<
                 RistrettoPoint,
                 RistrettoGroup,
-                GenericBulletinBoard<RistrettoPoint, RistrettoGroup, MBasic>,
+                CompositeBoard<RistrettoPoint, RistrettoGroup, MBoard>,
             > = Driver::new(trustee);
             drivers.push(driver);
         }
@@ -474,12 +460,10 @@ mod tests {
         let bb_keypair = Keypair::generate(&mut csprng);
 
         let cfg = gen_config(&group, contests, trustee_pks, bb_keypair.public);
-        let cfg_b = cfg.ser();
-        let tmp_file = util::write_tmp(cfg_b).unwrap();
         println!("Adding config..");
         // enough to push to any bb if we're using multiples ones (GIT)
         bbs[0]
-            .add_config(&ConfigPath(tmp_file.path().to_path_buf()))
+            .add_config(&cfg)
             .unwrap();
         bbs[0].post().unwrap();
 
@@ -638,7 +622,7 @@ mod tests {
         siv.run();
     }
 
-    fn step_t<E: 'static + Element, G: 'static + Group<E>, B: 'static + BasicBoard + Send + Sync>(
+    fn step_t<E: 'static + Element, G: 'static + Group<E>, B: 'static + Board + Send + Sync>(
         demo_arc: DemoArc<E, G, B>,
         t: u32,
     ) where
@@ -648,11 +632,7 @@ mod tests {
         std::thread::spawn(move || step(Arc::clone(&demo_arc), t));
     }
 
-    fn ballots_t<
-        E: 'static + Element,
-        G: 'static + Group<E>,
-        B: 'static + BasicBoard + Send + Sync,
-    >(
+    fn ballots_t<E: 'static + Element, G: 'static + Group<E>, B: 'static + Board + Send + Sync>(
         demo_arc: DemoArc<E, G, B>,
         t: u32,
     ) where
@@ -662,7 +642,7 @@ mod tests {
         std::thread::spawn(move || ballots(Arc::clone(&demo_arc), t));
     }
 
-    fn check_t<E: 'static + Element, G: 'static + Group<E>, B: 'static + BasicBoard + Send + Sync>(
+    fn check_t<E: 'static + Element, G: 'static + Group<E>, B: 'static + Board + Send + Sync>(
         demo_arc: DemoArc<E, G, B>,
         t: u32,
     ) where
@@ -672,10 +652,8 @@ mod tests {
         std::thread::spawn(move || check(Arc::clone(&demo_arc), t));
     }
 
-    fn step<E: Element, G: Group<E>, B: BasicBoard + Send + Sync>(
-        demo_arc: DemoArc<E, G, B>,
-        t: u32,
-    ) where
+    fn step<E: Element, G: Group<E>, B: Board + Send + Sync>(demo_arc: DemoArc<E, G, B>, t: u32)
+    where
         <E as Element>::Plaintext: std::hash::Hash,
         <E as Element>::Plaintext: Eq,
     {
@@ -689,10 +667,8 @@ mod tests {
         demo.done(t);
     }
 
-    fn ballots<E: Element, G: Group<E>, B: BasicBoard + Send + Sync>(
-        demo_arc: DemoArc<E, G, B>,
-        t: u32,
-    ) where
+    fn ballots<E: Element, G: Group<E>, B: Board + Send + Sync>(demo_arc: DemoArc<E, G, B>, t: u32)
+    where
         <E as Element>::Plaintext: std::hash::Hash,
         <E as Element>::Plaintext: Eq,
     {
@@ -703,7 +679,7 @@ mod tests {
         demo.done(t);
     }
 
-    fn check<E: 'static + Element, G: 'static + Group<E>, B: BasicBoard + Send + Sync>(
+    fn check<E: 'static + Element, G: 'static + Group<E>, B: Board + Send + Sync>(
         demo_arc: DemoArc<E, G, B>,
         t: u32,
     ) where
@@ -808,11 +784,12 @@ mod tests {
         cfg
     }
 
-    use crate::bulletinboard::git::GitBulletinBoard;
+    use crate::bulletinboard::gitboard::GitBoard;
 
-    fn git_board(i: u32) -> GitBulletinBoard {
-        let mut board = git::test_config();
+    fn git_board(i: u32) -> GitBoard {
+        let mut board = gitboard::test_config();
         board.fs_path = std::format!("/tmp/repo{}", i);
+        fs::remove_dir_all(&board.fs_path).ok();
 
         board
     }

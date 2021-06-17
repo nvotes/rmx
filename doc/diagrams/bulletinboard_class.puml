@@ -1,12 +1,12 @@
 @startuml bulletinboard
 package "bulletinboard" {
-    interface BulletinBoard
-    interface BasicBoard
-    class GenericBulletinBoard
-    class GitBulletinBoard
+    interface MixnetBoard
+    interface Board
+    class CompositeBoard
+    class GitBoard
     
-    BulletinBoard <|-- GenericBulletinBoard
-    BasicBoard <-- GenericBulletinBoard 
-    BasicBoard <|-- GitBulletinBoard
+    MixnetBoard <|-- CompositeBoard
+    Board <-- CompositeBoard 
+    Board <|-- GitBoard
 }
 @enduml

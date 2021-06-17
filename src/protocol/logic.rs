@@ -2,7 +2,7 @@ use crepe::crepe;
 use log::*;
 use std::marker::PhantomData;
 
-use crate::bulletinboard::bulletinboard::*;
+use crate::bulletinboard::mixnetboard::*;
 use crate::crypto::group::Element;
 use crate::crypto::group::Group;
 use crate::crypto::hashing;
@@ -284,7 +284,7 @@ pub struct Driver<E, G, B> {
     phantom_b: PhantomData<B>,
 }
 
-impl<E: Element, G: Group<E>, B: BulletinBoard<E, G>> Driver<E, G, B> {
+impl<E: Element, G: Group<E>, B: MixnetBoard<E, G>> Driver<E, G, B> {
     pub fn new(trustee: Trustee<E, G>) -> Driver<E, G, B> {
         Driver {
             trustee,

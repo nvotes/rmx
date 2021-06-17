@@ -7,15 +7,12 @@ use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use walkdir::{DirEntry, WalkDir};
 
-use crate::bulletinboard::basic::BasicBoard;
-use crate::bulletinboard::bulletinboard::BBError;
-use crate::crypto::hashing;
-use crate::crypto::hashing::Hash;
-use crate::data::byte_tree::*;
+use crate::bulletinboard::board::Board;
+use crate::bulletinboard::mixnetboard::BBError;
 use crate::util;
 
 #[derive(Serialize, Deserialize)]
-pub struct GitBulletinBoard {
+pub struct GitBoard {
     pub ssh_key_path: String,
     pub url: String,
     pub fs_path: String,
@@ -23,20 +20,21 @@ pub struct GitBulletinBoard {
     pub auto_push: bool,
 }
 
-impl BasicBoard for GitBulletinBoard {
+impl Board for GitBoard {
     fn list(&self) -> Result<Vec<String>, BBError> {
         self.list_entries()
     }
-    fn get<A: ToByteTree + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError> {
-        self.get_object(Path::new(&target), hash)
+    fn get(&self, target: String) -> Result<Option<Vec<u8>>, BBError> {
+        self.get_bytes(Path::new(&target))
     }
-    fn put(&mut self, entries: Vec<(&Path, &Path)>, message: String) -> Result<(), BBError> {
+    fn add(&mut self, entries: Vec<(&Path, Vec<u8>)>, message: String) -> Result<(), BBError> {
         self.add_and_commit(entries, &message)?;
         if self.auto_push {
             self.post()?;
         }
         Ok(())
     }
+
     fn post(&self) -> Result<(), BBError> {
         let repo = self.open()?;
         self.push(&repo).map_err(BBError::from)
@@ -69,7 +67,7 @@ impl BasicBoard for GitBulletinBoard {
     }*/
 }
 
-impl GitBulletinBoard {
+impl GitBoard {
     fn open_or_clone(&self) -> Result<Repository, Error> {
         if Path::new(&self.fs_path).exists() {
             self.open()
@@ -125,22 +123,11 @@ impl GitBulletinBoard {
         Ok(files)
     }
 
-    fn get_object<A: ToByteTree + Deser>(
-        &self,
-        target_path: &Path,
-        hash: Hash,
-    ) -> Result<Option<A>, BBError> {
+    fn get_bytes(&self, target_path: &Path) -> Result<Option<Vec<u8>>, BBError> {
         let target_file = Path::new(&self.fs_path).join(target_path);
         if target_file.exists() {
             let bytes: Vec<u8> = util::read_file_bytes(&target_file)?;
-            let artifact = A::deser(&bytes)?;
-            let hashed = hashing::hash(&artifact);
-
-            if hashed == hash {
-                Ok(Some(artifact))
-            } else {
-                Err(BBError::Msg("Mismatched hash".to_string()))
-            }
+            Ok(Some(bytes))
         } else {
             Ok(None)
         }
@@ -225,10 +212,10 @@ impl GitBulletinBoard {
         }
     }
 
-    fn add_and_commit(&self, files: Vec<(&Path, &Path)>, message: &str) -> Result<(), Error> {
+    fn add_and_commit(&self, files: Vec<(&Path, Vec<u8>)>, message: &str) -> Result<(), Error> {
         let mut entries = vec![];
-        for (target, source) in files {
-            let next = self.prepare_add(target, source);
+        for (target, bytes) in files {
+            let next = self.prepare_add(target, &bytes);
             entries.push(next);
         }
 
@@ -237,9 +224,8 @@ impl GitBulletinBoard {
         add_and_commit(&repo, entries, message, self.append_only)
     }
 
-    fn prepare_add(&self, target_path: &Path, source: &Path) -> GitAddEntry {
+    fn prepare_add(&self, target_path: &Path, bytes: &[u8]) -> GitAddEntry {
         let target_file = Path::new(&self.fs_path).join(target_path);
-        info!("GIT add: {:?} -> {:?}", source, target_file);
         let parent = target_file.parent().unwrap();
         if !parent.exists() {
             info!("GIT: create directory at {:?}", parent);
@@ -247,12 +233,11 @@ impl GitBulletinBoard {
         }
 
         if target_file.is_file() && target_file.exists() {
+            warn!("GIT: file already present at {:?}", target_file);
             fs::remove_file(&target_file).unwrap();
         }
-        // let tmp_file = NamedTempFile::new().unwrap();
-        // let tmp_file_path = tmp_file.path();
-        // fs::copy(source, tmp_file_path).unwrap();
-        fs::copy(source, &target_file).unwrap();
+        // FIXME is unwrap ok here
+        util::write_file_bytes(&target_file, bytes).unwrap();
 
         GitAddEntry {
             fs_path: target_file,
@@ -305,7 +290,7 @@ impl GitBulletinBoard {
         &self,
         repo: &Repository,
         target: &Path,
-        source: &Path,
+        source: &[u8],
         message: &str,
         append_only: bool,
     ) -> Result<(), Error> {
@@ -413,13 +398,6 @@ fn add_and_commit(
     let mut index = repo.index()?;
     for e in entries {
         info!("GIT add: {:?} ", e.fs_path);
-        /* let parent = e.fs_path.parent().unwrap();
-        if !parent.exists() {
-            info!("GIT: create directory at {:?}", parent);
-            fs::create_dir_all(parent).unwrap();
-        }*/
-        // replaces target if it exists, although prepare_add already removed target
-        // fs::rename(e.tmp_file.path(), &e.fs_path).unwrap();
         index.add_path(&e.repo_path)?;
     }
     let oid = index.write_tree()?;
@@ -476,44 +454,33 @@ fn is_hidden(entry: &DirEntry) -> bool {
         .unwrap_or(false)
 }
 
-pub fn test_config() -> GitBulletinBoard {
+pub fn test_config() -> GitBoard {
     let mut d = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     d.push("resources/test/git_bb.json");
     let cfg = fs::read_to_string(d).unwrap();
-    let board: GitBulletinBoard = serde_json::from_str(&cfg).unwrap();
+    let board: GitBoard = serde_json::from_str(&cfg).unwrap();
 
     board
 }
 
 #[cfg(test)]
 mod tests {
-    use chrono::{DateTime, Utc};
     use serial_test::serial;
     use std::fs;
-    use std::fs::File;
-    use std::fs::OpenOptions;
-    use std::io::Write;
     use std::path::Path;
-    use uuid::Uuid;
+    use rand::{thread_rng, Rng};
+    use rand::distributions::Alphanumeric;
 
-    use crate::bulletinboard::git::*;
+    use crate::bulletinboard::gitboard::*;
 
-    pub fn create_random_file(dir: &str) -> PathBuf {
-        let mut buff = Uuid::encode_buffer();
-        let id = Uuid::new_v4().to_simple().encode_lower(&mut buff);
-        let target = Path::new(dir).join(Path::new(&id));
-        let mut output = File::create(target.clone()).unwrap();
-        let now: DateTime<Utc> = Utc::now();
-        writeln!(output, "File {} created at {}", id, now).unwrap();
-        target
-    }
+    fn random_string() -> String {
+        let ret: String = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(30)
+            .map(char::from)
+            .collect();
 
-    pub fn modify_file(file: &str) {
-        let mut file = OpenOptions::new().append(true).open(file).unwrap();
-
-        let now: DateTime<Utc> = Utc::now();
-
-        writeln!(file, "New line at {}", now).unwrap();
+        ret
     }
 
     #[ignore]
@@ -547,10 +514,10 @@ mod tests {
         let g = test_config();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
-        let added = create_random_file("/tmp");
-        let name = Path::new(added.file_name().unwrap().to_str().unwrap());
+        let name_str = random_string();
+        let name = Path::new(&name_str);
 
-        g.add_and_commit(vec![(name, &added)], "new file").unwrap();
+        g.add_and_commit(vec![(name, "test".as_bytes().to_vec())], "new file").unwrap();
         g.post().unwrap();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
@@ -567,9 +534,9 @@ mod tests {
         g.open_or_clone().unwrap();
 
         // add new file
-        let added = create_random_file("/tmp");
-        let name = Path::new(added.file_name().unwrap().to_str().unwrap());
-        g.add_and_commit(vec![(name, &added)], "new file").unwrap();
+        let name_str = random_string();
+        let name = Path::new(&name_str);
+        g.add_and_commit(vec![(name, "test".as_bytes().to_vec())], "new file").unwrap();
         g.post().unwrap();
 
         // create 2nd repo after creating file but before making modification
@@ -583,16 +550,12 @@ mod tests {
         let files = g.list().unwrap();
         assert!(files.contains(&name.to_str().unwrap().to_string()));
 
-        let modify = added.to_str().unwrap();
-
-        modify_file(&modify);
-
-        let result = g.add_and_commit(vec![(name, &added)], "file modification");
+        let result = g.add_and_commit(vec![(name, "modified".as_bytes().to_vec())], "file modification");
         // cannot modify upstream in append_only mode
         assert!(result.is_err());
 
         g.append_only = false;
-        let result = g.add_and_commit(vec![(name, &added)], "file modification");
+        let result = g.add_and_commit(vec![(name, "modified".as_bytes().to_vec())], "file modification");
         g.post().unwrap();
         assert!(result.is_ok());
 
@@ -625,9 +588,9 @@ mod tests {
     #[test]
     #[serial]
     fn test_divergent() {
-        let mut g = test_config();
-        fs::remove_dir_all(&g.fs_path).ok();
-        g.open_or_clone().unwrap();
+        let mut g1 = test_config();
+        fs::remove_dir_all(&g1.fs_path).ok();
+        g1.open_or_clone().unwrap();
 
         let mut g2 = test_config();
         g2.fs_path.push_str("_");
@@ -635,50 +598,48 @@ mod tests {
         g2.open_or_clone().unwrap();
 
         // add new file
-        let added1 = create_random_file("/tmp");
-        let name1 = Path::new(added1.file_name().unwrap().to_str().unwrap());
-        g.add_and_commit(vec![(name1, &added1)], "new file")
+        let name_str = random_string();
+        let name1 = Path::new(&name_str);
+        g1.add_and_commit(vec![(name1, "test".as_bytes().to_vec())], "new file")
             .unwrap();
-        g.post().unwrap();
+        g1.post().unwrap();
 
         // add new file before refresh to trigger a merge
-        let added = create_random_file("/tmp");
-        let name = Path::new(added.file_name().unwrap().to_str().unwrap());
-        g2.__add_commit(&g2.open().unwrap(), name, &added, "add", true)
+        let name_str = random_string();
+        let name = Path::new(&name_str);
+        g2.__add_commit(&g2.open().unwrap(), name, &"test".as_bytes().to_vec(), "add", true)
             .unwrap();
         // will merge
         g2.list().unwrap();
 
         // modify a file in g1
-        modify_file(&added1.to_str().unwrap());
-        g.append_only = false;
-        g.add_and_commit(vec![(name1, &added1)], "file modification")
+        g1.append_only = false;
+        g1.add_and_commit(vec![(name1, "modified".as_bytes().to_vec())], "file modification")
             .unwrap();
-        g.post().unwrap();
+        g1.post().unwrap();
 
         // add a new file prior to refreshing to trigger a merge,
         // this time with non-add changes
-        let added = create_random_file("/tmp");
-        let name = Path::new(added.file_name().unwrap().to_str().unwrap());
-
-        g2.__add_commit(&g2.open().unwrap(), name, &added, "add", true)
+        let name_str = random_string();
+        let name = Path::new(&name_str);
+        g2.__add_commit(&g2.open().unwrap(), name, &"test".as_bytes().to_vec(), "add", true)
             .unwrap();
         // since we are passing false to append only, the merge will work
         g2.append_only = false;
         g2.list().unwrap();
 
         // modify a file in g1
-        modify_file(&added1.to_str().unwrap());
-        g.append_only = false;
-        g.add_and_commit(vec![(name1, &added1)], "file modification")
+        g1.append_only = false;
+        g1.add_and_commit(vec![(name1, "modified again".as_bytes().to_vec())], "file modification")
             .unwrap();
-        g.post().unwrap();
+        g1.post().unwrap();
 
         // add a new file prior to refreshing to trigger a merge,
         // this time with non-add changes
-        let added = create_random_file("/tmp");
-        let name = Path::new(added.file_name().unwrap().to_str().unwrap());
-        g2.__add_commit(&g2.open().unwrap(), name, &added, "add", true)
+
+        let name_str = random_string();
+        let name = Path::new(&name_str);
+        g2.__add_commit(&g2.open().unwrap(), name, &"test".as_bytes().to_vec(), "add", true)
             .unwrap();
         g2.append_only = true;
         let result = g2.list();

@@ -914,13 +914,14 @@ mod tests {
 
     use ed25519_dalek::Keypair;
     use rand::rngs::OsRng;
+    use rand::Rng;
     use rug::Integer;
     use uuid::Uuid;
 
     #[test]
     fn test_ciphertext_bytes() {
         let group = RugGroup::default();
-        let c = util::random_rug_ballots(1, &group).ciphertexts.remove(0);
+        let c = util::random_ballots(1, &group).ciphertexts.remove(0);
         let bytes = c.ser();
         let back = Ciphertext::<Integer>::deser(&bytes).unwrap();
 
@@ -1061,7 +1062,7 @@ mod tests {
     #[test]
     fn test_ballots_bytes() {
         let group = RugGroup::default();
-        let bs = util::random_rug_ballots(1000, &group);
+        let bs = util::random_ballots(1000, &group);
         let bytes = bs.ser();
         let back = Ballots::<Integer>::deser(&bytes).unwrap();
 
@@ -1123,7 +1124,6 @@ mod tests {
         assert!(ps == back);
     }
 
-    use rand::Rng;
     #[test]
     fn test_statement_bytes() {
         fn rnd32() -> Vec<u8> {
@@ -1168,7 +1168,7 @@ mod tests {
             bytes.len(),
             (bytes.len() as f32 / n_f)
         );
-        let es1 = util::random_ristretto_ballots(n, &group1).ciphertexts;
+        let es1 = util::random_ballots(n, &group1).ciphertexts;
         bytes = bincode::serialize(&es1).unwrap();
         println!(
             "{} ristretto ciphertexts in Ballots: {}, {}",
@@ -1194,7 +1194,7 @@ mod tests {
             bytes.len(),
             (bytes.len() as f32 / n_f)
         );
-        let es2 = util::random_rug_ballots(1000, &group2).ciphertexts;
+        let es2 = util::random_ballots(1000, &group2).ciphertexts;
         bytes = bincode::serialize(&es2).unwrap();
         println!(
             "{} rug ciphertexts in Ballots: {}, {}",
@@ -1220,7 +1220,7 @@ mod tests {
             bytes.len(),
             (bytes.len() as f32 / n_f)
         );
-        let es1 = util::random_ristretto_ballots(n, &group1).ciphertexts;
+        let es1 = util::random_ballots(n, &group1).ciphertexts;
         bytes = es1.ser();
         println!(
             "{} ristretto ciphertexts in Ballots (BT): {}, {}",
@@ -1246,7 +1246,7 @@ mod tests {
             bytes.len(),
             (bytes.len() as f32 / n_f)
         );
-        let es2 = util::random_rug_ballots(1000, &group2).ciphertexts;
+        let es2 = util::random_ballots(1000, &group2).ciphertexts;
         bytes = es2.ser();
         println!(
             "{} rug ciphertexts in Ballots (BT): {}, {}",

@@ -7,7 +7,7 @@ use ed25519_dalek::{Keypair, Signer};
 use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 
-use crate::bulletinboard::bulletinboard::*;
+use crate::bulletinboard::mixnetboard::*;
 use crate::crypto::group::Element;
 use crate::crypto::group::Group;
 use crate::crypto::hashing;
@@ -232,7 +232,7 @@ pub struct StatementVerifier {
 }
 
 impl StatementVerifier {
-    pub(super) fn verify<E: Element, G: Group<E>, B: BulletinBoard<E, G>>(
+    pub(super) fn verify<E: Element, G: Group<E>, B: MixnetBoard<E, G>>(
         &self,
         board: &B,
     ) -> Option<InputPredicate> {

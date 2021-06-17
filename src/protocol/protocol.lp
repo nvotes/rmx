@@ -295,7 +295,7 @@ posted_at(ballots(ConfigHash, Contest, "ballots_hash"), -1, T + 1) :-
 % 3) A has to successfully send work to BB
 %
 % NOTE: "Block pushing" of commits may not correspond to the current implementation
-% if commits are pushed individually (See GitBulletinBoard.auto_push).
+% if commits are pushed individually (See GitBoard.auto_push).
 %
 pending(config_signature(ConfigHash, A), A, T + 1) :- do(act_sign_config(ConfigHash), A, T).
 pending(pk_share(ConfigHash, Contest, @concat2("share_hash_by", A), A), A, T + 1) :- do(act_post_share(ConfigHash, Contest), A, T).

@@ -1,10 +1,9 @@
 #![allow(clippy::too_many_arguments)]
 use log::info;
 
-use crate::bulletinboard::bulletinboard::BulletinBoard;
+use crate::bulletinboard::mixnetboard::MixnetBoard;
 use crate::data::artifact::*;
 use crate::protocol::logic::Hashes;
-use crate::protocol::predicates::Act;
 use crate::protocol::statement::*;
 use crate::protocol::trustee::trustee::Trustee;
 use crate::protocol::trustee::trustee::TrusteeError;
@@ -20,9 +19,8 @@ use crate::crypto::shuffler::*;
 use crate::util::short;
 
 impl<E: Element, G: Group<E>> Trustee<E, G> {
-    pub(crate) fn check_config<B: BulletinBoard<E, G>>(
+    pub(crate) fn check_config<B: MixnetBoard<E, G>>(
         &self,
-        action: Act,
         self_index: u32,
         cfg_h: Hash,
         board: &mut B,
@@ -30,15 +28,14 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         info!(">> Action: checking config..");
         // FIXME validate the config somehow
         let ss = SignedStatement::config(&cfg_h, &self.keypair);
-        let stmt_path = self.work_cache.set_config_stmt(&action, &ss)?;
-        board.add_config_stmt(&stmt_path, self_index)?;
+
+        board.add_config_stmt(&ss, self_index)?;
         info!(">> OK");
         Ok(())
     }
 
-    pub(crate) fn post_share<B: BulletinBoard<E, G>>(
+    pub(crate) fn post_share<B: MixnetBoard<E, G>>(
         &self,
-        action: Act,
         self_index: u32,
         cfg_h: Hash,
         contest: u32,
@@ -55,17 +52,15 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let share = self.gen_share(&cfg.group, &self.get_label(&cfg, contest));
         let share_h = hashing::hash(&share);
         let ss = SignedStatement::keyshare(&cfg_h, &share_h, contest, &self.keypair);
-        let share_path = self.work_cache.set_share(&action, share, &ss)?;
 
-        board.add_share(&share_path, contest, self_index)?;
+        board.add_share(&share, &ss, contest, self_index)?;
         info!(">> OK");
 
         Ok(())
     }
 
-    pub(crate) fn combine_shares<B: BulletinBoard<E, G>>(
+    pub(crate) fn combine_shares<B: MixnetBoard<E, G>>(
         &self,
-        action: Act,
         self_index: u32,
         cfg_h: Hash,
         contest: u32,
@@ -87,16 +82,14 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let pk_h = hashing::hash(&pk);
         let ss = SignedStatement::public_key(&cfg_h, &pk_h, contest, &self.keypair);
 
-        let pk_path = self.work_cache.set_pk(&action, pk, &ss)?;
-        board.set_pk(&pk_path, contest)?;
+        board.set_pk(&pk, &ss, contest)?;
         info!(">> OK");
 
         Ok(())
     }
 
-    pub(crate) fn check_pk<B: BulletinBoard<E, G>>(
+    pub(crate) fn check_pk<B: MixnetBoard<E, G>>(
         &self,
-        action: Act,
         self_index: u32,
         cfg_h: Hash,
         contest: u32,
@@ -120,16 +113,14 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         assert!(pk_h == pk_h_);
         let ss = SignedStatement::public_key(&cfg_h, &pk_h, contest, &self.keypair);
 
-        let pk_stmt_path = self.work_cache.set_pk_stmt(&action, &ss)?;
-        board.set_pk_stmt(&pk_stmt_path, contest, self_index)?;
+        board.set_pk_stmt(&ss, contest, self_index)?;
         info!(">> OK");
 
         Ok(())
     }
 
-    pub(crate) fn mix<B: BulletinBoard<E, G>>(
+    pub(crate) fn mix<B: MixnetBoard<E, G>>(
         &self,
-        action: Act,
         self_index: u32,
         cfg_h: Hash,
         contest: u32,
@@ -190,11 +181,11 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         );
 
         let now_ = std::time::Instant::now();
-        let mix_path = self.work_cache.set_mix(&action, mix, &ss)?;
+
         let rate = ciphertexts.len() as f32 / now_.elapsed().as_millis() as f32;
         info!("IO Write ({:.1} ciphertexts/s)", 1000.0 * rate);
 
-        board.add_mix(&mix_path, contest, self_index)?;
+        board.add_mix(&mix, &ss, contest, self_index)?;
         info!(
             ">> Mix generated {:?} <- {:?}",
             short(&mix_h),
@@ -204,9 +195,8 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         Ok(())
     }
 
-    pub(crate) fn check_mix<B: BulletinBoard<E, G>>(
+    pub(crate) fn check_mix<B: MixnetBoard<E, G>>(
         &self,
-        action: Act,
         self_index: u32,
         cfg_h: Hash,
         contest: u32,
@@ -269,17 +259,16 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             contest,
             &self.keypair,
         );
-        let mix_path = self.work_cache.set_mix_stmt(&action, &ss)?;
-        board.add_mix_stmt(&mix_path, contest, self_index, trustee)?;
+
+        board.add_mix_stmt(&ss, contest, self_index, trustee)?;
 
         info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
 
         Ok(())
     }
 
-    pub(crate) fn partial_decrypt<B: BulletinBoard<E, G>>(
+    pub(crate) fn partial_decrypt<B: MixnetBoard<E, G>>(
         &self,
-        action: Act,
         self_index: u32,
         cfg_h: Hash,
         contest: u32,
@@ -319,17 +308,16 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         };
         let pd_h = hashing::hash(&pd);
         let ss = SignedStatement::pdecryptions(&cfg_h, &pd_h, contest, &self.keypair);
-        let pd_path = self.work_cache.set_pdecryptions(&action, pd, &ss)?;
-        board.add_decryption(&pd_path, contest, self_index)?;
+
+        board.add_decryption(&pd, &ss, contest, self_index)?;
 
         info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
 
         Ok(())
     }
 
-    pub(crate) fn combine_decryptions<B: BulletinBoard<E, G>>(
+    pub(crate) fn combine_decryptions<B: MixnetBoard<E, G>>(
         &self,
-        action: Act,
         self_index: u32,
         cfg_h: Hash,
         contest: u32,
@@ -356,17 +344,16 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         let plaintexts = Plaintexts { plaintexts: pls };
         let p_h = hashing::hash(&plaintexts);
         let ss = SignedStatement::plaintexts(&cfg_h, &p_h, contest, &self.keypair);
-        let p_path = self.work_cache.set_plaintexts(&action, plaintexts, &ss)?;
-        board.set_plaintexts(&p_path, contest)?;
+
+        board.set_plaintexts(&plaintexts, &ss, contest)?;
 
         info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
 
         Ok(())
     }
 
-    pub(crate) fn check_plaintexts<B: BulletinBoard<E, G>>(
+    pub(crate) fn check_plaintexts<B: MixnetBoard<E, G>>(
         &self,
-        action: Act,
         self_index: u32,
         cfg_h: Hash,
         contest: u32,
@@ -396,8 +383,8 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         assert!(pls == pls_board.plaintexts);
 
         let ss = SignedStatement::plaintexts(&cfg_h, &plaintexts_h, contest, &self.keypair);
-        let p_path = self.work_cache.set_plaintexts_stmt(&action, &ss)?;
-        board.set_plaintexts_stmt(&p_path, contest, self_index)?;
+
+        board.set_plaintexts_stmt(&ss, contest, self_index)?;
         info!(">> OK ({:.1} ciphertexts/s)", 1000.0 * rate);
 
         Ok(())

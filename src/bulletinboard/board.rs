@@ -1,31 +1,30 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::bulletinboard::bulletinboard::BBError;
-use crate::crypto::hashing;
-use crate::crypto::hashing::Hash;
-use crate::data::byte_tree::*;
-use crate::util;
+use crate::bulletinboard::mixnetboard::BBError;
 
-pub trait BasicBoard {
+pub trait Board {
     fn list(&self) -> Result<Vec<String>, BBError>;
-    fn get<A: ToByteTree + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError>;
-    fn put(&mut self, entries: Vec<(&Path, &Path)>, message: String) -> Result<(), BBError>;
+    // fn get<A: ToByteTree + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError>;
+    // fn put(&mut self, entries: Vec<(&Path, &Path)>, message: String) -> Result<(), BBError>;
+    fn get(&self, target: String) -> Result<Option<Vec<u8>>, BBError>;
+    fn add(&mut self, entries: Vec<(&Path, Vec<u8>)>, message: String) -> Result<(), BBError>;
     fn post(&self) -> Result<(), BBError>;
     fn get_unsafe(&self, target: &str) -> Result<Option<Vec<u8>>, BBError>;
 }
 
 #[derive(Default)]
-pub struct MBasic {
+pub struct MBoard {
     data: HashMap<String, Vec<u8>>,
 }
 
-impl BasicBoard for MBasic {
+impl Board for MBoard {
     fn list(&self) -> Result<Vec<String>, BBError> {
         Ok(self.data.iter().map(|(a, _)| a.clone()).collect())
     }
-    fn get<A: ToByteTree + Deser>(&self, target: String, hash: Hash) -> Result<Option<A>, BBError> {
-        let key = target;
+    fn get(&self, target: String) -> Result<Option<Vec<u8>>, BBError> {
+        Ok(self.data.get(&target).map(|v| v.to_vec()))
+        /* let key = target;
         if let Some(bytes) = self.data.get(&key) {
             let _now_ = std::time::Instant::now();
 
@@ -43,11 +42,10 @@ impl BasicBoard for MBasic {
             }
         } else {
             Ok(None)
-        }
+        }*/
     }
-    fn put(&mut self, entries: Vec<(&Path, &Path)>, _message: String) -> Result<(), BBError> {
+    fn add(&mut self, entries: Vec<(&Path, Vec<u8>)>, _message: String) -> Result<(), BBError> {
         for (name, data) in entries {
-            let bytes = util::read_file_bytes(data)?;
             let key = name
                 .to_str()
                 .ok_or_else(|| BBError::Msg("Invalid path string when putting".to_string()))?
@@ -58,11 +56,12 @@ impl BasicBoard for MBasic {
                     key
                 );
             }
-            self.data.insert(key, bytes);
+            self.data.insert(key, data.to_vec());
         }
 
         Ok(())
     }
+
     fn post(&self) -> Result<(), BBError> {
         Ok(())
     }

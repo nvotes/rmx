@@ -454,7 +454,7 @@ mod tests {
         let sk = group.gen_key();
         let pk = PublicKey::from(&sk.public_value, &group);
 
-        let es = util::random_ristretto_ballots(10, &group).ciphertexts;
+        let es = util::random_ballots(10, &group).ciphertexts;
         let seed = vec![];
         let hs = generators(es.len() + 1, &group, 0, seed);
         let shuffler = Shuffler {

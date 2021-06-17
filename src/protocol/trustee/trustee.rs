@@ -14,8 +14,8 @@ use crate::crypto::hashing::*;
 use crate::crypto::keymaker::Keymaker;
 use crate::crypto::symmetric;
 
-use crate::bulletinboard::bulletinboard::*;
 use crate::bulletinboard::staging::Staging;
+use crate::bulletinboard::mixnetboard::*;
 
 quick_error! {
     #[derive(Debug)]
@@ -53,7 +53,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         }
     }
 
-    pub fn run<B: BulletinBoard<E, G>>(
+    pub fn run<B: MixnetBoard<E, G>>(
         &self,
         facts: AllPredicates,
         board: &mut B,
@@ -70,31 +70,30 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
 
             match action {
                 Act::CheckConfig(cfg_h) => {
-                    self.check_config(action, self_t, cfg_h, board)?;
+                    self.check_config(self_t, cfg_h, board)?;
                 }
                 Act::PostShare(cfg_h, cnt) => {
-                    self.post_share(action, self_t, cfg_h, cnt, board)?;
+                    self.post_share(self_t, cfg_h, cnt, board)?;
                 }
                 Act::CombineShares(cfg_h, cnt, hs) => {
-                    self.combine_shares(action, self_t, cfg_h, cnt, hs, board)?;
+                    self.combine_shares(self_t, cfg_h, cnt, hs, board)?;
                 }
                 Act::CheckPk(cfg_h, cnt, pk_h, hs) => {
-                    self.check_pk(action, self_t, cfg_h, cnt, pk_h, hs, board)?;
+                    self.check_pk(self_t, cfg_h, cnt, pk_h, hs, board)?;
                 }
                 Act::Mix(cfg_h, cnt, ballots_h, pk_h) => {
-                    self.mix(action, self_t, cfg_h, cnt, ballots_h, pk_h, board)?;
+                    self.mix(self_t, cfg_h, cnt, ballots_h, pk_h, board)?;
                 }
                 Act::CheckMix(cfg_h, cnt, trustee, mix_h, ballots_h, pk_h) => {
                     self.check_mix(
-                        action, self_t, cfg_h, cnt, trustee, mix_h, ballots_h, pk_h, board,
+                        self_t, cfg_h, cnt, trustee, mix_h, ballots_h, pk_h, board,
                     )?;
                 }
                 Act::PartialDecrypt(cfg_h, cnt, mix_h, share_h) => {
-                    self.partial_decrypt(action, self_t, cfg_h, cnt, mix_h, share_h, board)?;
+                    self.partial_decrypt(self_t, cfg_h, cnt, mix_h, share_h, board)?;
                 }
                 Act::CombineDecryptions(cfg_h, cnt, decryption_hs, mix_h, share_hs) => {
                     self.combine_decryptions(
-                        action,
                         self_t,
                         cfg_h,
                         cnt,
@@ -106,7 +105,6 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                 }
                 Act::CheckPlaintexts(cfg_h, cnt, plaintexts_h, decryption_hs, mix_h, share_hs) => {
                     self.check_plaintexts(
-                        action,
                         self_t,
                         cfg_h,
                         cnt,
@@ -129,7 +127,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
     }
 
     // ballots may come from the ballot box, or an earlier mix
-    pub(super) fn get_mix_src<B: BulletinBoard<E, G>>(
+    pub(super) fn get_mix_src<B: MixnetBoard<E, G>>(
         &self,
         board: &B,
         contest: u32,
@@ -147,7 +145,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         }
     }
 
-    pub(super) fn get_plaintexts<B: BulletinBoard<E, G>>(
+    pub(super) fn get_plaintexts<B: MixnetBoard<E, G>>(
         &self,
         board: &B,
         cnt: u32,
@@ -194,7 +192,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
         }
     }
 
-    pub(super) fn get_pk<B: BulletinBoard<E, G>>(
+    pub(super) fn get_pk<B: MixnetBoard<E, G>>(
         &self,
         board: &B,
         hs: Vec<Hash>,

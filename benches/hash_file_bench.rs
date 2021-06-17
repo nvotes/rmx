@@ -10,10 +10,10 @@ use std::{
 fn create_file() {
     // 1M = 62M
     let group = RistrettoGroup;
-    let es = util::random_ristretto_ballots(1000000, &group).ciphertexts;
+    let es = util::random_ballots(1000000, &group).ciphertexts;
     // 100k = 100M
     // let group = RugGroup::default();
-    // let es = util::random_rug_ballots(100000, &group).ciphertexts;
+    // let es = util::random_ballots(100000, &group).ciphertexts;
     let bytes = bincode::serialize(&es).unwrap();
     let mut file = File::create("/tmp/big_file2").unwrap();
 

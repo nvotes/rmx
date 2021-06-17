@@ -11,7 +11,6 @@ mod tests {
     use std::fs;
     use std::iter::FromIterator;
     use std::marker::PhantomData;
-    use std::path::Path;
 
     use curve25519_dalek::ristretto::RistrettoPoint;
     use ed25519_dalek::{Keypair, PublicKey as SPublicKey};
@@ -84,18 +83,8 @@ mod tests {
         <E as Element>::Plaintext: std::hash::Hash,
         <E as Element>::Plaintext: Eq,
     {
-        let local1 = "/tmp/local";
-        let local2 = "/tmp/local2";
-        let local_path = Path::new(&local1);
-        // we do not care about these errors
-        fs::remove_dir_all(local_path).ok();
-        fs::create_dir(local_path).ok();
-        let local_path = Path::new(&local2);
-        fs::remove_dir_all(local_path).ok();
-        fs::create_dir(local_path).ok();
-
-        let trustee1: Trustee<E, G> = Trustee::new(local1.to_string());
-        let trustee2: Trustee<E, G> = Trustee::new(local2.to_string());
+        let trustee1: Trustee<E, G> = Trustee::new();
+        let trustee2: Trustee<E, G> = Trustee::new();
         let mut csprng = OsRng;
         let bb_keypair = Keypair::generate(&mut csprng);
 
@@ -413,12 +402,7 @@ mod tests {
             let bb = CompositeBoard::<RistrettoPoint, RistrettoGroup, GitBoard>::new(basic);
             bbs.push(bb);*/
 
-            let local = format!("/tmp/local{}", i);
-            let local_path = Path::new(&local);
-            fs::remove_dir_all(local_path).ok();
-            fs::create_dir(local_path).ok();
-
-            let trustee: Trustee<RistrettoPoint, RistrettoGroup> = Trustee::new(local.to_string());
+            let trustee: Trustee<RistrettoPoint, RistrettoGroup> = Trustee::new();
             trustee_pks.push(trustee.keypair.public);
 
             /*

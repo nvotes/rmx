@@ -1,8 +1,9 @@
-use generic_array::{typenum::U32, GenericArray};
-
+#![allow(clippy::new_without_default)]
 use ed25519_dalek::Keypair;
+use generic_array::{typenum::U32, GenericArray};
 use log::info;
 use rand::rngs::OsRng;
+use std::marker::PhantomData;
 
 use crate::data::artifact::*;
 use crate::protocol::predicates::*;
@@ -15,7 +16,6 @@ use crate::crypto::keymaker::Keymaker;
 use crate::crypto::symmetric;
 
 use crate::bulletinboard::mixnetboard::*;
-use crate::bulletinboard::staging::Staging;
 
 quick_error! {
     #[derive(Debug)]
@@ -35,21 +35,22 @@ quick_error! {
 
 pub struct Trustee<E, G> {
     pub keypair: Keypair,
-    pub work_cache: Staging<E, G>,
     pub symmetric: GenericArray<u8, U32>,
+    phantom_e: PhantomData<E>,
+    phantom_g: PhantomData<G>,
 }
 
 impl<E: Element, G: Group<E>> Trustee<E, G> {
-    pub fn new(local_store: String) -> Trustee<E, G> {
+    pub fn new() -> Trustee<E, G> {
         let mut csprng = OsRng;
-        let work_cache = Staging::new(local_store);
         let keypair = Keypair::generate(&mut csprng);
         let symmetric = symmetric::gen_key();
 
         Trustee {
             keypair,
-            work_cache,
             symmetric,
+            phantom_e: PhantomData,
+            phantom_g: PhantomData,
         }
     }
 

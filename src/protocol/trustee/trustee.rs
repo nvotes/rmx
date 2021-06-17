@@ -14,8 +14,8 @@ use crate::crypto::hashing::*;
 use crate::crypto::keymaker::Keymaker;
 use crate::crypto::symmetric;
 
-use crate::bulletinboard::staging::Staging;
 use crate::bulletinboard::mixnetboard::*;
+use crate::bulletinboard::staging::Staging;
 
 quick_error! {
     #[derive(Debug)]
@@ -85,9 +85,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
                     self.mix(self_t, cfg_h, cnt, ballots_h, pk_h, board)?;
                 }
                 Act::CheckMix(cfg_h, cnt, trustee, mix_h, ballots_h, pk_h) => {
-                    self.check_mix(
-                        self_t, cfg_h, cnt, trustee, mix_h, ballots_h, pk_h, board,
-                    )?;
+                    self.check_mix(self_t, cfg_h, cnt, trustee, mix_h, ballots_h, pk_h, board)?;
                 }
                 Act::PartialDecrypt(cfg_h, cnt, mix_h, share_h) => {
                     self.partial_decrypt(self_t, cfg_h, cnt, mix_h, share_h, board)?;

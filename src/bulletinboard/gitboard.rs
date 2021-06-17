@@ -465,11 +465,11 @@ pub fn test_config() -> GitBoard {
 
 #[cfg(test)]
 mod tests {
+    use rand::distributions::Alphanumeric;
+    use rand::{thread_rng, Rng};
     use serial_test::serial;
     use std::fs;
     use std::path::Path;
-    use rand::{thread_rng, Rng};
-    use rand::distributions::Alphanumeric;
 
     use crate::bulletinboard::gitboard::*;
 
@@ -517,7 +517,8 @@ mod tests {
         let name_str = random_string();
         let name = Path::new(&name_str);
 
-        g.add_and_commit(vec![(name, "test".as_bytes().to_vec())], "new file").unwrap();
+        g.add_and_commit(vec![(name, "test".as_bytes().to_vec())], "new file")
+            .unwrap();
         g.post().unwrap();
         fs::remove_dir_all(&g.fs_path).ok();
         g.open_or_clone().unwrap();
@@ -536,7 +537,8 @@ mod tests {
         // add new file
         let name_str = random_string();
         let name = Path::new(&name_str);
-        g.add_and_commit(vec![(name, "test".as_bytes().to_vec())], "new file").unwrap();
+        g.add_and_commit(vec![(name, "test".as_bytes().to_vec())], "new file")
+            .unwrap();
         g.post().unwrap();
 
         // create 2nd repo after creating file but before making modification
@@ -550,12 +552,18 @@ mod tests {
         let files = g.list().unwrap();
         assert!(files.contains(&name.to_str().unwrap().to_string()));
 
-        let result = g.add_and_commit(vec![(name, "modified".as_bytes().to_vec())], "file modification");
+        let result = g.add_and_commit(
+            vec![(name, "modified".as_bytes().to_vec())],
+            "file modification",
+        );
         // cannot modify upstream in append_only mode
         assert!(result.is_err());
 
         g.append_only = false;
-        let result = g.add_and_commit(vec![(name, "modified".as_bytes().to_vec())], "file modification");
+        let result = g.add_and_commit(
+            vec![(name, "modified".as_bytes().to_vec())],
+            "file modification",
+        );
         g.post().unwrap();
         assert!(result.is_ok());
 
@@ -607,31 +615,49 @@ mod tests {
         // add new file before refresh to trigger a merge
         let name_str = random_string();
         let name = Path::new(&name_str);
-        g2.__add_commit(&g2.open().unwrap(), name, &"test".as_bytes().to_vec(), "add", true)
-            .unwrap();
+        g2.__add_commit(
+            &g2.open().unwrap(),
+            name,
+            &"test".as_bytes().to_vec(),
+            "add",
+            true,
+        )
+        .unwrap();
         // will merge
         g2.list().unwrap();
 
         // modify a file in g1
         g1.append_only = false;
-        g1.add_and_commit(vec![(name1, "modified".as_bytes().to_vec())], "file modification")
-            .unwrap();
+        g1.add_and_commit(
+            vec![(name1, "modified".as_bytes().to_vec())],
+            "file modification",
+        )
+        .unwrap();
         g1.post().unwrap();
 
         // add a new file prior to refreshing to trigger a merge,
         // this time with non-add changes
         let name_str = random_string();
         let name = Path::new(&name_str);
-        g2.__add_commit(&g2.open().unwrap(), name, &"test".as_bytes().to_vec(), "add", true)
-            .unwrap();
+        g2.__add_commit(
+            &g2.open().unwrap(),
+            name,
+            &"test".as_bytes().to_vec(),
+            "add",
+            true,
+        )
+        .unwrap();
         // since we are passing false to append only, the merge will work
         g2.append_only = false;
         g2.list().unwrap();
 
         // modify a file in g1
         g1.append_only = false;
-        g1.add_and_commit(vec![(name1, "modified again".as_bytes().to_vec())], "file modification")
-            .unwrap();
+        g1.add_and_commit(
+            vec![(name1, "modified again".as_bytes().to_vec())],
+            "file modification",
+        )
+        .unwrap();
         g1.post().unwrap();
 
         // add a new file prior to refreshing to trigger a merge,
@@ -639,8 +665,14 @@ mod tests {
 
         let name_str = random_string();
         let name = Path::new(&name_str);
-        g2.__add_commit(&g2.open().unwrap(), name, &"test".as_bytes().to_vec(), "add", true)
-            .unwrap();
+        g2.__add_commit(
+            &g2.open().unwrap(),
+            name,
+            &"test".as_bytes().to_vec(),
+            "add",
+            true,
+        )
+        .unwrap();
         g2.append_only = true;
         let result = g2.list();
 

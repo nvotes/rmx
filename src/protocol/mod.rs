@@ -20,9 +20,9 @@ mod tests {
     use uuid::Uuid;
 
     use crate::bulletinboard::board::*;
+    use crate::bulletinboard::compositeboard::*;
     use crate::bulletinboard::gitboard;
     use crate::bulletinboard::mixnetboard::*;
-    use crate::bulletinboard::compositeboard::*;
     use crate::crypto::backend::ristretto_b::*;
     use crate::crypto::backend::rug_b::*;
     use crate::crypto::elgamal::PublicKey;
@@ -142,10 +142,7 @@ mod tests {
 
         println!("=================== ballots ===================");
         for i in 0..contests {
-            let pk_b = bb
-                .__get_unsafe(key_public_key(i, 0))
-                .unwrap()
-                .unwrap();
+            let pk_b = bb.__get_unsafe(key_public_key(i, 0)).unwrap().unwrap();
             let pk = PublicKey::<E, G>::deser(&pk_b).unwrap();
 
             let (plaintexts, ciphertexts) = util::random_encrypt_ballots(ballots, &pk);
@@ -156,10 +153,7 @@ mod tests {
             let ss = SignedStatement::ballots(&cfg_h, &ballots_h, i, &bb_keypair);
 
             println!(">> Adding {} ballots", ballots.ciphertexts.len());
-            bb.add_ballots(
-                &ballots, &ss,
-                i,
-            )?;
+            bb.add_ballots(&ballots, &ss, i)?;
             bb.post()?;
         }
         println!("===============================================");
@@ -191,10 +185,7 @@ mod tests {
         prot2.step(&mut bb)?;
 
         for i in 0..contests {
-            let decrypted_b = bb
-                .__get_unsafe(key_plaintexts(i, 0))
-                .unwrap()
-                .unwrap();
+            let decrypted_b = bb.__get_unsafe(key_plaintexts(i, 0)).unwrap().unwrap();
             let decrypted = Plaintexts::<E>::deser(&decrypted_b).unwrap();
             let decoded: Vec<E::Plaintext> = decrypted
                 .plaintexts
@@ -283,12 +274,8 @@ mod tests {
 
         fn add_ballots(&mut self) {
             for i in 0..self.config.contests {
-                let pk_b = self.boards[0]
-                    .__get_unsafe(key_public_key(i, 0))
-                    .unwrap();
-                let ballots_b = self.boards[0]
-                    .__get_unsafe(key_ballots(i))
-                    .unwrap();
+                let pk_b = self.boards[0].__get_unsafe(key_public_key(i, 0)).unwrap();
+                let ballots_b = self.boards[0].__get_unsafe(key_ballots(i)).unwrap();
                 if pk_b.is_some() && ballots_b.is_none() {
                     info!(">> Adding {} ballots..", self.ballots);
                     let pk = PublicKey::<E, G>::deser(&pk_b.unwrap()).unwrap();
@@ -302,12 +289,7 @@ mod tests {
                     let cfg_h = hashing::hash(&self.config);
                     let ss = SignedStatement::ballots(&cfg_h, &ballots_h, i, &self.bb_keypair);
 
-                    self.boards[0]
-                        .add_ballots(
-                            &ballots, &ss,
-                            i,
-                        )
-                        .unwrap();
+                    self.boards[0].add_ballots(&ballots, &ss, i).unwrap();
                     self.boards[0].post().unwrap();
                     info!(">> OK");
                 } else {
@@ -320,9 +302,8 @@ mod tests {
         }
         fn check_plaintexts(&self) {
             for i in 0..self.config.contests {
-                if let Some(decrypted_b) = self.boards[0]
-                    .__get_unsafe(key_plaintexts(i, 0))
-                    .unwrap()
+                if let Some(decrypted_b) =
+                    self.boards[0].__get_unsafe(key_plaintexts(i, 0)).unwrap()
                 {
                     let decrypted = Plaintexts::<E>::deser(&decrypted_b).unwrap();
                     let decoded: Vec<E::Plaintext> = decrypted
@@ -462,9 +443,7 @@ mod tests {
         let cfg = gen_config(&group, contests, trustee_pks, bb_keypair.public);
         println!("Adding config..");
         // enough to push to any bb if we're using multiples ones (GIT)
-        bbs[0]
-            .add_config(&cfg)
-            .unwrap();
+        bbs[0].add_config(&cfg).unwrap();
         bbs[0].post().unwrap();
 
         let mut siv = cursive::default();

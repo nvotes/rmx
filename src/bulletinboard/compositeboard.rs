@@ -357,7 +357,5 @@ fn key_plaintexts_stmt(contest: u32, auth: u32) -> String {
 mod tests {
 
     #[test]
-    fn test_fixme() {
-
-    }
+    fn test_fixme() {}
 }

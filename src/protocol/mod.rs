@@ -387,7 +387,7 @@ mod tests {
         let board = CompositeBoard::<RistrettoPoint, RistrettoGroup, MBoard>::new(basic);
         bbs.push(board);
 
-        for i in 0..trustees {
+        for _ in 0..trustees {
             /*
             Git BB - each bb has its own repository on disk
 

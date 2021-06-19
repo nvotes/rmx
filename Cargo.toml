@@ -17,6 +17,7 @@ ed25519-dalek = {version = "1.0.1", features = ["serde"]}
 aes = "0.6.0"
 block-modes = "0.7.0"
 sha2 = "0.9.1"
+sha3 = "0.9.1"
 rayon = "1.5"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

@@ -1,17 +1,17 @@
 use rand::rngs::OsRng;
-use rand::rngs::StdRng;
 use rand::RngCore;
-use rand::SeedableRng;
 use serde::{Deserialize, Serialize};
 
 use curve25519_dalek::constants::RISTRETTO_BASEPOINT_POINT;
+use curve25519_dalek::digest::{ExtendableOutputDirty, Update, XofReader};
 use curve25519_dalek::ristretto::{CompressedRistretto, RistrettoPoint};
 use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::Identity;
+use sha3::Shake256;
 
 use crate::crypto::elgamal::*;
 use crate::crypto::group::*;
-use crate::crypto::hashing::{hash_bytes_256, HashTo, RistrettoHasher};
+use crate::crypto::hashing::{HashTo, RistrettoHasher};
 use crate::util;
 
 impl Element for RistrettoPoint {
@@ -67,6 +67,41 @@ impl Exponent for Scalar {
 pub struct RistrettoGroup;
 
 impl RistrettoGroup {
+    // https://docs.rs/bulletproofs/4.0.0/src/bulletproofs/generators.rs.html
+    fn generators_shake(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<RistrettoPoint> {
+        let mut seed_ = seed.to_vec();
+        seed_.extend(&contest.to_le_bytes());
+
+        let mut ret: Vec<RistrettoPoint> = Vec::with_capacity(size);
+        let mut shake = Shake256::default();
+        shake.update(seed_);
+
+        let mut reader = shake.finalize_xof_dirty();
+        for _ in 0..size {
+            let mut uniform_bytes = [0u8; 64];
+            reader.read(&mut uniform_bytes);
+            let g = RistrettoPoint::from_uniform_bytes(&uniform_bytes);
+            ret.push(g);
+        }
+
+        ret
+    }
+
+    /*
+    fn generators_rnd(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<RistrettoPoint> {
+        let mut seed_ = seed.to_vec();
+        seed_.extend(&contest.to_le_bytes());
+        let hashed = hash_bytes_256(seed_);
+        let mut csprng: StdRng = SeedableRng::from_seed(hashed);
+        let mut ret: Vec<RistrettoPoint> = Vec::with_capacity(size);
+        for _ in 0..size {
+            let g = RistrettoPoint::random(&mut csprng);
+            ret.push(g);
+        }
+
+        ret
+    }*/
+
     /* fn encode_test(&self, data: [u8; 30]) -> (RistrettoPoint, usize) {
         let mut bytes = [0u8; 32];
         bytes[1..1 + data.len()].copy_from_slice(&data);
@@ -138,19 +173,8 @@ impl Group<RistrettoPoint> for RistrettoGroup {
         Box::new(RistrettoHasher)
     }
 
-    // FIXME not kosher
     fn generators(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<RistrettoPoint> {
-        let mut seed_ = seed.to_vec();
-        seed_.extend(&contest.to_le_bytes());
-        let hashed = hash_bytes_256(seed_);
-        let mut csprng: StdRng = SeedableRng::from_seed(hashed);
-        let mut ret: Vec<RistrettoPoint> = Vec::with_capacity(size);
-        for _ in 0..size {
-            let g = RistrettoPoint::random(&mut csprng);
-            ret.push(g);
-        }
-
-        ret
+        self.generators_shake(size, contest, seed)
     }
 }
 

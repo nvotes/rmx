@@ -1,5 +1,4 @@
 use std::path::Path;
-use std::path::PathBuf;
 
 use crate::crypto::elgamal::PublicKey;
 use crate::crypto::group::Element;
@@ -150,24 +149,10 @@ pub trait MixnetBoard<E: Element, G: Group<E>> {
     fn post(&self) -> Result<(), BBError>;
 }
 
-pub struct ConfigPath(pub PathBuf);
-pub struct ConfigStmtPath(pub PathBuf);
-pub struct KeysharePath(pub PathBuf, pub PathBuf);
-pub struct PkPath(pub PathBuf, pub PathBuf);
-pub struct PkStmtPath(pub PathBuf);
-pub struct BallotsPath(pub PathBuf, pub PathBuf);
-pub struct MixPath(pub PathBuf, pub PathBuf);
-pub struct MixStmtPath(pub PathBuf);
-pub struct PDecryptionsPath(pub PathBuf, pub PathBuf);
-pub struct PlaintextsPath(pub PathBuf, pub PathBuf);
-pub struct PlaintextsStmtPath(pub PathBuf);
-
-pub const CONFIG: &str = "config";
-pub const CONFIG_STMT: &str = "config.stmt";
-
-pub const SHARE: &str = "share";
-pub const PUBLIC_KEY: &str = "public_key";
-pub const BALLOTS: &str = "ballots";
-pub const MIX: &str = "mix";
-pub const DECRYPTION: &str = "decryption";
-pub const PLAINTEXTS: &str = "plaintexts";
+pub(crate) const CONFIG: &str = "config";
+pub(crate) const SHARE: &str = "share";
+pub(crate) const PUBLIC_KEY: &str = "public_key";
+pub(crate) const BALLOTS: &str = "ballots";
+pub(crate) const MIX: &str = "mix";
+pub(crate) const DECRYPTION: &str = "decryption";
+pub(crate) const PLAINTEXTS: &str = "plaintexts";

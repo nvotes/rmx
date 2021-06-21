@@ -214,13 +214,12 @@ impl GitBoard {
 
     fn add_and_commit(&self, files: Vec<(&Path, Vec<u8>)>, message: &str) -> Result<(), Error> {
         let mut entries = vec![];
+        let repo = self.open_or_clone()?;
         for (target, bytes) in files {
             let next = self.prepare_add(target, &bytes);
             entries.push(next);
         }
 
-        let repo = self.open_or_clone()?;
-        // adding to repo index uses relative path
         add_and_commit(&repo, entries, message, self.append_only)
     }
 
@@ -295,7 +294,7 @@ impl GitBoard {
         append_only: bool,
     ) -> Result<(), Error> {
         let entry = self.prepare_add(target, source);
-        // adding to repo index uses relative path
+
         add_and_commit(&repo, vec![entry], message, append_only)
     }
 }
@@ -366,7 +365,7 @@ fn merge(
     let result_tree = repo.find_tree(idx.write_tree_to(repo)?)?;
     // now create the merge commit
     info!("GIT: merge: {} into {}", remote.id(), local.id());
-    // let sig = repo.signature()?;
+
     let signature = Signature::now("braid", "braid@foo.bar")?;
     let local_commit = repo.find_commit(local.id())?;
     let remote_commit = repo.find_commit(remote.id())?;

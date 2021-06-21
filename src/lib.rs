@@ -3,6 +3,6 @@ extern crate quick_error;
 
 pub mod bulletinboard;
 pub mod crypto;
-pub mod data;
+pub(crate) mod data;
 pub mod protocol;
 pub mod util;

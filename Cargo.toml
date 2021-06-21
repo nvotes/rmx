@@ -12,8 +12,9 @@ edition = "2018"
 [dependencies]
 rand = "0.7.3"
 rug = {version = "1.12", features = ["integer", "rand", "serde"]}
-curve25519-dalek = {version = "3.0.0", features = ["serde"]}
-ed25519-dalek = {version = "1.0.1", features = ["serde"]}
+# curve25519-dalek = { package = "curve25519-dalek-ng", version = "4", features=["serde"] }
+curve25519-dalek = {version = "3", features = ["serde"]}
+ed25519-dalek = {version = "1", features = ["serde"]}
 aes = "0.6.0"
 block-modes = "0.7.0"
 sha2 = "0.9.1"
@@ -39,7 +40,7 @@ simplelog = "0.9.0"
 quick-error = "2.0.0"
 
 [dev-dependencies]
-criterion = "0.3"
+criterion = "0.3.4"
 serial_test = "0.5.0"
 regex = "1"
 cursive = "0.15"
@@ -63,3 +64,5 @@ harness = false
 # [[bench]]
 # name = "hash_bench"
 # harness = false
+[features]
+simd_backend = ["curve25519-dalek/nightly", "curve25519-dalek/simd_backend"]

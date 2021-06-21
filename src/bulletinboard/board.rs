@@ -24,25 +24,6 @@ impl Board for MBoard {
     }
     fn get(&self, target: String) -> Result<Option<Vec<u8>>, BBError> {
         Ok(self.data.get(&target).map(|v| v.to_vec()))
-        /* let key = target;
-        if let Some(bytes) = self.data.get(&key) {
-            let _now_ = std::time::Instant::now();
-
-            let artifact = A::deser(bytes)?;
-            // info!(">> Deser {}, bytes {}", now_.elapsed().as_millis(), bytes.len());
-
-            let _now_ = std::time::Instant::now();
-            let hashed = hashing::hash(&artifact);
-            // info!(">> Hash {}", now_.elapsed().as_millis());
-
-            if hashed == hash {
-                Ok(Some(artifact))
-            } else {
-                Err(BBError::Msg("Hash mismatch".to_string()))
-            }
-        } else {
-            Ok(None)
-        }*/
     }
     fn add(&mut self, entries: Vec<(&Path, Vec<u8>)>, _message: String) -> Result<(), BBError> {
         for (name, data) in entries {

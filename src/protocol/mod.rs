@@ -21,6 +21,7 @@ mod tests {
     use crate::bulletinboard::board::*;
     use crate::bulletinboard::compositeboard::*;
     use crate::bulletinboard::gitboard;
+    use crate::bulletinboard::gitboard::GitBoard;
     use crate::bulletinboard::mixnetboard::*;
     use crate::crypto::backend::ristretto_b::*;
     use crate::crypto::backend::rug_b::*;
@@ -40,98 +41,110 @@ mod tests {
     use simplelog::*;
 
     #[test]
-    fn run_rug_mem() {
-        // setup_log();
+    fn protocol_rug_mem() {
+        setup_log();
         let group = RugGroup::default();
-        run(group, MBoard::default()).unwrap();
+        // run(group, MBoard::default()).unwrap();
+        run(group, 2, vec![MBoard::default()]).unwrap();
     }
 
     #[test]
-    fn run_ristretto_mem() {
-        // setup_log();
-        let group = RistrettoGroup;
-        run(group, MBoard::default()).unwrap();
-    }
-
-    #[ignore]
-    #[test]
-    #[serial]
-    fn run_rug_remote() {
-        // setup_log();
-        let group = RugGroup::default();
-        let bb = git_board(0);
-        bb.__clear().unwrap();
-        run(group, bb).unwrap();
-    }
-
-    #[ignore]
-    #[test]
-    #[serial]
-    fn run_ristretto_remote() {
+    fn protocol_ristretto_mem() {
         setup_log();
         let group = RistrettoGroup;
-        let bb = git_board(1);
-        bb.__clear().unwrap();
-        run(group, bb).unwrap();
+        // run(group, MBoard::default()).unwrap();
+        run(group, 2, vec![MBoard::default()]).unwrap();
+    }
+
+    #[ignore]
+    #[test]
+    #[serial]
+    fn protocol_rug_remote() {
+        setup_log();
+        let group = RugGroup::default();
+        let trustees = 2;
+        let mut boards = vec![];
+        for i in 0..trustees {
+            let bb = git_board(i);
+            fs::remove_dir_all(&bb.fs_path).ok();
+            boards.push(bb);
+        }
+        boards[0].__clear().unwrap();
+        fs::remove_dir_all(&boards[0].fs_path).ok();
+
+        run(group, trustees, boards).unwrap();
+    }
+
+    #[ignore]
+    #[test]
+    #[serial]
+    fn protocol_ristretto_remote() {
+        setup_log();
+        let group = RistrettoGroup;
+        let trustees = 2;
+        let mut boards = vec![];
+        for i in 0..trustees {
+            let bb = git_board(i);
+            fs::remove_dir_all(&bb.fs_path).ok();
+            boards.push(bb);
+        }
+        boards[0].__clear().unwrap();
+        fs::remove_dir_all(&boards[0].fs_path).ok();
+
+        run(group, trustees, boards).unwrap();
     }
 
     fn run<E: Element + std::cmp::PartialEq, G: Group<E>, B: Board>(
         group: G,
-        basic: B,
+        num_trustees: u32,
+        mut boards: Vec<B>,
     ) -> Result<(), TrusteeError>
     where
         <E as Element>::Plaintext: std::hash::Hash,
         <E as Element>::Plaintext: Eq,
     {
-        let trustee1: Trustee<E, G> = Trustee::new();
-        let trustee2: Trustee<E, G> = Trustee::new();
-        let mut csprng = OsRng;
-        let bb_keypair = Keypair::generate(&mut csprng);
-
-        let mut bb = CompositeBoard::<E, G, B>::new(basic);
-
-        let mut trustee_pks = Vec::new();
-        trustee_pks.push(trustee1.keypair.public);
-        trustee_pks.push(trustee2.keypair.public);
-
+        let mut trustee_pks = vec![];
+        let mut drivers = vec![];
+        let mut mixboards = vec![];
         let contests = 3;
         let ballots = 200;
+
+        for _ in 0..num_trustees {
+            let trustee = Trustee::new();
+            trustee_pks.push(trustee.keypair.public);
+            let driver: Driver<E, G, CompositeBoard<E, G, B>> = Driver::new(trustee);
+            drivers.push(driver);
+        }
+        for _ in 0..boards.len() {
+            mixboards.push(CompositeBoard::<E, G, B>::new(boards.remove(0)));
+        }
+
+        let mut csprng = OsRng;
+        let bb_keypair = Keypair::generate(&mut csprng);
         let cfg = gen_config(&group, contests, trustee_pks, bb_keypair.public);
+        mixboards[0].add_config(&cfg)?;
+        mixboards[0].post()?;
 
-        bb.add_config(&cfg)?;
-        bb.post()?;
+        loop {
+            let mut total_actions = 0;
+            for i in 0..drivers.len() {
+                if mixboards.len() == 1 {
+                    total_actions += drivers[i].step(&mut mixboards[0]).unwrap()
+                } else {
+                    total_actions += drivers[i].step(&mut mixboards[i]).unwrap()
+                }
+            }
+            if total_actions == 0 {
+                break;
+            }
+        }
 
-        let prot1: Driver<E, G, CompositeBoard<E, G, B>> = Driver::new(trustee1);
-        let prot2: Driver<E, G, CompositeBoard<E, G, B>> = Driver::new(trustee2);
-
-        // mix position 0
-        prot1.step(&mut bb)?;
-        // verify mix position 0
-        prot2.step(&mut bb)?;
-
-        // nothing
-        prot1.step(&mut bb)?;
-        // mix position 1
-        prot2.step(&mut bb)?;
-
-        // check mix position 1
-        prot1.step(&mut bb)?;
-        // partial decryptions
-        prot2.step(&mut bb)?;
-
-        // partial decryptions
-        prot1.step(&mut bb)?;
-        // nothing
-        prot2.step(&mut bb)?;
-
-        // combine decryptions
-        prot1.step(&mut bb)?;
-
-        let mut all_plaintexts = Vec::with_capacity(contests as usize);
-
-        println!("=================== ballots ===================");
+        let mut all_plaintexts = vec![];
         for i in 0..contests {
-            let pk_b = bb.__get_unsafe(key_public_key(i, 0)).unwrap().unwrap();
+            let pk_b = mixboards[0]
+                .__get_unsafe(key_public_key(i, 0))
+                .unwrap()
+                .unwrap();
             let pk = PublicKey::<E, G>::deser(&pk_b).unwrap();
 
             let (plaintexts, ciphertexts) = util::random_encrypt_ballots(ballots, &pk);
@@ -141,40 +154,31 @@ mod tests {
             let cfg_h = hashing::hash(&cfg);
             let ss = SignedStatement::ballots(&cfg_h, &ballots_h, i, &bb_keypair);
 
-            println!(">> Adding {} ballots", ballots.ciphertexts.len());
-            bb.add_ballots(&ballots, &ss, i)?;
-            bb.post()?;
+            info!(">> Adding {} ballots", ballots.ciphertexts.len());
+            mixboards[0].add_ballots(&ballots, &ss, i)?;
+            mixboards[0].post()?;
         }
-        println!("===============================================");
 
-        // mix position 0
-        prot1.step(&mut bb)?;
-        // verify mix position 0
-        prot2.step(&mut bb)?;
-
-        // nothing
-        prot1.step(&mut bb)?;
-        // mix position 1
-        prot2.step(&mut bb)?;
-
-        // check mix position 1
-        prot1.step(&mut bb)?;
-        // partial decryptions
-        prot2.step(&mut bb)?;
-
-        // partial decryptions
-        prot1.step(&mut bb)?;
-        // nothing
-        prot2.step(&mut bb)?;
-
-        // combine decryptions
-        prot1.step(&mut bb)?;
-
-        // check plaintexts
-        prot2.step(&mut bb)?;
+        loop {
+            let mut total_actions = 0;
+            for i in 0..drivers.len() {
+                if mixboards.len() == 1 {
+                    total_actions += drivers[i].step(&mut mixboards[0]).unwrap()
+                } else {
+                    total_actions += drivers[i].step(&mut mixboards[i]).unwrap()
+                }
+            }
+            info!(">> Total actions = {}", total_actions);
+            if total_actions == 0 {
+                break;
+            }
+        }
 
         for i in 0..contests {
-            let decrypted_b = bb.__get_unsafe(key_plaintexts(i, 0)).unwrap().unwrap();
+            let decrypted_b = mixboards[0]
+                .__get_unsafe(key_plaintexts(i, 0))
+                .unwrap()
+                .unwrap();
             let decrypted = Plaintexts::<E>::deser(&decrypted_b).unwrap();
             let decoded: Vec<E::Plaintext> = decrypted
                 .plaintexts
@@ -185,9 +189,9 @@ mod tests {
                 HashSet::from_iter(all_plaintexts[i as usize].iter().clone());
             let p2: HashSet<&E::Plaintext> = HashSet::from_iter(decoded.iter().clone());
 
-            print!("Checking plaintexts contest=[{}]...", i);
+            info!("Checking plaintexts contest=[{}]...", i);
             assert!(p1 == p2);
-            println!("Ok");
+            info!("Ok");
         }
 
         Ok(())
@@ -196,7 +200,6 @@ mod tests {
     use std::sync::Once;
 
     static INIT: Once = Once::new();
-
     /// Setup function that is only run once, even if called multiple times.
     fn setup_log() {
         INIT.call_once(|| {
@@ -255,7 +258,6 @@ mod tests {
                 bb_keypair,
                 config: cfg,
                 boards,
-                // board: bb,
                 all_plaintexts: vec![],
                 ballots,
             }
@@ -533,7 +535,7 @@ mod tests {
             .fixed_width(95)
             .full_height(),
         );
-        // siv.add_fullscreen_layer(h_layout);
+
         siv.add_layer(h_layout);
         siv.add_global_callback('q', |s| s.quit());
         siv.add_global_callback('s', move |s| {
@@ -746,8 +748,6 @@ mod tests {
 
         cfg
     }
-
-    use crate::bulletinboard::gitboard::GitBoard;
 
     fn git_board(i: u32) -> GitBoard {
         let mut board = gitboard::test_config();

@@ -107,7 +107,7 @@ mod tests {
         let mut drivers = vec![];
         let mut mixboards = vec![];
         let contests = 3;
-        let ballots = 200;
+        let ballots = 100;
 
         for _ in 0..num_trustees {
             let trustee = Trustee::new();

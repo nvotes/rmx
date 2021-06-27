@@ -27,7 +27,7 @@ pub fn shuffle_ristretto(n: usize) -> Mix<RistrettoPoint> {
         es.push(c);
     }
     let seed = vec![];
-    let hs = generators(es.len() + 1, &group, 0, seed);
+    let hs = group.generators(es.len() + 1, 0, seed);
     let shuffler = Shuffler {
         pk: &pk,
         generators: &hs,
@@ -56,7 +56,7 @@ pub fn shuffle_rug(n: usize) -> Mix<Integer> {
         es.push(c);
     }
     let seed = vec![];
-    let hs = generators(es.len() + 1, &group, 0, seed);
+    let hs = group.generators(es.len() + 1, 0, seed);
     let shuffler = Shuffler {
         pk: &pk,
         generators: &hs,

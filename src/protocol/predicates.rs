@@ -1,4 +1,3 @@
-use log::info;
 use std::collections::HashSet;
 use std::fmt;
 
@@ -6,6 +5,25 @@ use strum::Display;
 
 use crate::protocol::logic::*;
 use crate::util::{short, shortm};
+
+type DatalogOutput = (
+    HashSet<Do>,
+    HashSet<ConfigOk>,
+    HashSet<PkSharesAll>,
+    HashSet<PkOk>,
+    HashSet<PkSharesUpTo>,
+    HashSet<ConfigSignedUpTo>,
+    HashSet<Contest>,
+    HashSet<PkSignedUpTo>,
+    HashSet<MixSignedUpTo>,
+    HashSet<MixOk>,
+    HashSet<ContestMixedUpTo>,
+    HashSet<ContestMixedOk>,
+    HashSet<DecryptionsUpTo>,
+    HashSet<DecryptionsAll>,
+    HashSet<PlaintextsSignedUpTo>,
+    HashSet<PlaintextsOk>,
+);
 
 #[derive(Copy, Clone, Display)]
 pub(super) enum InputPredicate {
@@ -81,61 +99,6 @@ impl InputPredicate {
     }
 }
 
-impl fmt::Debug for InputPredicate {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            InputPredicate::ConfigPresent(x) => write!(
-                f,
-                "ConfigPresent: [contests={} trustees={} self={}] {:?}",
-                x.1,
-                x.2,
-                x.3,
-                short(&x.0)
-            ),
-            InputPredicate::ConfigSignedBy(x) => {
-                write!(f, "ConfigSignedBy: [{}] cfg: {:?}", x.1, short(&x.0))
-            }
-            InputPredicate::PkShareSignedBy(x) => write!(
-                f,
-                "PkShareSignedBy [cn={} tr={}] share: {:?}",
-                x.1,
-                x.3,
-                short(&x.2)
-            ),
-            InputPredicate::PkSignedBy(x) => write!(
-                f,
-                "PkSignedBy [cn={} tr={}] for pk: {:?}",
-                x.1,
-                x.3,
-                short(&x.2)
-            ),
-
-            InputPredicate::BallotsSigned(x) => {
-                write!(f, "BallotsSigned [cn={}] [ballots={:?}]", x.1, short(&x.2))
-            }
-            InputPredicate::MixSignedBy(x) => write!(
-                f,
-                "MixSignedBy [cn={}] {:?} <- {:?}, [mxr={}, signer={}]",
-                x.1,
-                short(&x.2),
-                short(&x.3),
-                x.4,
-                x.5
-            ),
-            InputPredicate::DecryptionSignedBy(x) => write!(
-                f,
-                "DecryptionSignedBy [cn={}] [signer={}] {:?}",
-                x.1,
-                x.3,
-                short(&x.0)
-            ),
-            InputPredicate::PlaintextsSignedBy(x) => {
-                write!(f, "PlaintextsSignedBy [cn={}] {:?}", x.1, short(&x.0))
-            }
-        }
-    }
-}
-
 #[derive(Copy, Clone, Hash, Eq, PartialEq)]
 pub enum Act {
     CheckConfig(ConfigHash),
@@ -162,61 +125,6 @@ pub enum Act {
         Hashes,
     ),
 }
-
-impl fmt::Debug for Act {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self {
-            Act::CheckConfig(cfg) => write!(f, "CheckConfig {:?}", short(cfg)),
-            Act::PostShare(cfg, cnt) => write!(f, "PostShare cn=[{}] cfg: {:?}", cnt, short(cfg)),
-            Act::CombineShares(_cfg, cnt, hs) => {
-                write!(f, "CombineShares cn=[{}] shares: {:?}", cnt, shortm(hs))
-            }
-            Act::CheckPk(_cfg, cnt, h1, hs) => write!(
-                f,
-                "CheckPk cn=[{}], pk {:?} shares: {:?}",
-                cnt,
-                short(h1),
-                shortm(hs)
-            ),
-            Act::Mix(cfg, cnt, _bh, _pk_h) => write!(f, "Mix cn=[{}] cfg: {:?}", cnt, short(cfg)),
-            Act::CheckMix(_cfg, cnt, t, mh, _bh, _pk_h) => write!(
-                f,
-                "CheckMix cn=[{}] mix={:?} posted by tr=[{}]",
-                cnt,
-                short(mh),
-                t
-            ),
-            Act::PartialDecrypt(cfg, cnt, _h1, _share_h) => {
-                write!(f, "PartialDecrypt cn=[{}] cfg: {:?}", cnt, short(cfg))
-            }
-            Act::CombineDecryptions(cfg, cnt, _hs, _mix_h, _share_hs) => {
-                write!(f, "CombineDecryptions cn=[{}] cfg: {:?}", cnt, short(cfg))
-            }
-            Act::CheckPlaintexts(cfg, cnt, _p_h, _d_hs, _mix_h, _share_hs) => {
-                write!(f, "CheckPlaintexts cn=[{}] cfg: {:?}", cnt, short(cfg))
-            }
-        }
-    }
-}
-
-type DatalogOutput = (
-    HashSet<Do>,
-    HashSet<ConfigOk>,
-    HashSet<PkSharesAll>,
-    HashSet<PkOk>,
-    HashSet<PkSharesUpTo>,
-    HashSet<ConfigSignedUpTo>,
-    HashSet<Contest>,
-    HashSet<PkSignedUpTo>,
-    HashSet<MixSignedUpTo>,
-    HashSet<MixOk>,
-    HashSet<ContestMixedUpTo>,
-    HashSet<ContestMixedOk>,
-    HashSet<DecryptionsUpTo>,
-    HashSet<DecryptionsAll>,
-    HashSet<PlaintextsSignedUpTo>,
-    HashSet<PlaintextsOk>,
-);
 
 pub struct AllPredicates {
     pub(self) input_facts: Vec<InputPredicate>,
@@ -301,51 +209,6 @@ impl AllPredicates {
         }
     }
 
-    pub(super) fn log(&self) {
-        let next = &self.config_ok;
-        for f in next {
-            info!("OFact: ConfigOk {:?}", short(&f.0));
-        }
-        let next = &self.pk_shares_ok;
-        for f in next {
-            info!("OFact: PkSharesAll {:?}", short(&f.0));
-        }
-        let next = &self.pk_ok;
-        for f in next {
-            info!("OFact: PkOk {:?}", short(&f.0));
-        }
-        let next = &self.mixes_ok;
-        for f in next {
-            info!(
-                "OFact: MixOk cn=[{}] {:?} <- {:?}",
-                f.1,
-                short(&f.2),
-                short(&f.3)
-            );
-        }
-        let next = &self.contest_mixed_ok;
-        for f in next {
-            info!(
-                "OFact: ContestMixedOk cn=[{}] mix={:?} cfg {:?}",
-                f.1,
-                short(&f.2),
-                short(&f.0)
-            );
-        }
-        let next = &self.decryptions_all;
-        for f in next {
-            info!("OFact: DecryptionsAll cn=[{}] cfg {:?}", f.1, short(&f.0));
-        }
-        let next = &self.plaintexts_ok;
-        for f in next {
-            info!("OFact: PlaintextsOk cn=[{}] cfg {:?}", f.1, short(&f.0));
-        }
-        let next = &self.all_actions;
-        for f in next {
-            info!("OFact: Action {:?}", f);
-        }
-    }
-
     pub fn pk_shares_len(&self) -> usize {
         self.pk_shares_ok.len()
     }
@@ -378,6 +241,153 @@ impl AllPredicates {
             Some(self.input_facts[self.input_facts.len() - 1])
         } else {
             None
+        }
+    }
+}
+
+impl fmt::Debug for Act {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Act::CheckConfig(cfg) => write!(f, "CheckConfig {:?}", short(cfg)),
+            Act::PostShare(cfg, cnt) => write!(f, "PostShare cn=[{}] cfg: {:?}", cnt, short(cfg)),
+            Act::CombineShares(_cfg, cnt, hs) => {
+                write!(f, "CombineShares cn=[{}] shares: {:?}", cnt, shortm(hs))
+            }
+            Act::CheckPk(_cfg, cnt, h1, hs) => write!(
+                f,
+                "CheckPk cn=[{}], pk {:?} shares: {:?}",
+                cnt,
+                short(h1),
+                shortm(hs)
+            ),
+            Act::Mix(cfg, cnt, _bh, _pk_h) => write!(f, "Mix cn=[{}] cfg: {:?}", cnt, short(cfg)),
+            Act::CheckMix(_cfg, cnt, t, mh, _bh, _pk_h) => write!(
+                f,
+                "CheckMix cn=[{}] mix={:?} posted by tr=[{}]",
+                cnt,
+                short(mh),
+                t
+            ),
+            Act::PartialDecrypt(cfg, cnt, _h1, _share_h) => {
+                write!(f, "PartialDecrypt cn=[{}] cfg: {:?}", cnt, short(cfg))
+            }
+            Act::CombineDecryptions(cfg, cnt, _hs, _mix_h, _share_hs) => {
+                write!(f, "CombineDecryptions cn=[{}] cfg: {:?}", cnt, short(cfg))
+            }
+            Act::CheckPlaintexts(cfg, cnt, _p_h, _d_hs, _mix_h, _share_hs) => {
+                write!(f, "CheckPlaintexts cn=[{}] cfg: {:?}", cnt, short(cfg))
+            }
+        }
+    }
+}
+
+impl fmt::Debug for AllPredicates {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let next = &self.config_ok;
+        for p in next {
+            writeln!(f, "OFact: ConfigOk {:?}", short(&p.0))?;
+        }
+        let next = &self.pk_shares_ok;
+        for p in next {
+            writeln!(f, "OFact: PkSharesAll {:?}", short(&p.0))?;
+        }
+        let next = &self.pk_ok;
+        for p in next {
+            writeln!(f, "OFact: PkOk {:?}", short(&p.0))?;
+        }
+        let next = &self.mixes_ok;
+        for p in next {
+            writeln!(
+                f,
+                "OFact: MixOk cn=[{}] {:?} <- {:?}",
+                p.1,
+                short(&p.2),
+                short(&p.3)
+            )?;
+        }
+        let next = &self.contest_mixed_ok;
+        for p in next {
+            writeln!(
+                f,
+                "OFact: ContestMixedOk cn=[{}] mix={:?} cfg {:?}",
+                p.1,
+                short(&p.2),
+                short(&p.0)
+            )?;
+        }
+        let next = &self.decryptions_all;
+        for p in next {
+            writeln!(
+                f,
+                "OFact: DecryptionsAll cn=[{}] cfg {:?}",
+                p.1,
+                short(&p.0)
+            )?;
+        }
+        let next = &self.plaintexts_ok;
+        for p in next {
+            writeln!(f, "OFact: PlaintextsOk cn=[{}] cfg {:?}", p.1, short(&p.0))?;
+        }
+        let next = &self.all_actions;
+        for p in next {
+            writeln!(f, "OFact: Action {:?}", p)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl fmt::Debug for InputPredicate {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            InputPredicate::ConfigPresent(x) => write!(
+                f,
+                "ConfigPresent: [contests={} trustees={} self={}] {:?}",
+                x.1,
+                x.2,
+                x.3,
+                short(&x.0)
+            ),
+            InputPredicate::ConfigSignedBy(x) => {
+                write!(f, "ConfigSignedBy: [{}] cfg: {:?}", x.1, short(&x.0))
+            }
+            InputPredicate::PkShareSignedBy(x) => write!(
+                f,
+                "PkShareSignedBy [cn={} tr={}] share: {:?}",
+                x.1,
+                x.3,
+                short(&x.2)
+            ),
+            InputPredicate::PkSignedBy(x) => write!(
+                f,
+                "PkSignedBy [cn={} tr={}] for pk: {:?}",
+                x.1,
+                x.3,
+                short(&x.2)
+            ),
+
+            InputPredicate::BallotsSigned(x) => {
+                write!(f, "BallotsSigned [cn={}] [ballots={:?}]", x.1, short(&x.2))
+            }
+            InputPredicate::MixSignedBy(x) => write!(
+                f,
+                "MixSignedBy [cn={}] {:?} <- {:?}, [mxr={}, signer={}]",
+                x.1,
+                short(&x.2),
+                short(&x.3),
+                x.4,
+                x.5
+            ),
+            InputPredicate::DecryptionSignedBy(x) => write!(
+                f,
+                "DecryptionSignedBy [cn={}] [signer={}] {:?}",
+                x.1,
+                x.3,
+                short(&x.0)
+            ),
+            InputPredicate::PlaintextsSignedBy(x) => {
+                write!(f, "PlaintextsSignedBy [cn={}] {:?}", x.1, short(&x.0))
+            }
         }
     }
 }

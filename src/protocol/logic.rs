@@ -350,7 +350,8 @@ impl<E: Element, G: Group<E>, B: MixnetBoard<E, G>> Driver<E, G, B> {
 
         let ret = AllPredicates::new(input_predicates, output_predicates);
 
-        ret.log();
+        info!("{:?}", ret);
+        // ret.log();
         info!("");
         info!("Output facts ({} actions) derived in [{}ms]", actions, done);
 

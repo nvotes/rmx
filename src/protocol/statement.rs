@@ -192,7 +192,6 @@ impl SignedStatement {
             signature,
         }
     }
-
     pub fn pdecryptions(
         cfg_h: &hashing::Hash,
         pd_h: &hashing::Hash,
@@ -254,10 +253,6 @@ impl StatementVerifier {
         let statement_hash = hashing::hash(statement);
         let verified = pk.verify(&statement_hash, &self.statement.signature);
         let config_h = util::to_u8_64(&statement.hashes[0]);
-        // info!("* Verify returns: [{}] on [{:?}] from trustee [{}] for contest [{}]", verified.is_ok(),
-        //    &self.statement.statement.stype, &self.trustee, &self.contest
-        //);
-
         let mixer_t = statement.trustee_aux.unwrap_or(self_t);
 
         match statement.stype {

@@ -1000,15 +1000,15 @@ mod tests {
         let secret = group.rnd_exp();
         let public1 = g1.mod_pow(&secret, &group.modulus());
         let public2 = g2.mod_pow(&secret, &group.modulus());
-        let proof = group.cp_prove(&secret, &public1, &public2, &g1, &g2, &vec![]);
-        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &proof, &vec![]);
+        let proof = group.cp_prove(&secret, &public1, &public2, None, &g2, &vec![]);
+        let verified = group.cp_verify(&public1, &public2, None, &g2, &proof, &vec![]);
         assert!(verified == true);
 
         let bytes = proof.ser();
         let back = ChaumPedersen::<Integer>::deser(&bytes).unwrap();
         assert!(proof == back);
 
-        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &back, &vec![]);
+        let verified = group.cp_verify(&public1, &public2, None, &g2, &back, &vec![]);
         assert!(verified == true);
     }
 
@@ -1086,7 +1086,7 @@ mod tests {
             es.push(c);
         }
         let seed = vec![];
-        let hs = generators(es.len() + 1, &group, 0, seed);
+        let hs = group.generators(es.len() + 1, 0, seed);
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,

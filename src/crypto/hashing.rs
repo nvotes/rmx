@@ -5,7 +5,7 @@ use curve25519_dalek::ristretto::RistrettoPoint;
 use curve25519_dalek::scalar::Scalar;
 use rug::{integer::Order, Integer};
 use serde_bytes::ByteBuf;
-use sha2::{Digest, Sha256, Sha512};
+use sha2::{Digest, Sha512};
 
 use crate::crypto::elgamal::*;
 use crate::crypto::group::*;
@@ -163,13 +163,6 @@ pub fn hash_bytes(bytes: Vec<u8>) -> [u8; 64] {
     let mut hasher = Sha512::new();
     hasher.update(bytes);
     util::to_u8_64(&hasher.finalize().to_vec())
-}
-
-// We only use this variant for seeding rngs when deriving independent generators
-pub fn hash_bytes_256(bytes: Vec<u8>) -> [u8; 32] {
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    util::to_u8_32(&hasher.finalize().to_vec())
 }
 
 #[cfg(test)]

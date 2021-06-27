@@ -59,7 +59,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
             &self.sk.value,
             &self.pk.value,
             &dec_factor,
-            &group.generator(),
+            None,
             &c.b,
             label,
         );
@@ -82,9 +82,7 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
 
     pub fn joint_dec(group: &G, decs: Vec<E>, c: &Ciphertext<E>) -> E {
         let mut acc: E = decs[0].clone();
-        // for i in 1..decs.len() {
         for dec in decs.iter().skip(1) {
-            // acc = acc.mul(&decs[i]).modulo(&group.modulus());
             acc = acc.mul(&dec).modulo(&group.modulus());
         }
 
@@ -119,14 +117,13 @@ impl<E: Element, G: Group<E>> Keymaker<E, G> {
     ) -> bool {
         assert_eq!(decs.len(), proofs.len());
         assert_eq!(decs.len(), ciphertexts.len());
-        let generator = group.generator();
         let bools: Vec<bool> = (0..decs.len())
             .into_par_iter()
             .map(|i| {
                 group.cp_verify(
                     pk_value,
                     &decs[i],
-                    &generator,
+                    None,
                     &ciphertexts[i].b,
                     &proofs[i],
                     label,

@@ -143,7 +143,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             .ok_or_else(|| TrusteeError::Msg("Could not find pk".to_string()))?;
 
         let group = &cfg.group;
-        let hs = generators(ciphertexts.len() + 1, group, contest, cfg.id.to_vec());
+        let hs = group.generators(ciphertexts.len() + 1, contest, cfg.id.to_vec());
 
         let challenger = &*group.challenger();
         let shuffler = Shuffler {
@@ -227,7 +227,7 @@ impl<E: Element, G: Group<E>> Trustee<E, G> {
             .ok_or_else(|| TrusteeError::Msg("Could not find pk".to_string()))?;
         let group = &cfg.group;
 
-        let hs = generators(ciphertexts.len() + 1, group, contest, cfg.id.to_vec());
+        let hs = group.generators(ciphertexts.len() + 1, contest, cfg.id.to_vec());
         let challenger = &*group.challenger();
         let shuffler = Shuffler {
             pk: &pk,

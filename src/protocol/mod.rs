@@ -42,17 +42,15 @@ mod tests {
 
     #[test]
     fn protocol_rug_mem() {
-        setup_log();
+        // setup_log();
         let group = RugGroup::default();
-        // run(group, MBoard::default()).unwrap();
         run(group, 2, vec![MBoard::default()]).unwrap();
     }
 
     #[test]
     fn protocol_ristretto_mem() {
-        setup_log();
+        // setup_log();
         let group = RistrettoGroup;
-        // run(group, MBoard::default()).unwrap();
         run(group, 2, vec![MBoard::default()]).unwrap();
     }
 
@@ -107,7 +105,7 @@ mod tests {
         let mut drivers = vec![];
         let mut mixboards = vec![];
         let contests = 3;
-        let ballots = 100;
+        let ballots = 500;
 
         for _ in 0..num_trustees {
             let trustee = Trustee::new();

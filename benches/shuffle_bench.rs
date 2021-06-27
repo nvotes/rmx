@@ -23,7 +23,7 @@ pub fn shuffle_rug(n: usize) -> bool {
         es.push(c);
     }
     let seed = vec![];
-    let hs = generators(es.len() + 1, &group, 0, seed);
+    let hs = group.generators(es.len() + 1, 0, seed);
     let shuffler = Shuffler {
         pk: &pk,
         generators: &hs,
@@ -33,7 +33,7 @@ pub fn shuffle_rug(n: usize) -> bool {
     let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
     // simulate computing the generators again
     let seed = vec![];
-    let _hs = generators(es.len() + 1, &group, 0, seed);
+    let _hs = group.generators(es.len() + 1, 0, seed);
     let ok = shuffler.check_proof(&proof, &es, &e_primes, &vec![]);
 
     assert_eq!(ok, true);
@@ -55,7 +55,7 @@ pub fn shuffle_ristretto(n: usize) -> bool {
         es.push(c);
     }
     let seed = vec![];
-    let hs = generators(es.len() + 1, &group, 0, seed);
+    let hs = group.generators(es.len() + 1, 0, seed);
     let shuffler = Shuffler {
         pk: &pk,
         generators: &hs,
@@ -65,7 +65,7 @@ pub fn shuffle_ristretto(n: usize) -> bool {
     let proof = shuffler.gen_proof(&es, &e_primes, &rs, &perm, &vec![]);
     // simulate computing the generators again
     let seed = vec![];
-    let _hs = generators(es.len() + 1, &group, 0, seed);
+    let _hs = group.generators(es.len() + 1, 0, seed);
     let ok = shuffler.check_proof(&proof, &es, &e_primes, &vec![]);
 
     assert!(ok);

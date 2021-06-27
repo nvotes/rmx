@@ -62,7 +62,7 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
             &self.value,
             &self.public_value,
             dec_factor,
-            &self.group.generator(),
+            None,
             &c.b,
             label,
         );
@@ -77,7 +77,8 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
         c.b.mod_pow(&self.value, modulus)
     }
     pub fn from(secret: &E::Exp, group: &G) -> PrivateKey<E, G> {
-        let public_value = group.generator().mod_pow(&secret, &group.modulus());
+        // let public_value = group.generator().mod_pow(&secret, &group.modulus());
+        let public_value = group.gmod_pow(&secret);
         PrivateKey {
             value: secret.clone(),
             group: group.clone(),
@@ -96,7 +97,8 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
     ) -> PrivateKey<E, G> {
         let key_bytes = symmetric::decrypt(key, &encrypted.iv, &encrypted.bytes);
         let value = E::Exp::deser(&key_bytes).unwrap();
-        let public_value = group.generator().mod_pow(&value, &group.modulus());
+        // let public_value = group.generator().mod_pow(&value, &group.modulus());
+        let public_value = group.gmod_pow(&value);
 
         PrivateKey {
             value,

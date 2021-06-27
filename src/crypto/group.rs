@@ -31,7 +31,8 @@ pub trait Exponent: Clone + Eq + Send + Sync + Serialize + FromByteTree + BTree 
 }
 
 pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
-    fn generator(&self) -> E;
+    fn generator(&self) -> &E;
+    fn gmod_pow(&self, other: &E::Exp) -> E;
     fn modulus(&self) -> E;
     fn exp_modulus(&self) -> E::Exp;
 
@@ -76,15 +77,20 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
         secret: &E::Exp,
         public1: &E,
         public2: &E,
-        g1: &E,
+        g1: Option<&E>,
         g2: &E,
         label: &[u8],
     ) -> ChaumPedersen<E> {
         let r = self.rnd_exp();
-        let commitment1 = g1.mod_pow(&r, &self.modulus());
+        let commitment1 = if let Some(g1) = g1 {
+            g1.mod_pow(&r, &self.modulus())
+        }
+        else {
+            self.gmod_pow(&r)
+        };
         let commitment2 = g2.mod_pow(&r, &self.modulus());
         let challenge: E::Exp = cp_proof_challenge(
-            g1,
+            g1.unwrap_or_else(|| self.generator()),
             g2,
             public1,
             public2,
@@ -107,13 +113,13 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
         &self,
         public1: &E,
         public2: &E,
-        g1: &E,
+        g1: Option<&E>,
         g2: &E,
         proof: &ChaumPedersen<E>,
         label: &[u8],
     ) -> bool {
         let challenge_ = cp_proof_challenge(
-            g1,
+            g1.unwrap_or_else(|| self.generator()),
             g2,
             public1,
             public2,
@@ -124,7 +130,13 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
         );
         let ok1 = challenge_.eq(&proof.challenge);
 
-        let lhs1 = g1.mod_pow(&proof.response, &self.modulus());
+        // let lhs1 = g1.mod_pow(&proof.response, &self.modulus());
+        let lhs1 = if let Some(g1) = g1 {
+            g1.mod_pow(&proof.response, &self.modulus())
+        }
+        else {
+            self.gmod_pow(&proof.response)
+        };
         let rhs1 = proof
             .commitment1
             .mul(&public1.mod_pow(&proof.challenge, &self.modulus()))

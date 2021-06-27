@@ -97,7 +97,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
                     c.a.mul(&self.pk.value.mod_pow(&r, &group.modulus()))
                         .modulo(&group.modulus());
                 let b =
-                    c.b.mul(&group.generator().mod_pow(&r, &group.modulus()))
+                    c.b.mul(&group.gmod_pow(&r))
                         .modulo(&group.modulus());
 
                 let c_ = Ciphertext { a, b };
@@ -124,7 +124,6 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         perm: &[usize],
         label: &[u8],
     ) -> ShuffleProof<E> {
-        // let h_generators = &self.generators[1..];
         let (cs, rs) = self.gen_commitments(&perm, &self.pk.group);
         let perm_data = PermutationData {
             permutation: &perm,
@@ -205,8 +204,8 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         let omega_hats: Vec<E::Exp> = (0..N).map(|_| group.rnd_exp()).collect();
         let omega_primes: Vec<E::Exp> = (0..N).map(|_| group.rnd_exp()).collect();
 
-        let t1 = group.generator().mod_pow(&omegas[0], gmod);
-        let t2 = group.generator().mod_pow(&omegas[1], gmod);
+        let t1 = group.gmod_pow(&omegas[0]);
+        let t2 = group.gmod_pow(&omegas[1]);
 
         let mut t3_temp = E::mul_identity();
         let mut t4_1_temp = E::mul_identity();
@@ -238,13 +237,13 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             t4_2_temp = t4_2_temp.mul(&value.2).modulo(gmod);
         }
 
-        let t3 = (group.generator().mod_pow(&omegas[2], gmod))
+        let t3 = (group.gmod_pow(&omegas[2]))
             .mul(&t3_temp)
             .modulo(gmod);
         let t4_1 = (self.pk.value.mod_pow(&omegas[3].neg(), gmod))
             .mul(&t4_1_temp)
             .modulo(gmod);
-        let t4_2 = (group.generator().mod_pow(&omegas[3].neg(), gmod))
+        let t4_2 = (group.gmod_pow(&omegas[3].neg()))
             .mul(&t4_2_temp)
             .modulo(gmod);
 
@@ -255,7 +254,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             .map(|i| {
                 let previous_c = if i == 0 { h_initial } else { &c_hats[i - 1] };
 
-                (group.generator().mod_pow(&omega_hats[i], gmod))
+                (group.gmod_pow(&omega_hats[i]))
                     .mul(&previous_c.mod_pow(&omega_primes[i], gmod))
                     .modulo(gmod)
             })
@@ -392,15 +391,15 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         let c = hashing::shuffle_proof_challenge(&y, &proof.t, self.hasher, label);
 
         let t_prime1 = (c_bar.mod_pow(&c.neg(), gmod))
-            .mul(&group.generator().mod_pow(&proof.s.s1, gmod))
+            .mul(&group.gmod_pow(&proof.s.s1))
             .modulo(gmod);
 
         let t_prime2 = (c_hat.mod_pow(&c.neg(), gmod))
-            .mul(&group.generator().mod_pow(&proof.s.s2, gmod))
+            .mul(&group.gmod_pow(&proof.s.s2))
             .modulo(gmod);
 
         let t_prime3 = (c_tilde.mod_pow(&c.neg(), gmod))
-            .mul(&group.generator().mod_pow(&proof.s.s3, gmod))
+            .mul(&group.gmod_pow(&proof.s.s3))
             .mul(&t_tilde3_temp)
             .modulo(gmod);
 
@@ -410,7 +409,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             .modulo(gmod);
 
         let t_prime42 = (b_prime.mod_pow(&c.neg(), gmod))
-            .mul(&group.generator().mod_pow(&proof.s.s4.neg(), gmod))
+            .mul(&group.gmod_pow(&proof.s.s4.neg()))
             .mul(&t_tilde42_temp)
             .modulo(gmod);
 
@@ -425,7 +424,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
                 };
 
                 (proof.c_hats[i].mod_pow(&c.neg(), gmod))
-                    .mul(&group.generator().mod_pow(&proof.s.s_hats[i], gmod))
+                    .mul(&group.gmod_pow(&proof.s.s_hats[i]))
                     .mul(&c_term.mod_pow(&proof.s.s_primes[i], gmod))
                     .modulo(gmod)
             })
@@ -459,7 +458,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
         perm.par_iter().enumerate().for_each(|(i, p)| {
             let r = group.rnd_exp();
             let c = generators[i]
-                .mul(&group.generator().mod_pow(&r, &group.modulus()))
+                .mul(&group.gmod_pow(&r))
                 .modulo(&group.modulus());
 
             rs_mutex.lock().unwrap()[*p] = Some(r);
@@ -493,8 +492,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             .map(|_| {
                 let r = group.rnd_exp();
                 let first = group
-                    .generator()
-                    .mod_pow(&r, &group.modulus())
+                    .gmod_pow(&r)
                     .modulo(&group.modulus());
 
                 (first, r)
@@ -514,15 +512,6 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
 
         (cs, rs)
     }
-}
-
-pub fn generators<E: Element, G: Group<E>>(
-    size: usize,
-    group: &G,
-    contest: u32,
-    seed: Vec<u8>,
-) -> Vec<E> {
-    group.generators(size, contest, seed)
 }
 
 fn gen_permutation(size: usize) -> Vec<usize> {
@@ -569,7 +558,7 @@ mod tests {
             es.push(c);
         }
         let seed = vec![];
-        let hs = generators(es.len() + 1, &group, 0, seed);
+        let hs = group.generators(es.len() + 1, 0, seed);
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
@@ -599,7 +588,7 @@ mod tests {
             es.push(c);
         }
         let seed = vec![];
-        let hs = generators(es.len() + 1, &group, 0, seed);
+        let hs = group.generators(es.len() + 1, 0, seed);
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
@@ -615,7 +604,7 @@ mod tests {
 
     // experimental
     #[test]
-    fn test_rug_par_shuffle() {
+    fn test_rug_multi_shuffle() {
         let group = RugGroup::default();
         let challenger = &*group.challenger();
 
@@ -633,7 +622,7 @@ mod tests {
             es2.push(c2);
         }
         let seed = vec![];
-        let hs = generators(es1.len() + 1, &group, 0, seed);
+        let hs = group.generators(es1.len() + 1, 0, seed);
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,
@@ -726,7 +715,7 @@ mod tests {
             es.push(c);
         }
         let seed = vec![];
-        let hs = generators(es.len() + 1, &group, 0, seed);
+        let hs = group.generators(es.len() + 1, 0, seed);
 
         let shuffler = Shuffler {
             pk: &pk,

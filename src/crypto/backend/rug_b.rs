@@ -101,18 +101,14 @@ pub struct RugGroup {
 }
 
 impl RugGroup {
+    // 2048 bits
     // https://github.com/bfh-evg/unicrypt/blob/2c9b223c1abc6266aa56ace5562200a5050a0c2a/src/main/java/ch/bfh/unicrypt/helper/prime/SafePrime.java
     pub const P_STR: &'static str = "B7E151628AED2A6ABF7158809CF4F3C762E7160F38B4DA56A784D9045190CFEF324E7738926CFBE5F4BF8D8D8C31D763DA06C80ABB1185EB4F7C7B5757F5958490CFD47D7C19BB42158D9554F7B46BCED55C4D79FD5F24D6613C31C3839A2DDF8A9A276BCFBFA1C877C56284DAB79CD4C2B3293D20E9E5EAF02AC60ACC93ED874422A52ECB238FEEE5AB6ADD835FD1A0753D0A8F78E537D2B95BB79D8DCAEC642C1E9F23B829B5C2780BF38737DF8BB300D01334A0D0BD8645CBFA73A6160FFE393C48CBBBCA060F0FF8EC6D31BEB5CCEED7F2F0BB088017163BC60DF45A0ECB1BCD289B06CBBFEA21AD08E1847F3F7378D56CED94640D6EF0D3D37BE69D0063";
     pub const Q_STR: &'static str = "5bf0a8b1457695355fb8ac404e7a79e3b1738b079c5a6d2b53c26c8228c867f799273b9c49367df2fa5fc6c6c618ebb1ed0364055d88c2f5a7be3dababfacac24867ea3ebe0cdda10ac6caaa7bda35e76aae26bcfeaf926b309e18e1c1cd16efc54d13b5e7dfd0e43be2b1426d5bce6a6159949e9074f2f5781563056649f6c3a21152976591c7f772d5b56ec1afe8d03a9e8547bc729be95caddbcec6e57632160f4f91dc14dae13c05f9c39befc5d98068099a50685ec322e5fd39d30b07ff1c9e2465dde5030787fc763698df5ae6776bf9785d84400b8b1de306fa2d07658de6944d8365dff510d68470c23f9fb9bc6ab676ca3206b77869e9bdf34e8031";
 
-    // pub const P_STR: &'static str = "9A91C3B704E382E0C772FA7CF0E5D6363EDC53D156E841555702C5B6F906574204BF49A551B695BED292E0218337C0861EE649D2FE4039174514FE2C23C10F67";
-    // pub const Q_STR: &'static str = "4D48E1DB8271C17063B97D3E7872EB1B1F6E29E8AB7420AAAB8162DB7C832BA1025FA4D2A8DB4ADF69497010C19BE0430F7324E97F201C8BA28A7F1611E087B3";
-    // pub const G_STR: &'static str = "300763B0150525252E4989F51E33C4E6462091152EF2291E45699374A3AA8ACEA714FF30260338BDDBB48FC7446B273AAADA90E3EE8326F388B582EA8A073502";
-
     pub fn default() -> RugGroup {
         let p = Integer::from_str_radix(Self::P_STR, 16).unwrap();
         let q = Integer::from_str_radix(Self::Q_STR, 16).unwrap();
-        // let g = Integer::from_str_radix(Self::G_STR, 16).unwrap();
         let g = Integer::from(3);
         let co_factor = Integer::from(2);
 
@@ -129,7 +125,6 @@ impl RugGroup {
     // https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf A.2.3
     fn generators_fips(&self, size: usize, contest: u32, seed: Vec<u8>) -> Vec<Integer> {
         let mut ret = Vec::with_capacity(size);
-        // let hasher = self.elem_hasher();
         let hasher = RugHasher(self.modulus.clone());
         let two = Integer::from(2);
 
@@ -161,8 +156,13 @@ impl RugGroup {
 }
 
 impl Group<Integer> for RugGroup {
-    fn generator(&self) -> Integer {
-        self.generator.clone()
+    fn generator(&self) -> &Integer {
+        // self.generator.clone()
+        &self.generator
+    }
+    fn gmod_pow(&self, other: &Integer) -> Integer {
+        // self.generator.clone()
+        self.generator.mod_pow(other, &self.modulus())
     }
     fn modulus(&self) -> Integer {
         self.modulus.clone()
@@ -192,7 +192,6 @@ impl Group<Integer> for RugGroup {
         let legendre = notzero.legendre(&self.modulus());
         let product = legendre * notzero;
 
-        // this syntax to disambiguate between traits
         Element::modulo(&product, &self.modulus())
     }
     fn decode(&self, element: &Integer) -> Integer {
@@ -278,14 +277,14 @@ mod tests {
         let secret = group.rnd_exp();
         let public1 = g1.mod_pow(&secret, &group.modulus());
         let public2 = g2.mod_pow(&secret, &group.modulus());
-        let proof = group.cp_prove(&secret, &public1, &public2, &g1, &g2, &vec![]);
-        let verified = group.cp_verify(&public1, &public2, &g1, &g2, &proof, &vec![]);
+        let proof = group.cp_prove(&secret, &public1, &public2, None, &g2, &vec![]);
+        let verified = group.cp_verify(&public1, &public2, None, &g2, &proof, &vec![]);
 
         assert!(verified == true);
         let public_false = group
             .generator()
             .mod_pow(&group.rnd_exp(), &group.modulus());
-        let verified_false = group.cp_verify(&public1, &public_false, &g1, &g2, &proof, &vec![]);
+        let verified_false = group.cp_verify(&public1, &public_false, None, &g2, &proof, &vec![]);
         assert!(verified_false == false);
     }
 
@@ -306,7 +305,7 @@ mod tests {
         let verified = group.cp_verify(
             &pk.value,
             &dec_factor,
-            &group.generator(),
+            None,
             &c.b,
             &proof,
             &vec![],
@@ -347,7 +346,7 @@ mod tests {
         let verified1 = group.cp_verify(
             pk1_value,
             &dec_f1,
-            &group.generator(),
+            None,
             &c.b,
             &proof1,
             &vec![],
@@ -355,7 +354,7 @@ mod tests {
         let verified2 = group.cp_verify(
             pk2_value,
             &dec_f2,
-            &group.generator(),
+            None,
             &c.b,
             &proof2,
             &vec![],
@@ -471,7 +470,7 @@ mod tests {
         let es = util::random_ballots(10, &group).ciphertexts;
 
         let seed = vec![];
-        let hs = generators(es.len() + 1, &group, 0, seed);
+        let hs = group.generators(es.len() + 1, 0, seed);
         let shuffler = Shuffler {
             pk: &pk,
             generators: &hs,

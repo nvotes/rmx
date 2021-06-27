@@ -4,17 +4,15 @@ use log::info;
 use crate::bulletinboard::mixnetboard::MixnetBoard;
 use crate::data::artifact::*;
 use crate::protocol::logic::Hashes;
-use crate::protocol::statement::*;
-use crate::protocol::trustee::trustee::Trustee;
-use crate::protocol::trustee::trustee::TrusteeError;
+use crate::protocol::statement::SignedStatement;
+use crate::protocol::trustee::trustee::{Trustee, TrusteeError};
 
 use crate::crypto::elgamal::PrivateKey;
-use crate::crypto::group::Element;
-use crate::crypto::group::Group;
+use crate::crypto::group::{Element, Group};
 use crate::crypto::hashing;
 use crate::crypto::hashing::Hash;
 use crate::crypto::keymaker::Keymaker;
-use crate::crypto::shuffler::*;
+use crate::crypto::shuffler::Shuffler;
 
 use crate::util::short;
 

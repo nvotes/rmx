@@ -1,10 +1,10 @@
 use generic_array::{typenum::U32, GenericArray};
 use serde::{Deserialize, Serialize};
 
-use crate::crypto::group::*;
+use crate::crypto::group::{ChaumPedersen, Element, Group};
 use crate::crypto::symmetric;
-use crate::data::artifact::*;
-use crate::data::byte_tree::*;
+use crate::data::artifact::EncryptedPrivateKey;
+use crate::data::byte_tree::{Deser, Ser};
 
 #[derive(Serialize, Deserialize, Clone, Eq, PartialEq)]
 pub struct Ciphertext<E> {
@@ -77,7 +77,6 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
         c.b.mod_pow(&self.value, modulus)
     }
     pub fn from(secret: &E::Exp, group: &G) -> PrivateKey<E, G> {
-        // let public_value = group.generator().mod_pow(&secret, &group.modulus());
         let public_value = group.gmod_pow(&secret);
         PrivateKey {
             value: secret.clone(),
@@ -97,7 +96,6 @@ impl<E: Element, G: Group<E>> PrivateKey<E, G> {
     ) -> PrivateKey<E, G> {
         let key_bytes = symmetric::decrypt(key, &encrypted.iv, &encrypted.bytes);
         let value = E::Exp::deser(&key_bytes).unwrap();
-        // let public_value = group.generator().mod_pow(&value, &group.modulus());
         let public_value = group.gmod_pow(&value);
 
         PrivateKey {

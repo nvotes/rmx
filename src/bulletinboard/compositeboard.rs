@@ -6,15 +6,12 @@ use log::info;
 use crate::bulletinboard::board::Board;
 use crate::bulletinboard::mixnetboard::*;
 use crate::crypto::elgamal::PublicKey;
-use crate::crypto::group::Element;
-use crate::crypto::group::Group;
+use crate::crypto::group::{Element, Group};
 use crate::crypto::hashing;
 use crate::crypto::hashing::Hash;
 use crate::data::artifact::*;
-use crate::data::byte_tree::*;
-use crate::protocol::statement::SignedStatement;
-use crate::protocol::statement::StatementType;
-use crate::protocol::statement::StatementVerifier;
+use crate::data::byte_tree::{Deser, FromByteTree, Ser, ToByteTree};
+use crate::protocol::statement::{SignedStatement, StatementType, StatementVerifier};
 
 pub struct CompositeBoard<E, G, B> {
     basic: B,

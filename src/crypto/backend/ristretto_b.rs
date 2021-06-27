@@ -10,8 +10,8 @@ use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::Identity;
 use sha3::Shake256;
 
-use crate::crypto::elgamal::*;
-use crate::crypto::group::*;
+use crate::crypto::elgamal::PrivateKey;
+use crate::crypto::group::{Element, Exponent, Group};
 use crate::crypto::hashing::{HashTo, RistrettoHasher};
 use crate::util;
 
@@ -95,7 +95,6 @@ impl Group<RistrettoPoint> for RistrettoGroup {
     }
     fn gmod_pow(&self, other: &Scalar) -> RistrettoPoint {
         other * &RISTRETTO_BASEPOINT_TABLE
-        // self.generator().mod_pow(other, &self.modulus())
     }
     fn modulus(&self) -> RistrettoPoint {
         // returning a dummy value as modulus does not apply to this backend
@@ -164,6 +163,7 @@ mod tests {
     use curve25519_dalek::traits::Identity;
 
     use crate::crypto::backend::ristretto_b::*;
+    use crate::crypto::elgamal::*;
     use crate::crypto::keymaker::*;
     use crate::crypto::shuffler::*;
     use crate::crypto::symmetric;

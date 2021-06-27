@@ -198,7 +198,6 @@ mod tests {
     use std::sync::Once;
 
     static INIT: Once = Once::new();
-    /// Setup function that is only run once, even if called multiple times.
     fn setup_log() {
         INIT.call_once(|| {
             CombinedLogger::init(vec![TermLogger::new(

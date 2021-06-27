@@ -9,14 +9,14 @@ use ed25519_dalek::Signature;
 use rug::{integer::Order, Integer};
 use serde_bytes::ByteBuf;
 
-use crate::crypto::backend::ristretto_b::*;
-use crate::crypto::backend::rug_b::*;
-use crate::crypto::elgamal::*;
-use crate::crypto::group::*;
+use crate::crypto::backend::ristretto_b::RistrettoGroup;
+use crate::crypto::backend::rug_b::RugGroup;
+use crate::crypto::elgamal::{Ciphertext, PrivateKey, PublicKey};
+use crate::crypto::group::{ChaumPedersen, Element, Schnorr};
 use crate::crypto::shuffler::{Commitments, Responses, ShuffleProof};
 use crate::data::artifact::*;
 use crate::protocol::predicates::Act;
-use crate::protocol::statement::*;
+use crate::protocol::statement::{SignedStatement, Statement, StatementType};
 use crate::util;
 
 const LEAF: u8 = 0;
@@ -907,6 +907,7 @@ impl ToByteTree for Act {
 
 #[cfg(test)]
 mod tests {
+    use crate::crypto::group::{Element, Group};
     use crate::crypto::keymaker::*;
     use crate::crypto::shuffler::*;
     use crate::crypto::symmetric;

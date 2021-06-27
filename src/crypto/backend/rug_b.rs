@@ -8,8 +8,8 @@ use rand::rngs::StdRng;
 use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
-use crate::crypto::elgamal::*;
-use crate::crypto::group::*;
+use crate::crypto::elgamal::PrivateKey;
+use crate::crypto::group::{Element, Exponent, Group};
 use crate::crypto::hashing::{HashTo, RugHasher};
 
 impl Element for Integer {
@@ -218,6 +218,8 @@ impl Group<Integer> for RugGroup {
 #[cfg(test)]
 mod tests {
     use crate::crypto::backend::rug_b::*;
+    use crate::crypto::elgamal::*;
+    use crate::crypto::group::Group;
     use crate::crypto::keymaker::*;
     use crate::crypto::shuffler::*;
     use crate::crypto::symmetric;

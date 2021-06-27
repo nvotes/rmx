@@ -2,15 +2,13 @@ use crepe::crepe;
 use log::*;
 use std::marker::PhantomData;
 
-use crate::bulletinboard::mixnetboard::*;
-use crate::crypto::group::Element;
-use crate::crypto::group::Group;
+use crate::bulletinboard::mixnetboard::MixnetBoard;
+use crate::crypto::group::{Element, Group};
 use crate::crypto::hashing;
-use crate::crypto::hashing::*;
+use crate::crypto::hashing::Hash;
 use crate::protocol::predicates::Act;
 use crate::protocol::predicates::{AllPredicates, InputPredicate};
-use crate::protocol::trustee::trustee::Trustee;
-use crate::protocol::trustee::trustee::TrusteeError;
+use crate::protocol::trustee::trustee::{Trustee, TrusteeError};
 
 pub(super) type TrusteeIndex = u32;
 pub(super) type ContestIndex = u32;

@@ -7,8 +7,8 @@ use rug::{integer::Order, Integer};
 use serde_bytes::ByteBuf;
 use sha2::{Digest, Sha512};
 
-use crate::crypto::elgamal::*;
-use crate::crypto::group::*;
+use crate::crypto::elgamal::Ciphertext;
+use crate::crypto::group::{Element, Group};
 use crate::crypto::shuffler::{Commitments, YChallengeInput};
 use crate::data::byte_tree::ByteTree;
 use crate::data::byte_tree::ByteTree::Leaf;

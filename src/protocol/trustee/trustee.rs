@@ -5,17 +5,14 @@ use log::info;
 use rand::rngs::OsRng;
 use std::marker::PhantomData;
 
-use crate::data::artifact::*;
-use crate::protocol::predicates::*;
-
+use crate::bulletinboard::mixnetboard::{BBError, MixnetBoard};
 use crate::crypto::elgamal::{Ciphertext, PublicKey};
-use crate::crypto::group::Element;
-use crate::crypto::group::Group;
-use crate::crypto::hashing::*;
+use crate::crypto::group::{Element, Group};
+use crate::crypto::hashing::Hash;
 use crate::crypto::keymaker::Keymaker;
 use crate::crypto::symmetric;
-
-use crate::bulletinboard::mixnetboard::*;
+use crate::data::artifact::*;
+use crate::protocol::predicates::{Act, AllPredicates};
 
 quick_error! {
     #[derive(Debug)]

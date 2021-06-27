@@ -1,9 +1,9 @@
 use serde::Serialize;
 use std::marker::{Send, Sync};
 
-use crate::crypto::elgamal::*;
-use crate::crypto::hashing::*;
-use crate::data::byte_tree::*;
+use crate::crypto::elgamal::PrivateKey;
+use crate::crypto::hashing::{cp_proof_challenge, schnorr_proof_challenge, HashTo};
+use crate::data::byte_tree::{BTree, FromByteTree};
 
 pub trait Element: Clone + Eq + Send + Sync + Serialize + BTree {
     type Exp: Exponent;
@@ -129,7 +129,6 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
         );
         let ok1 = challenge_.eq(&proof.challenge);
 
-        // let lhs1 = g1.mod_pow(&proof.response, &self.modulus());
         let lhs1 = if let Some(g1) = g1 {
             g1.mod_pow(&proof.response, &self.modulus())
         } else {

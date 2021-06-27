@@ -8,11 +8,9 @@ use num_enum::TryFromPrimitive;
 use serde::{Deserialize, Serialize};
 
 use crate::bulletinboard::mixnetboard::*;
-use crate::crypto::group::Element;
-use crate::crypto::group::Group;
+use crate::crypto::group::{Element, Group};
 use crate::crypto::hashing;
-use crate::protocol::logic::ContestIndex;
-use crate::protocol::logic::TrusteeIndex;
+use crate::protocol::logic::{ContestIndex, TrusteeIndex};
 use crate::protocol::predicates::InputPredicate;
 use crate::util;
 

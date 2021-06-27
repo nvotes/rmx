@@ -3,9 +3,9 @@ use std::marker::PhantomData;
 use ed25519_dalek::PublicKey as SPublicKey;
 use serde::Serialize;
 
-use crate::crypto::elgamal::*;
-use crate::crypto::group::*;
-use crate::crypto::shuffler::*;
+use crate::crypto::elgamal::{Ciphertext, PublicKey};
+use crate::crypto::group::{ChaumPedersen, Element, Schnorr};
+use crate::crypto::shuffler::ShuffleProof;
 
 #[derive(Serialize, Eq, PartialEq, Debug)]
 pub struct Config<E, G> {

@@ -1,13 +1,11 @@
 use std::path::Path;
 
 use crate::crypto::elgamal::PublicKey;
-use crate::crypto::group::Element;
-use crate::crypto::group::Group;
+use crate::crypto::group::{Element, Group};
 use crate::crypto::hashing::Hash;
 use crate::data::artifact::*;
 use crate::data::byte_tree::ByteError;
-use crate::protocol::statement::SignedStatement;
-use crate::protocol::statement::StatementVerifier;
+use crate::protocol::statement::{SignedStatement, StatementVerifier};
 
 quick_error! {
     #[derive(Debug)]

@@ -96,9 +96,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
                 let a =
                     c.a.mul(&self.pk.value.mod_pow(&r, &group.modulus()))
                         .modulo(&group.modulus());
-                let b =
-                    c.b.mul(&group.gmod_pow(&r))
-                        .modulo(&group.modulus());
+                let b = c.b.mul(&group.gmod_pow(&r)).modulo(&group.modulus());
 
                 let c_ = Ciphertext { a, b };
                 rs_mutex.lock().unwrap()[*p] = Some(r);
@@ -237,9 +235,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             t4_2_temp = t4_2_temp.mul(&value.2).modulo(gmod);
         }
 
-        let t3 = (group.gmod_pow(&omegas[2]))
-            .mul(&t3_temp)
-            .modulo(gmod);
+        let t3 = (group.gmod_pow(&omegas[2])).mul(&t3_temp).modulo(gmod);
         let t4_1 = (self.pk.value.mod_pow(&omegas[3].neg(), gmod))
             .mul(&t4_1_temp)
             .modulo(gmod);
@@ -491,9 +487,7 @@ impl<'a, E: Element, G: Group<E>> Shuffler<'a, E, G> {
             .into_par_iter()
             .map(|_| {
                 let r = group.rnd_exp();
-                let first = group
-                    .gmod_pow(&r)
-                    .modulo(&group.modulus());
+                let first = group.gmod_pow(&r).modulo(&group.modulus());
 
                 (first, r)
             })

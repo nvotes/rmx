@@ -295,14 +295,7 @@ mod tests {
 
         let dec_factor = c.a.div(&d, &group.modulus()).modulo(&group.modulus());
 
-        let verified = group.cp_verify(
-            &pk.value,
-            &dec_factor,
-            None,
-            &c.b,
-            &proof,
-            &vec![],
-        );
+        let verified = group.cp_verify(&pk.value, &dec_factor, None, &c.b, &proof, &vec![]);
         let recovered = group.decode(&d).to_vec();
         assert!(verified == true);
         assert_eq!(fill.to_vec(), recovered);
@@ -337,22 +330,8 @@ mod tests {
         let (dec_f1, proof1) = km1.decryption_factor(&c, &vec![]);
         let (dec_f2, proof2) = km2.decryption_factor(&c, &vec![]);
 
-        let verified1 = group.cp_verify(
-            pk1_value,
-            &dec_f1,
-            None,
-            &c.b,
-            &proof1,
-            &vec![],
-        );
-        let verified2 = group.cp_verify(
-            pk2_value,
-            &dec_f2,
-            None,
-            &c.b,
-            &proof2,
-            &vec![],
-        );
+        let verified1 = group.cp_verify(pk1_value, &dec_f1, None, &c.b, &proof1, &vec![]);
+        let verified2 = group.cp_verify(pk2_value, &dec_f2, None, &c.b, &proof2, &vec![]);
         assert!(verified1 == true);
         assert!(verified2 == true);
 

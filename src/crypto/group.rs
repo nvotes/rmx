@@ -84,8 +84,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
         let r = self.rnd_exp();
         let commitment1 = if let Some(g1) = g1 {
             g1.mod_pow(&r, &self.modulus())
-        }
-        else {
+        } else {
             self.gmod_pow(&r)
         };
         let commitment2 = g2.mod_pow(&r, &self.modulus());
@@ -133,8 +132,7 @@ pub trait Group<E: Element>: Clone + Send + Sync + Serialize + BTree {
         // let lhs1 = g1.mod_pow(&proof.response, &self.modulus());
         let lhs1 = if let Some(g1) = g1 {
             g1.mod_pow(&proof.response, &self.modulus())
-        }
-        else {
+        } else {
             self.gmod_pow(&proof.response)
         };
         let rhs1 = proof

@@ -714,7 +714,7 @@ mod tests {
         let bft = "core.bigFileThreshold";
         let lc = "core.looseCompression";
         let pc = "pack.compression";
-        
+
         let cfg_path = Path::new(".git/config");
 
         // seems libgit2 does not support these options
@@ -730,12 +730,16 @@ mod tests {
             let entry = entry.unwrap();
             println!("{} => {}", entry.name().unwrap(), entry.value().unwrap());
         }
-        
+
         let length: usize = 1024 * 1024 * 100;
         println!(">> gen {} bytes..", length);
         let random_bytes = (0..length).map(|_| rand::random::<u8>()).collect();
-        
-        g1.add(vec![(Path::new("largefile"), random_bytes)], String::from("large file")).unwrap();
+
+        g1.add(
+            vec![(Path::new("largefile"), random_bytes)],
+            String::from("large file"),
+        )
+        .unwrap();
 
         println!(">> posting {} bytes..", length);
         let now_ = std::time::Instant::now();

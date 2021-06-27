@@ -44,14 +44,14 @@ mod tests {
     fn protocol_rug_mem() {
         // setup_log();
         let group = RugGroup::default();
-        run(group, 2, vec![MBoard::default()]).unwrap();
+        run(group, 2, vec![MBoard::default()], 100).unwrap();
     }
 
     #[test]
     fn protocol_ristretto_mem() {
         // setup_log();
         let group = RistrettoGroup;
-        run(group, 2, vec![MBoard::default()]).unwrap();
+        run(group, 2, vec![MBoard::default()], 300).unwrap();
     }
 
     #[ignore]
@@ -70,7 +70,7 @@ mod tests {
         boards[0].__clear().unwrap();
         fs::remove_dir_all(&boards[0].fs_path).ok();
 
-        run(group, trustees, boards).unwrap();
+        run(group, trustees, boards, 100).unwrap();
     }
 
     #[ignore]
@@ -89,13 +89,14 @@ mod tests {
         boards[0].__clear().unwrap();
         fs::remove_dir_all(&boards[0].fs_path).ok();
 
-        run(group, trustees, boards).unwrap();
+        run(group, trustees, boards, 300).unwrap();
     }
 
     fn run<E: Element + std::cmp::PartialEq, G: Group<E>, B: Board>(
         group: G,
         num_trustees: u32,
         mut boards: Vec<B>,
+        ballots: usize,
     ) -> Result<(), TrusteeError>
     where
         <E as Element>::Plaintext: std::hash::Hash,
@@ -105,7 +106,6 @@ mod tests {
         let mut drivers = vec![];
         let mut mixboards = vec![];
         let contests = 3;
-        let ballots = 500;
 
         for _ in 0..num_trustees {
             let trustee = Trustee::new();
